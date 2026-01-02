@@ -1,4 +1,30 @@
-*.txt
-*.pem
-server.py
+# === Go ===
+backend/maltiden
+backend/*.exe
+backend/*.db
+backend/*.sqlite
+
+# === Node/Vue ===
+frontend/node_modules/
+frontend/dist/
+
+# === IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo
 .claude/
+.editorconfig
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Env/secrets ===
+.env
+.env.local
+*.pem
+
+# === Logs ===
+*.log
+*.txt
