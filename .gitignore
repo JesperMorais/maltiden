@@ -1,0 +1,4 @@
+*.txt
+*.pem
+server.py
+.claude/
