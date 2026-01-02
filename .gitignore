@@ -13,9 +13,6 @@ frontend/dist/
 .vscode/
 *.swp
 *.swo
-.claude/
-.editorconfig
-project-knowledge-file.md
 
 # === OS ===
 .DS_Store
