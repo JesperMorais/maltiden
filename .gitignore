@@ -15,6 +15,7 @@ frontend/dist/
 *.swo
 .claude/
 .editorconfig
+project-knowledge-file.md
 
 # === OS ===
 .DS_Store
