@@ -33,6 +33,11 @@ migrations/                 # SQL-migreringar
 - `domain/` är ren – inga DB/HTTP-imports
 - Monolith men förberett för separation vid behov
 
+## Git Workflow
+- **Branch-namn:** `feat/be_<feature>` (backend), `feat/fe_<feature>` (frontend)
+- **Merge-strategi:** Rebase only (inga merge commits)
+- **Merge till main:** Använd `git rebase` följt av `git merge --ff-only`
+
 ## Kärnfunktioner (MVP)
 1. Generera veckomenyer (5 dagar default)
 2. Flexibla dagar (skippa, fler personer, matlådor)
