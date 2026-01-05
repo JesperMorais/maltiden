@@ -38,12 +38,6 @@ const iconMap: Record<string, string> = {
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Fraunces:wght@700&display=swap');
 
 .feature-card {
-  --coral: #ff6b5b;
-  --coral-light: #ff8a7d;
-  --peach: #ffb599;
-  --text-dark: #3d2c29;
-  --text-muted: #6b5a56;
-
   position: relative;
   text-align: center;
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -80,7 +74,7 @@ const iconMap: Record<string, string> = {
 .icon-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, var(--peach) 0%, var(--coral-light) 100%);
+  background: linear-gradient(135deg, var(--peach) 0%, var(--accent-light) 100%);
   border-radius: 24px;
   transform: rotate(-6deg);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -96,7 +90,7 @@ const iconMap: Record<string, string> = {
   font-family: 'Fraunces', serif;
   font-weight: 700;
   font-size: 1.35rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.75rem;
   line-height: 1.3;
 }
@@ -104,7 +98,7 @@ const iconMap: Record<string, string> = {
 .feature-description {
   font-family: 'Nunito', sans-serif;
   font-size: 1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: 1.65;
   margin: 0;
 }
@@ -115,7 +109,7 @@ const iconMap: Record<string, string> = {
   right: -30px;
   width: 100px;
   height: 100px;
-  background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--peach) 100%);
   border-radius: 50%;
   opacity: 0.05;
   transition: all 0.4s ease;

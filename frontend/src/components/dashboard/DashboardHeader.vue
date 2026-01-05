@@ -89,16 +89,8 @@ function handleSettings() {
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Fraunces:wght@700&display=swap');
 
 .dashboard-header {
-  --coral: #ff6b5b;
-  --coral-light: #ff8a7d;
-  --peach: #ffb599;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --text-muted: #6b5a56;
-
-  background: var(--warm-white);
-  border-bottom: 1px solid rgba(61, 44, 41, 0.08);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -127,7 +119,7 @@ function handleSettings() {
 }
 
 .logo:hover {
-  background: rgba(255, 107, 91, 0.08);
+  background: var(--bg-hover);
 }
 
 .logo-icon {
@@ -138,7 +130,7 @@ function handleSettings() {
   font-family: 'Fraunces', serif;
   font-weight: 700;
   font-size: 1.35rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
 }
 
 /* Household badge */
@@ -147,9 +139,9 @@ function handleSettings() {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, rgba(255, 107, 91, 0.08) 0%, rgba(255, 181, 153, 0.08) 100%);
+  background: var(--bg-hover);
   border-radius: 100px;
-  border: 1px solid rgba(255, 107, 91, 0.1);
+  border: 1px solid var(--border-color);
 }
 
 .household-icon {
@@ -160,7 +152,7 @@ function handleSettings() {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
 }
 
 /* User menu */
@@ -174,23 +166,23 @@ function handleSettings() {
   gap: 0.75rem;
   padding: 0.5rem;
   padding-right: 1rem;
-  background: white;
-  border: 1px solid rgba(61, 44, 41, 0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 100px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .user-button:hover {
-  border-color: var(--coral);
-  box-shadow: 0 4px 12px rgba(255, 107, 91, 0.15);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
 }
 
 .avatar {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 100%);
+  background: var(--accent-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -204,7 +196,7 @@ function handleSettings() {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
 }
 
 .role-badge {
@@ -218,24 +210,24 @@ function handleSettings() {
 }
 
 .role-badge.owner {
-  background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+  background: var(--role-owner-bg);
   color: white;
 }
 
 .role-badge.member {
-  background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 100%);
+  background: var(--role-member-bg);
   color: white;
 }
 
 .role-badge.guest {
-  background: rgba(61, 44, 41, 0.1);
-  color: var(--text-muted);
+  background: var(--role-guest-bg);
+  color: var(--role-guest-text);
 }
 
 .chevron {
   width: 16px;
   height: 16px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   transition: transform 0.3s ease;
 }
 
@@ -249,12 +241,10 @@ function handleSettings() {
   top: calc(100% + 8px);
   right: 0;
   min-width: 180px;
-  background: white;
+  background: var(--bg-card);
   border-radius: 16px;
-  box-shadow:
-    0 10px 40px rgba(61, 44, 41, 0.15),
-    0 4px 12px rgba(61, 44, 41, 0.1);
-  border: 1px solid rgba(61, 44, 41, 0.08);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
   padding: 0.5rem;
   overflow: hidden;
 }
@@ -272,18 +262,18 @@ function handleSettings() {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 0.9rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   transition: all 0.2s ease;
 }
 
 .dropdown-item:hover {
-  background: rgba(255, 107, 91, 0.08);
-  color: var(--coral);
+  background: var(--bg-hover);
+  color: var(--accent);
 }
 
 .dropdown-item.logout:hover {
-  background: rgba(229, 62, 62, 0.08);
-  color: #e53e3e;
+  background: rgba(229, 62, 62, 0.1);
+  color: var(--error);
 }
 
 .dropdown-icon {
@@ -292,7 +282,7 @@ function handleSettings() {
 
 .dropdown-divider {
   height: 1px;
-  background: rgba(61, 44, 41, 0.08);
+  background: var(--border-color);
   margin: 0.25rem 0.5rem;
 }
 

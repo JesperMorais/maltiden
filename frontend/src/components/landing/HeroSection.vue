@@ -2,6 +2,7 @@
 import { RouterLink } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { useUserStore } from '@/stores/user'
+import { useThemeStore } from '@/stores/theme'
 
 interface Props {
   title: string
@@ -13,6 +14,7 @@ interface Props {
 defineProps<Props>()
 
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 </script>
 
 <template>
@@ -23,7 +25,17 @@ const userStore = useUserStore()
         <span class="logo-icon">🍽️</span>
         <span class="logo-text">Måltiden</span>
       </RouterLink>
-      <RouterLink to="/about" class="nav-link">Om oss</RouterLink>
+      <div class="nav-actions">
+        <RouterLink to="/about" class="nav-link">Om oss</RouterLink>
+        <button
+          class="theme-toggle"
+          @click="themeStore.toggleDarkMode()"
+          :aria-label="themeStore.isDarkMode ? 'Byt till ljust läge' : 'Byt till mörkt läge'"
+        >
+          <span v-if="themeStore.isDarkMode">☀️</span>
+          <span v-else>🌙</span>
+        </button>
+      </div>
     </nav>
 
     <!-- Decorative background elements -->
@@ -112,17 +124,6 @@ const userStore = useUserStore()
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap');
 
 .hero {
-  --coral: #ff6b5b;
-  --coral-light: #ff8a7d;
-  --peach: #ffb599;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --text-muted: #6b5a56;
-  --yellow-soft: #ffd93d;
-  --orange-soft: #ffab5e;
-  --section-bg: #fef6f0;
-
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -133,9 +134,9 @@ const userStore = useUserStore()
   padding-bottom: 10rem;
   background: linear-gradient(
     165deg,
-    var(--cream) 0%,
-    var(--warm-white) 50%,
-    #fff5eb 100%
+    var(--bg-secondary) 0%,
+    var(--bg-primary) 50%,
+    var(--bg-secondary) 100%
   );
 }
 
@@ -172,25 +173,49 @@ const userStore = useUserStore()
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: 1.35rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .nav-link {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.95rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-decoration: none;
   padding: 0.5rem 1.25rem;
   border-radius: 100px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
+  background: var(--bg-hover);
   transition: all 0.3s ease;
 }
 
 .nav-link:hover {
-  color: var(--coral);
-  background: rgba(255, 107, 91, 0.15);
+  color: var(--accent);
+  background: var(--border-color-hover);
+}
+
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.25rem;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--border-color-hover);
+  transform: scale(1.1);
 }
 
 /* Curved bottom transition */
@@ -201,7 +226,7 @@ const userStore = useUserStore()
   left: 0;
   right: 0;
   height: 150px;
-  background: var(--section-bg);
+  background: var(--bg-secondary);
   clip-path: ellipse(75% 100% at 50% 100%);
 }
 
@@ -222,7 +247,7 @@ const userStore = useUserStore()
 .blob-1 {
   width: 600px;
   height: 600px;
-  background: linear-gradient(135deg, var(--peach) 0%, var(--coral-light) 100%);
+  background: linear-gradient(135deg, var(--peach) 0%, var(--accent-light) 100%);
   top: -200px;
   right: -100px;
   animation: float-slow 20s ease-in-out infinite;
@@ -240,7 +265,7 @@ const userStore = useUserStore()
 .blob-3 {
   width: 300px;
   height: 300px;
-  background: var(--coral-light);
+  background: var(--accent-light);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -266,7 +291,7 @@ const userStore = useUserStore()
   position: absolute;
   font-size: 2.5rem;
   animation: float 6s ease-in-out infinite;
-  filter: drop-shadow(0 4px 8px rgba(61, 44, 41, 0.15));
+  filter: drop-shadow(0 4px 8px var(--shadow-sm));
 }
 
 .float-1 { top: 15%; left: 10%; animation-delay: 0s; }
@@ -287,8 +312,8 @@ const userStore = useUserStore()
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(255, 107, 91, 0.1);
-  color: var(--coral);
+  background: var(--bg-hover);
+  color: var(--accent);
   padding: 0.5rem 1rem;
   border-radius: 100px;
   font-family: 'Nunito', sans-serif;
@@ -306,7 +331,7 @@ const userStore = useUserStore()
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: clamp(2.5rem, 6vw, 4rem);
-  color: var(--text-dark);
+  color: var(--text-primary);
   line-height: 1.1;
   margin: 0 0 1.5rem;
   animation: fade-in-up 0.8s ease-out 0.1s backwards;
@@ -315,7 +340,7 @@ const userStore = useUserStore()
 .hero-subtitle {
   font-family: 'Nunito', sans-serif;
   font-size: clamp(1.1rem, 2.5vw, 1.35rem);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: 1.7;
   margin: 0 0 2.5rem;
   max-width: 550px;
@@ -354,18 +379,18 @@ const userStore = useUserStore()
 .login-link {
   font-family: 'Nunito', sans-serif;
   font-size: 0.95rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 .login-link span {
-  color: var(--coral);
+  color: var(--accent);
   font-weight: 700;
 }
 
 .login-link:hover {
-  color: var(--text-dark);
+  color: var(--text-primary);
 }
 
 .login-link:hover span {
@@ -375,12 +400,12 @@ const userStore = useUserStore()
 .logged-in-text {
   font-family: 'Nunito', sans-serif;
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0;
 }
 
 .logged-in-text strong {
-  color: var(--coral);
+  color: var(--accent);
 }
 
 .trust-badges {
@@ -396,7 +421,7 @@ const userStore = useUserStore()
   gap: 0.5rem;
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
@@ -427,15 +452,12 @@ const userStore = useUserStore()
 .plate-inner {
   width: 180px;
   height: 180px;
-  background: linear-gradient(165deg, #fff 0%, var(--cream) 100%);
+  background: linear-gradient(165deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow:
-    0 20px 60px rgba(61, 44, 41, 0.15),
-    0 8px 20px rgba(61, 44, 41, 0.1),
-    inset 0 -4px 12px rgba(61, 44, 41, 0.05);
+  box-shadow: var(--shadow-lg);
 }
 
 .plate-emoji {

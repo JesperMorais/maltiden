@@ -65,37 +65,22 @@ const emit = defineEmits<{
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Fraunces:wght@700;800&display=swap');
 
 .todays-meal {
-  --coral: #ff6b5b;
-  --coral-light: #ff8a7d;
-  --peach: #ffb599;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --text-muted: #6b5a56;
-  --yellow-soft: #ffd93d;
-
   position: relative;
-  background: linear-gradient(
-    165deg,
-    var(--cream) 0%,
-    var(--warm-white) 100%
-  );
+  background: var(--bg-primary);
   border-radius: 32px;
   padding: 2.5rem;
   min-height: 320px;
   cursor: pointer;
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow:
-    0 4px 24px rgba(61, 44, 41, 0.06),
-    0 0 0 1px rgba(255, 107, 91, 0.08);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
 }
 
 .todays-meal:hover {
   transform: translateY(-4px);
-  box-shadow:
-    0 12px 40px rgba(61, 44, 41, 0.1),
-    0 0 0 2px rgba(255, 107, 91, 0.2);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-color-hover);
 }
 
 /* Background decorations */
@@ -117,7 +102,7 @@ const emit = defineEmits<{
 .blob-1 {
   width: 300px;
   height: 300px;
-  background: linear-gradient(135deg, var(--peach) 0%, var(--coral-light) 100%);
+  background: var(--accent-gradient);
   top: -100px;
   right: -50px;
 }
@@ -125,7 +110,7 @@ const emit = defineEmits<{
 .blob-2 {
   width: 200px;
   height: 200px;
-  background: var(--yellow-soft);
+  background: var(--warning);
   bottom: -50px;
   left: -50px;
   opacity: 0.3;
@@ -140,7 +125,7 @@ const emit = defineEmits<{
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.4) 50%,
+    var(--shimmer-color) 50%,
     transparent 100%
   );
   animation: shimmer 3s ease-in-out infinite;
@@ -168,7 +153,7 @@ const emit = defineEmits<{
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 1rem;
-  background: rgba(255, 107, 91, 0.1);
+  background: var(--bg-hover);
   border-radius: 100px;
   margin-bottom: 1.5rem;
 }
@@ -177,7 +162,7 @@ const emit = defineEmits<{
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--coral);
+  background: var(--accent);
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -190,7 +175,7 @@ const emit = defineEmits<{
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
-  color: var(--coral);
+  color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -212,7 +197,7 @@ const emit = defineEmits<{
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: clamp(1.75rem, 4vw, 2.5rem);
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.5rem;
   line-height: 1.2;
 }
@@ -220,7 +205,7 @@ const emit = defineEmits<{
 .meal-portions {
   font-family: 'Nunito', sans-serif;
   font-size: 1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0 0 1.5rem;
 }
 
@@ -229,19 +214,19 @@ const emit = defineEmits<{
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: var(--coral);
+  background: var(--accent);
   color: white;
   border-radius: 100px;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.95rem;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(255, 107, 91, 0.3);
+  box-shadow: var(--shadow-accent);
 }
 
 .todays-meal:hover .meal-action {
-  background: var(--coral-light);
-  box-shadow: 0 6px 20px rgba(255, 107, 91, 0.4);
+  background: var(--accent-light);
+  box-shadow: var(--shadow-accent);
 }
 
 .arrow {
@@ -276,7 +261,7 @@ const emit = defineEmits<{
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: 2rem;
-  color: var(--coral);
+  color: var(--accent);
   animation: bounce 2s ease-in-out infinite;
 }
 
@@ -289,14 +274,14 @@ const emit = defineEmits<{
   font-family: 'Fraunces', serif;
   font-weight: 700;
   font-size: 1.5rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.5rem;
 }
 
 .empty-text {
   font-family: 'Nunito', sans-serif;
   font-size: 1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0;
 }
 

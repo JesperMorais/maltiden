@@ -557,24 +557,13 @@ async function handleCreate() {
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap');
 
 .onboarding-page {
-  --coral: #ff6b5b;
-  --coral-dark: #e85a4a;
-  --coral-light: #ff8a7d;
-  --peach: #ffb599;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --text-muted: #6b5a56;
-  --yellow-soft: #ffd93d;
-  --success: #4ade80;
-
   min-height: 100vh;
   padding: 2rem;
   background: linear-gradient(
     165deg,
-    var(--cream) 0%,
-    var(--warm-white) 50%,
-    #fff5eb 100%
+    var(--bg-secondary) 0%,
+    var(--bg-primary) 50%,
+    var(--bg-secondary) 100%
   );
   position: relative;
   overflow: hidden;
@@ -597,7 +586,7 @@ async function handleCreate() {
 .blob-1 {
   width: 500px;
   height: 500px;
-  background: linear-gradient(135deg, var(--peach) 0%, var(--coral-light) 100%);
+  background: linear-gradient(135deg, var(--peach) 0%, var(--accent-light) 100%);
   top: -200px;
   right: -150px;
 }
@@ -633,7 +622,7 @@ async function handleCreate() {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 0.95rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-decoration: none;
   padding: 0.5rem 1rem;
   border-radius: 100px;
@@ -642,8 +631,8 @@ async function handleCreate() {
 }
 
 .back-link:hover {
-  color: var(--coral);
-  background: rgba(255, 107, 91, 0.1);
+  color: var(--accent);
+  background: var(--accent-bg);
 }
 
 .back-arrow {
@@ -670,14 +659,14 @@ async function handleCreate() {
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: clamp(1.75rem, 4vw, 2.5rem);
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.5rem;
 }
 
 .onboarding-header p {
   font-family: 'Nunito', sans-serif;
   font-size: 1.15rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -698,14 +687,14 @@ async function handleCreate() {
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: 2rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.5rem;
 }
 
 .success-state p {
   font-family: 'Nunito', sans-serif;
   font-size: 1.1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0 0 2rem;
 }
 
@@ -747,11 +736,11 @@ async function handleCreate() {
 
 .choice-card:hover {
   transform: translateY(-8px);
-  border-color: rgba(255, 107, 91, 0.2);
+  border-color: var(--accent);
 }
 
 .choice-card-wrapper.active .choice-card {
-  border-color: var(--coral);
+  border-color: var(--accent);
   transform: none;
 }
 
@@ -764,14 +753,14 @@ async function handleCreate() {
   font-family: 'Fraunces', serif;
   font-weight: 700;
   font-size: 1.35rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.75rem;
 }
 
 .choice-card p {
   font-family: 'Nunito', sans-serif;
   font-size: 1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: 1.6;
   margin: 0 0 1.5rem;
 }
@@ -786,13 +775,13 @@ async function handleCreate() {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
-  background: rgba(255, 107, 91, 0.1);
-  color: var(--coral);
+  background: var(--accent-bg);
+  color: var(--accent);
   transition: all 0.3s ease;
 }
 
 .choice-card:hover .choice-indicator {
-  background: var(--coral);
+  background: var(--accent);
   color: white;
 }
 
@@ -801,7 +790,7 @@ async function handleCreate() {
 }
 
 .choice-card-wrapper.active .choice-indicator {
-  background: var(--coral);
+  background: var(--accent);
   color: white;
 }
 
@@ -811,12 +800,11 @@ async function handleCreate() {
 }
 
 .form-card {
-  background: var(--warm-white);
+  background: var(--bg-primary);
   border-radius: 20px;
   padding: 2rem;
-  box-shadow:
-    0 4px 20px rgba(61, 44, 41, 0.06),
-    0 0 0 1px rgba(255, 107, 91, 0.1);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .form-label {
@@ -829,31 +817,32 @@ async function handleCreate() {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
 }
 
 .form-input {
   width: 100%;
   padding: 0.9rem 1.25rem;
-  border: 2px solid rgba(61, 44, 41, 0.1);
+  border: 2px solid var(--border-color);
   border-radius: 14px;
   font-family: 'Nunito', sans-serif;
   font-size: 1rem;
-  color: var(--text-dark);
-  background: white;
+  color: var(--text-primary);
+  background: var(--bg-card);
   transition: all 0.3s ease;
   box-sizing: border-box;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--coral);
-  box-shadow: 0 0 0 4px rgba(255, 107, 91, 0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-bg);
 }
 
 .form-input::placeholder {
-  color: #bbb;
+  color: var(--text-secondary);
+  opacity: 0.6;
 }
 
 /* Password toggle */
@@ -897,7 +886,7 @@ async function handleCreate() {
 .form-hint {
   font-family: 'Nunito', sans-serif;
   font-size: 0.85rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: -0.5rem 0 1.5rem;
 }
 
@@ -908,13 +897,13 @@ async function handleCreate() {
 .form-terms {
   font-family: 'Nunito', sans-serif;
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-align: center;
   margin: 1rem 0 0;
 }
 
 .form-terms a {
-  color: var(--coral);
+  color: var(--accent);
   text-decoration: none;
 }
 
@@ -953,9 +942,10 @@ async function handleCreate() {
 .welcome-step {
   text-align: center;
   padding: 3rem 2rem;
-  background: var(--warm-white);
+  background: var(--bg-primary);
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(61, 44, 41, 0.06);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
   animation: fade-in-up 0.5s ease-out;
 }
 
@@ -969,7 +959,7 @@ async function handleCreate() {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -977,7 +967,7 @@ async function handleCreate() {
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: 1.75rem;
-  color: var(--coral);
+  color: var(--accent);
   margin: 0.25rem 0 1.5rem;
 }
 
@@ -991,7 +981,7 @@ async function handleCreate() {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--coral);
+  background: var(--accent);
   animation: dot-bounce 1.4s ease-in-out infinite;
 }
 
@@ -1013,7 +1003,7 @@ async function handleCreate() {
   font-family: 'Fraunces', serif;
   font-weight: 700;
   font-size: 1.25rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   text-align: center;
   margin: 0 0 1.5rem;
 }
@@ -1030,8 +1020,8 @@ async function handleCreate() {
   align-items: center;
   gap: 1rem;
   padding: 1.25rem;
-  background: white;
-  border: 2px solid rgba(61, 44, 41, 0.1);
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1040,9 +1030,9 @@ async function handleCreate() {
 }
 
 .join-option:hover {
-  border-color: var(--coral);
+  border-color: var(--accent);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 107, 91, 0.15);
+  box-shadow: var(--shadow-sm);
 }
 
 .option-icon {
@@ -1054,14 +1044,14 @@ async function handleCreate() {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 1rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.25rem;
 }
 
 .option-content p {
   font-family: 'Nunito', sans-serif;
   font-size: 0.85rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -1079,7 +1069,7 @@ async function handleCreate() {
 }
 
 .option-badge.recommended {
-  background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--peach) 100%);
   color: white;
 }
 
@@ -1089,14 +1079,14 @@ async function handleCreate() {
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
   padding-top: 1.5rem;
-  border-top: 1px solid rgba(61, 44, 41, 0.1);
+  border-top: 1px solid var(--border-color);
 }
 
 .benefits-column h5 {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.75rem;
 }
 
@@ -1109,7 +1099,7 @@ async function handleCreate() {
 .benefits-column li {
   font-family: 'Nunito', sans-serif;
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   padding: 0.35rem 0;
   display: flex;
   align-items: center;
@@ -1117,7 +1107,7 @@ async function handleCreate() {
 }
 
 .benefits-column.member li {
-  color: var(--text-dark);
+  color: var(--text-primary);
 }
 
 .benefits-column li .muted {
@@ -1135,7 +1125,7 @@ async function handleCreate() {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 0.85rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0.5rem 0;
   margin-bottom: 1rem;
@@ -1143,29 +1133,29 @@ async function handleCreate() {
 }
 
 .back-to-choice:hover {
-  color: var(--coral);
+  color: var(--accent);
 }
 
 .form-title {
   font-family: 'Fraunces', serif;
   font-weight: 700;
   font-size: 1.25rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.25rem;
 }
 
 .form-subtitle {
   font-family: 'Nunito', sans-serif;
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0 0 1.5rem;
 }
 
 .guest-note {
   font-family: 'Nunito', sans-serif;
   font-size: 0.85rem;
-  color: var(--text-muted);
-  background: rgba(255, 107, 91, 0.08);
+  color: var(--text-secondary);
+  background: var(--accent-bg);
   padding: 0.75rem 1rem;
   border-radius: 10px;
   margin: 0 0 1.5rem;
@@ -1181,15 +1171,15 @@ async function handleCreate() {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 0.95rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   cursor: pointer;
   border-radius: 100px;
   transition: all 0.3s ease;
 }
 
 .reset-choice:hover {
-  color: var(--coral);
-  background: rgba(255, 107, 91, 0.1);
+  color: var(--accent);
+  background: var(--accent-bg);
 }
 
 /* Animations */

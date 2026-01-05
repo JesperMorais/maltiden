@@ -47,20 +47,11 @@ const emit = defineEmits<{
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
 
 .weekly-menu {
-  --coral: #ff6b5b;
-  --coral-light: #ff8a7d;
-  --peach: #ffb599;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --text-muted: #6b5a56;
-
-  background: var(--warm-white);
+  background: var(--bg-primary);
   border-radius: 24px;
   padding: 1.5rem;
-  box-shadow:
-    0 4px 20px rgba(61, 44, 41, 0.05),
-    0 0 0 1px rgba(255, 107, 91, 0.06);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .menu-header {
@@ -74,7 +65,7 @@ const emit = defineEmits<{
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 1rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -82,8 +73,8 @@ const emit = defineEmits<{
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 0.8rem;
-  color: var(--text-muted);
-  background: rgba(61, 44, 41, 0.05);
+  color: var(--text-secondary);
+  background: var(--bg-hover);
   padding: 0.25rem 0.75rem;
   border-radius: 100px;
 }
@@ -100,7 +91,7 @@ const emit = defineEmits<{
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 0.5rem;
-  background: white;
+  background: var(--bg-card);
   border: 2px solid transparent;
   border-radius: 16px;
   cursor: pointer;
@@ -110,18 +101,18 @@ const emit = defineEmits<{
 
 .day-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(255, 107, 91, 0.2);
-  box-shadow: 0 4px 12px rgba(61, 44, 41, 0.08);
+  border-color: var(--border-color-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 .day-card.today {
-  background: linear-gradient(165deg, rgba(255, 107, 91, 0.08) 0%, rgba(255, 181, 153, 0.08) 100%);
-  border-color: var(--coral);
+  background: var(--bg-hover);
+  border-color: var(--accent);
 }
 
 .day-card.today:hover {
-  border-color: var(--coral);
-  box-shadow: 0 4px 16px rgba(255, 107, 91, 0.2);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
 }
 
 .day-card.skipped {
@@ -134,20 +125,20 @@ const emit = defineEmits<{
 
 .day-card.no-meal {
   border-style: dashed;
-  border-color: rgba(61, 44, 41, 0.15);
+  border-color: var(--border-color);
 }
 
 .day-name {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .day-card.today .day-name {
-  color: var(--coral);
+  color: var(--accent);
 }
 
 .day-meal {
@@ -172,7 +163,7 @@ const emit = defineEmits<{
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   opacity: 0.4;
 }
 
@@ -180,7 +171,7 @@ const emit = defineEmits<{
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 1.25rem;
-  color: var(--coral);
+  color: var(--accent);
   opacity: 0.4;
   transition: all 0.3s ease;
 }
@@ -198,7 +189,7 @@ const emit = defineEmits<{
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--coral);
+  background: var(--accent);
 }
 
 /* Responsive */

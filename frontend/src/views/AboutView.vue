@@ -163,19 +163,8 @@ import { RouterLink } from 'vue-router'
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap');
 
 .about-page {
-  --coral: #ff6b5b;
-  --coral-dark: #e85a4a;
-  --coral-light: #ff8a7d;
-  --peach: #ffb599;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --text-muted: #6b5a56;
-  --yellow-soft: #ffd93d;
-  --orange-soft: #ffab5e;
-
   min-height: 100vh;
-  background: var(--cream);
+  background: var(--bg-secondary);
   position: relative;
   overflow-x: hidden;
 }
@@ -198,7 +187,7 @@ import { RouterLink } from 'vue-router'
 .blob-1 {
   width: 600px;
   height: 600px;
-  background: linear-gradient(135deg, var(--peach) 0%, var(--coral-light) 100%);
+  background: linear-gradient(135deg, var(--peach) 0%, var(--accent-light) 100%);
   top: -200px;
   right: -200px;
   animation: float-slow 25s ease-in-out infinite;
@@ -216,7 +205,7 @@ import { RouterLink } from 'vue-router'
 .blob-3 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, var(--coral-light) 0%, var(--peach) 100%);
+  background: linear-gradient(135deg, var(--accent-light) 0%, var(--peach) 100%);
   top: 60%;
   right: -100px;
   animation: float-slow 20s ease-in-out infinite;
@@ -243,18 +232,18 @@ import { RouterLink } from 'vue-router'
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 0.95rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-decoration: none;
   padding: 0.5rem 1rem;
   border-radius: 100px;
   transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
 }
 
 .back-link:hover {
-  color: var(--coral);
-  background: rgba(255, 107, 91, 0.15);
+  color: var(--accent);
+  background: var(--accent-bg);
 }
 
 .back-arrow {
@@ -283,8 +272,8 @@ import { RouterLink } from 'vue-router'
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(255, 107, 91, 0.1);
-  color: var(--coral);
+  background: var(--accent-bg);
+  color: var(--accent);
   padding: 0.5rem 1rem;
   border-radius: 100px;
   font-family: 'Nunito', sans-serif;
@@ -302,7 +291,7 @@ import { RouterLink } from 'vue-router'
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: clamp(2.5rem, 6vw, 3.5rem);
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 1rem;
   animation: fade-in-up 0.8s ease-out 0.2s backwards;
 }
@@ -310,7 +299,7 @@ import { RouterLink } from 'vue-router'
 .hero-subtitle {
   font-family: 'Nunito', sans-serif;
   font-size: clamp(1.1rem, 2vw, 1.35rem);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0;
   max-width: 500px;
   margin-inline: auto;
@@ -340,7 +329,7 @@ import { RouterLink } from 'vue-router'
   position: relative;
   z-index: 1;
   padding: 6rem 2rem;
-  background: var(--warm-white);
+  background: var(--bg-primary);
 }
 
 .mission-container {
@@ -366,14 +355,14 @@ import { RouterLink } from 'vue-router'
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: clamp(2rem, 4vw, 2.75rem);
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .team-header p {
   font-family: 'Nunito', sans-serif;
   font-size: 1.1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 1rem 0 0;
   max-width: 500px;
   margin-inline: auto;
@@ -383,7 +372,7 @@ import { RouterLink } from 'vue-router'
   font-family: 'Nunito', sans-serif;
   font-size: 1.2rem;
   line-height: 1.8;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-align: center;
   max-width: 700px;
   margin: 0 auto 4rem;
@@ -397,21 +386,19 @@ import { RouterLink } from 'vue-router'
 }
 
 .value-card {
-  background: white;
+  background: var(--bg-card);
   border-radius: 24px;
   padding: 2rem;
   text-align: center;
-  box-shadow:
-    0 10px 40px rgba(61, 44, 41, 0.06),
-    0 0 0 1px rgba(255, 107, 91, 0.08);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .value-card:hover {
   transform: translateY(-8px);
-  box-shadow:
-    0 20px 60px rgba(61, 44, 41, 0.1),
-    0 0 0 1px rgba(255, 107, 91, 0.15);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent);
 }
 
 .value-icon {
@@ -423,14 +410,14 @@ import { RouterLink } from 'vue-router'
   font-family: 'Fraunces', serif;
   font-weight: 700;
   font-size: 1.25rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.75rem;
 }
 
 .value-card p {
   font-family: 'Nunito', sans-serif;
   font-size: 0.95rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: 1.6;
   margin: 0;
 }
@@ -438,7 +425,7 @@ import { RouterLink } from 'vue-router'
 .mission-quote {
   text-align: center;
   padding: 3rem;
-  background: linear-gradient(135deg, rgba(255, 107, 91, 0.08) 0%, rgba(255, 181, 153, 0.08) 100%);
+  background: var(--accent-bg);
   border-radius: 24px;
   position: relative;
 }
@@ -447,7 +434,7 @@ import { RouterLink } from 'vue-router'
   font-family: 'Fraunces', serif;
   font-weight: 700;
   font-size: clamp(1.25rem, 3vw, 1.5rem);
-  color: var(--text-dark);
+  color: var(--text-primary);
   font-style: italic;
   margin: 0 0 1.5rem;
   line-height: 1.5;
@@ -472,7 +459,7 @@ import { RouterLink } from 'vue-router'
   position: relative;
   z-index: 1;
   padding: 6rem 2rem;
-  background: linear-gradient(180deg, var(--warm-white) 0%, var(--cream) 100%);
+  background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
 }
 
 .team-container {
@@ -489,22 +476,20 @@ import { RouterLink } from 'vue-router'
 
 .team-card {
   position: relative;
-  background: white;
+  background: var(--bg-card);
   border-radius: 28px;
   padding: 2.5rem 2rem;
   text-align: center;
-  box-shadow:
-    0 15px 50px rgba(61, 44, 41, 0.08),
-    0 0 0 1px rgba(255, 107, 91, 0.1);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
 }
 
 .team-card:hover {
   transform: translateY(-10px) scale(1.02);
-  box-shadow:
-    0 25px 70px rgba(61, 44, 41, 0.12),
-    0 0 0 2px rgba(255, 107, 91, 0.2);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--accent);
 }
 
 .card-accent {
@@ -513,7 +498,7 @@ import { RouterLink } from 'vue-router'
   left: 0;
   right: 0;
   height: 6px;
-  background: linear-gradient(90deg, var(--coral) 0%, var(--peach) 100%);
+  background: linear-gradient(90deg, var(--accent) 0%, var(--peach) 100%);
 }
 
 .team-card-david .card-accent {
@@ -547,11 +532,9 @@ import { RouterLink } from 'vue-router'
   width: 100%;
   height: 100%;
   font-size: 3rem;
-  background: linear-gradient(135deg, var(--cream) 0%, white 100%);
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
   border-radius: 50%;
-  box-shadow:
-    0 8px 25px rgba(61, 44, 41, 0.1),
-    inset 0 -3px 10px rgba(61, 44, 41, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .avatar-ring {
@@ -559,7 +542,7 @@ import { RouterLink } from 'vue-router'
   inset: -4px;
   border-radius: 50%;
   border: 3px solid transparent;
-  background: linear-gradient(135deg, var(--coral), var(--peach)) border-box;
+  background: linear-gradient(135deg, var(--accent), var(--peach)) border-box;
   -webkit-mask:
     linear-gradient(#fff 0 0) padding-box,
     linear-gradient(#fff 0 0);
@@ -580,7 +563,7 @@ import { RouterLink } from 'vue-router'
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: 1.5rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.25rem;
 }
 
@@ -588,7 +571,7 @@ import { RouterLink } from 'vue-router'
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 0.95rem;
-  color: var(--coral);
+  color: var(--accent);
   margin: 0 0 1rem;
 }
 
@@ -598,7 +581,7 @@ import { RouterLink } from 'vue-router'
 .member-desc {
   font-family: 'Nunito', sans-serif;
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: 1.6;
   margin: 0;
 }
@@ -631,7 +614,7 @@ import { RouterLink } from 'vue-router'
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 1.1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -640,7 +623,7 @@ import { RouterLink } from 'vue-router'
   position: relative;
   z-index: 1;
   padding: 6rem 2rem;
-  background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--peach) 100%);
   text-align: center;
 }
 
@@ -671,18 +654,18 @@ import { RouterLink } from 'vue-router'
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 1.1rem;
-  color: var(--coral);
-  background: white;
+  color: var(--accent);
+  background: var(--bg-card);
   padding: 1rem 2.5rem;
   border-radius: 100px;
   text-decoration: none;
-  box-shadow: 0 10px 30px rgba(61, 44, 41, 0.2);
+  box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
 }
 
 .cta-button:hover {
   transform: translateY(-3px);
-  box-shadow: 0 15px 40px rgba(61, 44, 41, 0.25);
+  box-shadow: var(--shadow-lg);
 }
 
 .btn-arrow {
