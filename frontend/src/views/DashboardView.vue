@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useUserStore } from '@/stores/user'
 import DashboardHeader from '@/components/dashboard/DashboardHeader.vue'
@@ -8,13 +8,18 @@ import WeeklyMenuGrid from '@/components/dashboard/WeeklyMenuGrid.vue'
 import QuickActions from '@/components/dashboard/QuickActions.vue'
 import HouseholdWidget from '@/components/dashboard/HouseholdWidget.vue'
 import ShoppingListWidget from '@/components/dashboard/ShoppingListWidget.vue'
+import SettingsModal from '@/components/dashboard/SettingsModal.vue'
 import type { MenuDay } from '@/api/types/dashboard.types'
 
 const dashboardStore = useDashboardStore()
 const userStore = useUserStore()
 
+// Settings modal state
+const showSettings = ref(false)
+
 onMounted(() => {
   dashboardStore.fetchDashboard()
+  userStore.initFromToken()
 })
 
 function handleDayClick(day: MenuDay) {
@@ -28,13 +33,15 @@ function handleMealClick() {
 }
 
 function handleLogout() {
-  console.log('Logout')
-  // TODO: Implement logout
+  userStore.logout()
 }
 
 function handleSettings() {
-  console.log('Settings')
-  // TODO: Navigate to settings
+  showSettings.value = true
+}
+
+function handleCloseSettings() {
+  showSettings.value = false
 }
 
 function handleGenerateMenu() {
@@ -137,6 +144,14 @@ function handleViewShoppingList() {
           </aside>
         </div>
       </main>
+
+      <!-- Settings Modal -->
+      <SettingsModal
+        :user="userStore.currentUser"
+        :is-open="showSettings"
+        @close="handleCloseSettings"
+        @logout="handleLogout"
+      />
     </template>
   </div>
 </template>
@@ -145,15 +160,8 @@ function handleViewShoppingList() {
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700&family=Fraunces:wght@700&display=swap');
 
 .dashboard-page {
-  --coral: #ff6b5b;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --text-muted: #6b5a56;
-  --page-bg: #fef6f0;
-
   min-height: 100vh;
-  background: var(--page-bg);
+  background: var(--bg-secondary);
 }
 
 /* Loading state */
@@ -162,7 +170,7 @@ function handleViewShoppingList() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(165deg, var(--cream) 0%, var(--warm-white) 100%);
+  background: var(--bg-primary);
 }
 
 .loader {
@@ -179,7 +187,7 @@ function handleViewShoppingList() {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 1.1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin-top: 1rem;
 }
 
@@ -189,7 +197,7 @@ function handleViewShoppingList() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(165deg, var(--cream) 0%, var(--warm-white) 100%);
+  background: var(--bg-primary);
   padding: 2rem;
 }
 
@@ -208,13 +216,13 @@ function handleViewShoppingList() {
   font-family: 'Fraunces', serif;
   font-weight: 700;
   font-size: 1.75rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.5rem;
 }
 
 .error-content p {
   font-family: 'Nunito', sans-serif;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0 0 1.5rem;
 }
 
@@ -223,7 +231,7 @@ function handleViewShoppingList() {
   font-weight: 700;
   font-size: 1rem;
   color: white;
-  background: var(--coral);
+  background: var(--accent);
   border: none;
   border-radius: 100px;
   padding: 0.85em 2em;
@@ -233,7 +241,7 @@ function handleViewShoppingList() {
 
 .retry-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 107, 91, 0.35);
+  box-shadow: var(--shadow-accent);
 }
 
 /* Dashboard content */

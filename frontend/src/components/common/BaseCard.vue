@@ -20,15 +20,12 @@ withDefaults(defineProps<Props>(), {
 
 <style scoped>
 .base-card {
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --coral-tint: rgba(255, 107, 91, 0.03);
-
   background: linear-gradient(
     165deg,
-    var(--warm-white) 0%,
-    var(--cream) 100%
+    var(--bg-primary) 0%,
+    var(--bg-secondary) 100%
   );
+  border: 1px solid var(--border-color);
   position: relative;
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -40,8 +37,8 @@ withDefaults(defineProps<Props>(), {
   border-radius: inherit;
   background: linear-gradient(
     165deg,
-    rgba(255, 255, 255, 0.8) 0%,
-    rgba(255, 248, 240, 0.4) 100%
+    var(--bg-card) 0%,
+    var(--bg-secondary) 100%
   );
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -59,17 +56,11 @@ withDefaults(defineProps<Props>(), {
 
 /* Shadow */
 .shadow {
-  box-shadow:
-    0 4px 20px rgba(61, 44, 41, 0.06),
-    0 2px 8px rgba(61, 44, 41, 0.04),
-    0 0 0 1px rgba(255, 107, 91, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .shadow:hover {
-  box-shadow:
-    0 12px 40px rgba(61, 44, 41, 0.1),
-    0 4px 12px rgba(61, 44, 41, 0.06),
-    0 0 0 1px rgba(255, 107, 91, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 /* Rounded */

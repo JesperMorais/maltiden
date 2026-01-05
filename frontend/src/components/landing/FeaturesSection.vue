@@ -41,19 +41,10 @@ defineProps<Props>()
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700&family=Fraunces:wght@700;800&display=swap');
 
 .features-section {
-  --coral: #ff6b5b;
-  --coral-light: #ff8a7d;
-  --peach: #ffb599;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --section-bg: #fef6f0;
-  --cta-bg: #fff5eb;
-
   position: relative;
   padding: 6rem 2rem;
   padding-bottom: 12rem;
-  background: var(--section-bg);
+  background: var(--bg-secondary);
   overflow: visible;
 }
 
@@ -65,7 +56,7 @@ defineProps<Props>()
   left: 0;
   right: 0;
   height: 150px;
-  background: var(--cta-bg);
+  background: var(--bg-secondary);
   clip-path: ellipse(70% 100% at 50% 100%);
 }
 
@@ -78,7 +69,7 @@ defineProps<Props>()
 .dot-pattern {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(var(--coral) 1px, transparent 1px);
+  background-image: radial-gradient(var(--accent) 1px, transparent 1px);
   background-size: 40px 40px;
   opacity: 0.03;
 }
@@ -102,8 +93,8 @@ defineProps<Props>()
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: var(--coral);
-  background: rgba(255, 107, 91, 0.1);
+  color: var(--accent);
+  background: var(--bg-hover);
   padding: 0.5rem 1.25rem;
   border-radius: 100px;
   margin-bottom: 1.25rem;
@@ -113,7 +104,7 @@ defineProps<Props>()
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: clamp(2rem, 4vw, 2.75rem);
-  color: var(--text-dark);
+  color: var(--text-primary);
   line-height: 1.2;
   margin: 0;
   max-width: 600px;

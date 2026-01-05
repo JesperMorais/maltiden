@@ -151,22 +151,11 @@ function cancelRemove() {
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
 
 .household-widget {
-  --coral: #ff6b5b;
-  --coral-light: #ff8a7d;
-  --peach: #ffb599;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --text-muted: #6b5a56;
-  --green: #48bb78;
-  --red: #e53e3e;
-
-  background: var(--warm-white);
+  background: var(--bg-primary);
   border-radius: 20px;
   padding: 1.25rem;
-  box-shadow:
-    0 4px 20px rgba(61, 44, 41, 0.05),
-    0 0 0 1px rgba(255, 107, 91, 0.06);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
   position: relative;
 }
 
@@ -181,7 +170,7 @@ function cancelRemove() {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 0.9rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -195,8 +184,8 @@ function cancelRemove() {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 0.75rem;
-  color: var(--text-muted);
-  background: rgba(61, 44, 41, 0.05);
+  color: var(--text-secondary);
+  background: var(--bg-hover);
   padding: 0.2rem 0.6rem;
   border-radius: 100px;
 }
@@ -217,30 +206,30 @@ function cancelRemove() {
 }
 
 .settings-btn:hover {
-  background: rgba(61, 44, 41, 0.08);
+  background: var(--bg-hover);
   opacity: 1;
 }
 
 .settings-btn.active {
-  background: rgba(255, 107, 91, 0.15);
+  background: var(--bg-hover);
   opacity: 1;
 }
 
 /* Settings dropdown */
 .settings-dropdown {
-  background: white;
+  background: var(--bg-card);
   border-radius: 12px;
   padding: 0.75rem;
   margin-bottom: 1rem;
-  box-shadow: 0 4px 16px rgba(61, 44, 41, 0.1);
-  border: 1px solid rgba(61, 44, 41, 0.08);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
 }
 
 .dropdown-label {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0 0 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -280,7 +269,7 @@ function cancelRemove() {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 0.85rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   text-align: left;
 }
 
@@ -288,7 +277,7 @@ function cancelRemove() {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 1.25rem;
-  color: var(--red);
+  color: var(--error);
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -332,7 +321,7 @@ function cancelRemove() {
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem;
-  background: white;
+  background: var(--bg-card);
   border-radius: 12px;
   transition: all 0.2s ease;
 }
@@ -357,12 +346,12 @@ function cancelRemove() {
 
 .member-avatar.owner,
 .member-initial.owner {
-  background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+  background: var(--role-owner-bg);
 }
 
 .member-avatar.member,
 .member-initial.member {
-  background: linear-gradient(135deg, var(--coral) 0%, var(--peach) 100%);
+  background: var(--role-member-bg);
 }
 
 .member-avatar.guest,
@@ -380,7 +369,7 @@ function cancelRemove() {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
 }
 
 .member-status {
@@ -389,19 +378,19 @@ function cancelRemove() {
   gap: 0.35rem;
   font-family: 'Nunito', sans-serif;
   font-size: 0.7rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: var(--text-secondary);
   opacity: 0.4;
 }
 
 .status-dot.eating {
-  background: var(--green);
+  background: var(--success);
   opacity: 1;
 }
 
@@ -428,8 +417,8 @@ function cancelRemove() {
   font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
-  background: rgba(61, 44, 41, 0.08);
+  color: var(--text-secondary);
+  background: var(--bg-hover);
   padding: 0.2rem 0.5rem;
   border-radius: 100px;
 }
@@ -441,20 +430,20 @@ function cancelRemove() {
   gap: 0.5rem;
   width: 100%;
   padding: 0.65rem;
-  background: rgba(255, 107, 91, 0.08);
-  border: 1px dashed rgba(255, 107, 91, 0.3);
+  background: var(--bg-hover);
+  border: 1px dashed var(--border-color-hover);
   border-radius: 12px;
   cursor: pointer;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
-  color: var(--coral);
+  color: var(--accent);
   transition: all 0.3s ease;
 }
 
 .invite-button:hover {
-  background: rgba(255, 107, 91, 0.15);
-  border-color: var(--coral);
+  background: var(--bg-hover);
+  border-color: var(--accent);
 }
 
 .invite-icon {
@@ -479,7 +468,7 @@ function cancelRemove() {
 .confirm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(61, 44, 41, 0.5);
+  background: var(--overlay-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -488,13 +477,14 @@ function cancelRemove() {
 }
 
 .confirm-dialog {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 20px;
   padding: 2rem;
   max-width: 360px;
   width: 100%;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(61, 44, 41, 0.25);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
 }
 
 .confirm-icon {
@@ -506,20 +496,20 @@ function cancelRemove() {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 1.25rem;
-  color: #3d2c29;
+  color: var(--text-primary);
   margin: 0 0 0.5rem;
 }
 
 .confirm-dialog p {
   font-family: 'Nunito', sans-serif;
   font-size: 0.9rem;
-  color: #6b5a56;
+  color: var(--text-secondary);
   line-height: 1.5;
   margin: 0 0 1.5rem;
 }
 
 .confirm-dialog strong {
-  color: #3d2c29;
+  color: var(--text-primary);
 }
 
 .confirm-actions {
@@ -540,13 +530,13 @@ function cancelRemove() {
 }
 
 .btn-cancel {
-  background: rgba(61, 44, 41, 0.08);
+  background: var(--bg-hover);
   border: none;
-  color: #3d2c29;
+  color: var(--text-primary);
 }
 
 .btn-cancel:hover {
-  background: rgba(61, 44, 41, 0.15);
+  background: var(--border-color);
 }
 
 .btn-confirm {
