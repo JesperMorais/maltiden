@@ -7,12 +7,16 @@ backend/*.sqlite
 # === Node/Vue ===
 frontend/node_modules/
 frontend/dist/
+frontend/.vite/
+npm-debug.log
+yarn-error.log
 
 # === IDE ===
 .idea/
 .vscode/
 *.swp
 *.swo
+.claude/settings.local.json
 
 # === OS ===
 .DS_Store
@@ -25,4 +29,3 @@ Thumbs.db
 
 # === Logs ===
 *.log
-*.txt
