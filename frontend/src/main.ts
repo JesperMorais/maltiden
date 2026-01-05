@@ -4,9 +4,18 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
-const app = createApp(App)
+// Global theme styles
+import './styles/theme.css'
 
-app.use(createPinia())
+const app = createApp(App)
+const pinia = createPinia()
+
+app.use(pinia)
 app.use(router)
+
+// Initialize theme before mounting to prevent flash
+import { useThemeStore } from './stores/theme'
+const themeStore = useThemeStore(pinia)
+themeStore.initTheme()
 
 app.mount('#app')
