@@ -1,0 +1,296 @@
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { useDashboardStore } from '@/stores/dashboard'
+import { useUserStore } from '@/stores/user'
+import DashboardHeader from '@/components/dashboard/DashboardHeader.vue'
+import TodaysMeal from '@/components/dashboard/TodaysMeal.vue'
+import WeeklyMenuGrid from '@/components/dashboard/WeeklyMenuGrid.vue'
+import QuickActions from '@/components/dashboard/QuickActions.vue'
+import HouseholdWidget from '@/components/dashboard/HouseholdWidget.vue'
+import ShoppingListWidget from '@/components/dashboard/ShoppingListWidget.vue'
+import type { MenuDay } from '@/api/types/dashboard.types'
+
+const dashboardStore = useDashboardStore()
+const userStore = useUserStore()
+
+onMounted(() => {
+  dashboardStore.fetchDashboard()
+})
+
+function handleDayClick(day: MenuDay) {
+  console.log('Day clicked:', day)
+  // TODO: Open day detail modal
+}
+
+function handleMealClick() {
+  console.log('Today meal clicked')
+  // TODO: Open recipe detail
+}
+
+function handleLogout() {
+  console.log('Logout')
+  // TODO: Implement logout
+}
+
+function handleSettings() {
+  console.log('Settings')
+  // TODO: Navigate to settings
+}
+
+function handleGenerateMenu() {
+  console.log('Generate menu')
+  // TODO: Implement menu generation
+}
+
+function handleAddRecipe() {
+  console.log('Add recipe')
+  // TODO: Navigate to add recipe
+}
+
+function handleInviteMember() {
+  console.log('Invite member')
+  // TODO: Show invite modal
+}
+
+function handleShowInvite() {
+  console.log('Show invite code')
+  // TODO: Show invite modal
+}
+
+function handleRemoveMember(memberId: string) {
+  console.log('Remove member:', memberId)
+  // TODO: Call API to remove member from household
+}
+
+function handleViewShoppingList() {
+  console.log('View shopping list')
+  // TODO: Navigate to shopping list
+}
+</script>
+
+<template>
+  <div class="dashboard-page">
+    <!-- Loading state -->
+    <div v-if="dashboardStore.isLoading" class="loading-state">
+      <div class="loader">
+        <span class="loader-icon">🍳</span>
+        <p class="loader-text">Laddar din dashboard...</p>
+      </div>
+    </div>
+
+    <!-- Error state -->
+    <div v-else-if="dashboardStore.error" class="error-state">
+      <div class="error-content">
+        <span class="error-icon">😅</span>
+        <h2>Något gick fel</h2>
+        <p>{{ dashboardStore.error }}</p>
+        <button class="retry-btn" @click="dashboardStore.fetchDashboard(true)">
+          Försök igen
+        </button>
+      </div>
+    </div>
+
+    <!-- Dashboard content -->
+    <template v-else-if="dashboardStore.dashboardData">
+      <DashboardHeader
+        :household-name="dashboardStore.householdName"
+        :user-name="userStore.userName"
+        :user-role="userStore.userRole || 'guest'"
+        @logout="handleLogout"
+        @settings="handleSettings"
+      />
+
+      <main class="dashboard-content">
+        <div class="dashboard-grid">
+          <!-- Main content area -->
+          <div class="main-area">
+            <TodaysMeal
+              :meal="dashboardStore.todaysMeal"
+              @click="handleMealClick"
+            />
+
+            <WeeklyMenuGrid
+              :weekly-menu="dashboardStore.weeklyMenu"
+              @day-click="handleDayClick"
+            />
+          </div>
+
+          <!-- Sidebar -->
+          <aside class="sidebar">
+            <QuickActions
+              @generate-menu="handleGenerateMenu"
+              @add-recipe="handleAddRecipe"
+              @invite-member="handleInviteMember"
+            />
+
+            <HouseholdWidget
+              :members="dashboardStore.householdMembers"
+              :invite-code="dashboardStore.inviteCode"
+              @show-invite="handleShowInvite"
+              @remove-member="handleRemoveMember"
+            />
+
+            <ShoppingListWidget
+              :shopping-list="dashboardStore.shoppingList"
+              @view-list="handleViewShoppingList"
+            />
+          </aside>
+        </div>
+      </main>
+    </template>
+  </div>
+</template>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700&family=Fraunces:wght@700&display=swap');
+
+.dashboard-page {
+  --coral: #ff6b5b;
+  --cream: #fff8f0;
+  --warm-white: #fffcf7;
+  --text-dark: #3d2c29;
+  --text-muted: #6b5a56;
+  --page-bg: #fef6f0;
+
+  min-height: 100vh;
+  background: var(--page-bg);
+}
+
+/* Loading state */
+.loading-state {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(165deg, var(--cream) 0%, var(--warm-white) 100%);
+}
+
+.loader {
+  text-align: center;
+}
+
+.loader-icon {
+  font-size: 4rem;
+  display: block;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.loader-text {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  margin-top: 1rem;
+}
+
+/* Error state */
+.error-state {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(165deg, var(--cream) 0%, var(--warm-white) 100%);
+  padding: 2rem;
+}
+
+.error-content {
+  text-align: center;
+  max-width: 400px;
+}
+
+.error-icon {
+  font-size: 4rem;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.error-content h2 {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: 1.75rem;
+  color: var(--text-dark);
+  margin: 0 0 0.5rem;
+}
+
+.error-content p {
+  font-family: 'Nunito', sans-serif;
+  color: var(--text-muted);
+  margin: 0 0 1.5rem;
+}
+
+.retry-btn {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: white;
+  background: var(--coral);
+  border: none;
+  border-radius: 100px;
+  padding: 0.85em 2em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retry-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 91, 0.35);
+}
+
+/* Dashboard content */
+.dashboard-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 2rem;
+  align-items: start;
+}
+
+.main-area {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: calc(70px + 2rem); /* Header height + padding */
+}
+
+/* Animations */
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-content {
+    padding: 1rem;
+  }
+
+  .sidebar {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
