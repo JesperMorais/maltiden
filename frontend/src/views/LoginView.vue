@@ -22,22 +22,13 @@ async function handleLogin() {
   isLoading.value = true
   error.value = ''
 
-  // Mock login - simulate API call
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  // Use real backend login
+  const success = await userStore.login(email.value, password.value)
 
-  // Mock: Accept any valid-looking credentials
-  if (email.value && password.value) {
-    // Set mock user data
-    userStore.setUser({
-      id: 'user-1',
-      name: email.value.split('@')[0],
-      email: email.value,
-      role: 'member'
-    })
-
+  if (success) {
     router.push('/dashboard')
   } else {
-    error.value = 'Fel e-post eller lösenord'
+    error.value = userStore.error || 'Fel e-post eller lösenord'
   }
 
   isLoading.value = false
@@ -55,7 +46,7 @@ async function handleLogin() {
 
     <div class="login-container">
       <!-- Back link -->
-      <RouterLink to="/" class="back-link">
+      <RouterLink v-prefetch="'landing'" to="/" class="back-link">
         <span class="back-arrow">←</span>
         <span>Tillbaka</span>
       </RouterLink>
@@ -103,7 +94,7 @@ async function handleLogin() {
         <div class="login-footer">
           <p>
             Har du inget konto?
-            <RouterLink to="/register">Skapa konto</RouterLink>
+            <RouterLink v-prefetch="'register'" to="/register">Skapa konto</RouterLink>
           </p>
         </div>
       </div>
@@ -112,8 +103,6 @@ async function handleLogin() {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap');
-
 .login-page {
   --coral: #ff6b5b;
   --coral-dark: #e85a4a;

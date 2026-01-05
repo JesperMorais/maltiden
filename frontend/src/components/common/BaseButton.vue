@@ -32,8 +32,6 @@ withDefaults(defineProps<Props>(), {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
-
 .base-button {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;

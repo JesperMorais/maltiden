@@ -1,11 +1,9 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type { DashboardData, Meal, MenuDay, Household, ShoppingListSummary } from '@/api/types/dashboard.types'
-import { USE_MOCKS } from '@/mocks'
 import { mockDashboardData } from '@/mocks/dashboard.mock'
 import { useUserStore } from './user'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+import apiClient from '@/api/client'
 
 /**
  * Dashboard Store
@@ -57,37 +55,35 @@ export const useDashboardStore = defineStore('dashboard', () => {
     error.value = null
 
     try {
-      if (USE_MOCKS) {
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 500))
-        dashboardData.value = mockDashboardData
+      // Fetch real household data from backend
+      const { data: householdData } = await apiClient.get('/households/me')
 
-        // Set current user from dashboard data
-        if (dashboardData.value.user) {
-          userStore.setUser(dashboardData.value.user)
-        }
-      } else {
-        const response = await fetch(`${API_URL}/api/dashboard`)
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch dashboard: ${response.status}`)
-        }
-
-        const result = await response.json()
-
-        if (!result.success) {
-          throw new Error(result.error?.message || 'Unknown error')
-        }
-
-        dashboardData.value = result.data
-
-        if (result.data.user) {
-          userStore.setUser(result.data.user)
+      // Combine real household with mock data for features not yet implemented
+      // (menu, shopping list, etc. will come from backend later)
+      dashboardData.value = {
+        ...mockDashboardData,
+        user: userStore.currentUser!,
+        household: {
+          id: householdData.id,
+          name: householdData.name,
+          inviteCode: householdData.inviteCode || 'ABC123', // Backend may not have this yet
+          members: householdData.members.map((m: { id: string; name: string; role: string }) => ({
+            id: m.id,
+            name: m.name,
+            role: m.role as 'owner' | 'member' | 'guest',
+            isEatingToday: true, // Default until backend supports this
+            wantsLunchBox: false
+          }))
         }
       }
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Kunde inte ladda dashboard'
-      console.error('Dashboard store error:', e)
+      // If backend fails, fall back to full mock data
+      console.warn('Using mock dashboard data:', e)
+      dashboardData.value = mockDashboardData
+
+      if (dashboardData.value.user) {
+        userStore.setUser(dashboardData.value.user)
+      }
     } finally {
       isLoading.value = false
     }

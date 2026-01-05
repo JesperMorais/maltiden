@@ -1,8 +1,8 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import { useRouter } from 'vue-router'
 import type { User, UserRole } from '@/api/types/dashboard.types'
 import { tokenUtils } from '@/utils/token'
+import * as authApi from '@/api/auth.api'
 
 /**
  * User Store
@@ -14,6 +14,8 @@ export const useUserStore = defineStore('user', () => {
   // State
   const currentUser = ref<User | null>(null)
   const isAuthenticated = ref(false)
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
 
   // Computed
   const userRole = computed<UserRole | null>(() => currentUser.value?.role ?? null)
@@ -64,10 +66,71 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  /**
+   * Clear any error state
+   */
+  function clearError() {
+    error.value = null
+  }
+
+  /**
+   * Login with email and password
+   */
+  async function login(email: string, password: string): Promise<boolean> {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const response = await authApi.login(email, password)
+      tokenUtils.set(response.token)
+      setUser({
+        id: response.user.id,
+        name: response.user.name,
+        email: response.user.email,
+        role: 'member' // Default role, will be updated when fetching household
+      })
+      return true
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'Inloggningen misslyckades'
+      error.value = errorMessage
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Register a new user
+   */
+  async function register(name: string, email: string, password: string): Promise<boolean> {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const response = await authApi.register(name, email, password)
+      tokenUtils.set(response.token)
+      setUser({
+        id: response.user.id,
+        name: response.user.name,
+        email: response.user.email,
+        role: 'member'
+      })
+      return true
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'Registreringen misslyckades'
+      error.value = errorMessage
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
     // State
     currentUser,
     isAuthenticated,
+    isLoading,
+    error,
 
     // Computed
     userRole,
@@ -81,6 +144,9 @@ export const useUserStore = defineStore('user', () => {
     clearUser,
     logout,
     canPerformAction,
-    initFromToken
+    initFromToken,
+    clearError,
+    login,
+    register
   }
 })

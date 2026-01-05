@@ -41,7 +41,7 @@ function handleSettings() {
   <header class="dashboard-header">
     <div class="header-content">
       <!-- Logo (link to landing) -->
-      <RouterLink to="/" class="logo">
+      <RouterLink v-prefetch="'landing'" to="/" class="logo">
         <span class="logo-icon">🍽️</span>
         <span class="logo-text">Måltiden</span>
       </RouterLink>
@@ -86,8 +86,6 @@ function handleSettings() {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Fraunces:wght@700&display=swap');
-
 .dashboard-header {
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);

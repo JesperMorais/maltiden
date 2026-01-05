@@ -62,8 +62,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700&family=Fraunces:wght@700&display=swap');
-
 .landing-page {
   min-height: 100vh;
   background: var(--bg-secondary);

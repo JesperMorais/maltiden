@@ -39,7 +39,7 @@ defineProps<Props>()
         <p class="cta-description">{{ description }}</p>
 
         <div class="cta-actions">
-          <RouterLink :to="primaryButton.link" class="cta-link">
+          <RouterLink v-prefetch:path="primaryButton.link" :to="primaryButton.link" class="cta-link">
             <BaseButton variant="primary" size="lg">
               {{ primaryButton.text }}
               <span class="btn-icon">→</span>
@@ -48,6 +48,7 @@ defineProps<Props>()
 
           <RouterLink
             v-if="secondaryButton"
+            v-prefetch:path="secondaryButton.link"
             :to="secondaryButton.link"
             class="cta-link"
           >
@@ -74,8 +75,6 @@ defineProps<Props>()
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Fraunces:wght@700;800&display=swap');
-
 .cta-section {
   position: relative;
   padding: 6rem 2rem;

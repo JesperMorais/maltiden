@@ -35,8 +35,6 @@ const iconMap: Record<string, string> = {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Fraunces:wght@700&display=swap');
-
 .feature-card {
   position: relative;
   text-align: center;

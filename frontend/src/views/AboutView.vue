@@ -14,7 +14,7 @@ import { RouterLink } from 'vue-router'
 
     <!-- Navigation -->
     <nav class="about-nav">
-      <RouterLink to="/" class="back-link">
+      <RouterLink v-prefetch="'landing'" to="/" class="back-link">
         <span class="back-arrow">←</span>
         <span>Tillbaka</span>
       </RouterLink>
@@ -160,8 +160,6 @@ import { RouterLink } from 'vue-router'
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap');
-
 .about-page {
   min-height: 100vh;
   background: var(--bg-secondary);

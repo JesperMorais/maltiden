@@ -26,7 +26,7 @@ const themeStore = useThemeStore()
         <span class="logo-text">Måltiden</span>
       </RouterLink>
       <div class="nav-actions">
-        <RouterLink to="/about" class="nav-link">Om oss</RouterLink>
+        <RouterLink v-prefetch="'about'" to="/about" class="nav-link">Om oss</RouterLink>
         <button
           class="theme-toggle"
           @click="themeStore.toggleDarkMode()"
@@ -68,7 +68,7 @@ const themeStore = useThemeStore()
       <div class="hero-actions">
         <!-- Logged in: Go to dashboard -->
         <template v-if="userStore.isAuthenticated">
-          <RouterLink to="/dashboard" class="cta-link">
+          <RouterLink v-prefetch="'dashboard'" to="/dashboard" class="cta-link">
             <BaseButton variant="primary" size="lg">
               Gå till Dashboard
               <span class="btn-arrow">→</span>
@@ -82,14 +82,14 @@ const themeStore = useThemeStore()
         <!-- Not logged in: Register + Login -->
         <template v-else>
           <div class="auth-buttons">
-            <RouterLink :to="ctaButtonLink" class="cta-link">
+            <RouterLink v-prefetch="'register'" :to="ctaButtonLink" class="cta-link">
               <BaseButton variant="primary" size="lg">
                 {{ ctaButtonText }}
                 <span class="btn-arrow">→</span>
               </BaseButton>
             </RouterLink>
 
-            <RouterLink to="/login" class="login-link">
+            <RouterLink v-prefetch="'login'" to="/login" class="login-link">
               Redan medlem? <span>Logga in</span>
             </RouterLink>
           </div>
@@ -121,8 +121,6 @@ const themeStore = useThemeStore()
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap');
-
 .hero {
   min-height: 100vh;
   display: flex;
