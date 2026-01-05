@@ -3,6 +3,7 @@ import LandingView from '@/views/LandingView.vue'
 import OnboardingView from '@/views/OnboardingView.vue'
 import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
+import AboutView from '@/views/AboutView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -29,6 +30,12 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
       component: DashboardView,
+      meta: { transition: 'page-fade' }
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: AboutView,
       meta: { transition: 'page-fade' }
     },
   ],
