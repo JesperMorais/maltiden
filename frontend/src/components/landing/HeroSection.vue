@@ -17,6 +17,15 @@ const userStore = useUserStore()
 
 <template>
   <section class="hero">
+    <!-- Navigation -->
+    <nav class="hero-nav">
+      <RouterLink to="/" class="nav-logo">
+        <span class="logo-icon">🍽️</span>
+        <span class="logo-text">Måltiden</span>
+      </RouterLink>
+      <RouterLink to="/about" class="nav-link">Om oss</RouterLink>
+    </nav>
+
     <!-- Decorative background elements -->
     <div class="hero-bg">
       <div class="blob blob-1"></div>
@@ -128,6 +137,60 @@ const userStore = useUserStore()
     var(--warm-white) 50%,
     #fff5eb 100%
   );
+}
+
+/* Navigation */
+.hero-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  transition: transform 0.3s ease;
+}
+
+.nav-logo:hover {
+  transform: scale(1.05);
+}
+
+.nav-logo .logo-icon {
+  font-size: 1.75rem;
+}
+
+.nav-logo .logo-text {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 1.35rem;
+  color: var(--text-dark);
+}
+
+.nav-link {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+  color: var(--coral);
+  background: rgba(255, 107, 91, 0.15);
 }
 
 /* Curved bottom transition */
