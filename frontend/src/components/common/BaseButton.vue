@@ -35,14 +35,6 @@ withDefaults(defineProps<Props>(), {
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
 
 .base-button {
-  --coral: #ff6b5b;
-  --coral-dark: #e85a4a;
-  --coral-light: #ff8a7d;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --peach: #ffb599;
-
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   border: none;
@@ -77,16 +69,13 @@ withDefaults(defineProps<Props>(), {
 
 /* Variant: Primary */
 .variant-primary {
-  background: linear-gradient(135deg, var(--coral) 0%, var(--coral-dark) 100%);
-  color: var(--warm-white);
-  box-shadow:
-    0 4px 14px rgba(255, 107, 91, 0.35),
-    0 2px 4px rgba(255, 107, 91, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: white;
+  box-shadow: var(--shadow-accent);
 }
 
 .variant-primary::before {
-  background: linear-gradient(135deg, var(--coral-light) 0%, var(--coral) 100%);
+  background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 100%);
 }
 
 .variant-primary:hover:not(:disabled)::before {
@@ -94,43 +83,36 @@ withDefaults(defineProps<Props>(), {
 }
 
 .variant-primary:hover:not(:disabled) {
-  box-shadow:
-    0 8px 24px rgba(255, 107, 91, 0.4),
-    0 4px 8px rgba(255, 107, 91, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow: var(--shadow-accent);
 }
 
 /* Variant: Secondary */
 .variant-secondary {
-  background: linear-gradient(135deg, var(--cream) 0%, var(--warm-white) 100%);
-  color: var(--text-dark);
-  box-shadow:
-    0 4px 12px rgba(61, 44, 41, 0.08),
-    0 2px 4px rgba(61, 44, 41, 0.05),
-    inset 0 0 0 2px rgba(255, 107, 91, 0.15);
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .variant-secondary:hover:not(:disabled) {
-  box-shadow:
-    0 8px 20px rgba(61, 44, 41, 0.12),
-    0 4px 8px rgba(61, 44, 41, 0.08),
-    inset 0 0 0 2px var(--coral);
-  color: var(--coral-dark);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* Variant: Outline */
 .variant-outline {
   background: transparent;
-  color: var(--coral);
-  box-shadow: inset 0 0 0 2.5px var(--coral);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 2.5px var(--accent);
 }
 
 .variant-outline:hover:not(:disabled) {
-  background: var(--coral);
-  color: var(--warm-white);
+  background: var(--accent);
+  color: white;
   box-shadow:
-    inset 0 0 0 2.5px var(--coral),
-    0 6px 16px rgba(255, 107, 91, 0.3);
+    inset 0 0 0 2.5px var(--accent),
+    var(--shadow-accent);
 }
 
 /* Sizes */

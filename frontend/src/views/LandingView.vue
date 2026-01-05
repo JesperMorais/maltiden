@@ -65,15 +65,8 @@ onMounted(() => {
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700&family=Fraunces:wght@700&display=swap');
 
 .landing-page {
-  --coral: #ff6b5b;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --text-muted: #6b5a56;
-  --cta-bg: #fff5eb;
-
   min-height: 100vh;
-  background: var(--cta-bg);
+  background: var(--bg-secondary);
   overflow-x: hidden;
 }
 
@@ -83,7 +76,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(165deg, var(--cream) 0%, var(--warm-white) 100%);
+  background: linear-gradient(165deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
 }
 
 .loader {
@@ -100,7 +93,7 @@ onMounted(() => {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 1.25rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin-top: 1rem;
 }
 
@@ -110,7 +103,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(165deg, var(--cream) 0%, var(--warm-white) 100%);
+  background: linear-gradient(165deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   padding: 2rem;
 }
 
@@ -129,13 +122,13 @@ onMounted(() => {
   font-family: 'Fraunces', serif;
   font-weight: 700;
   font-size: 1.75rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.5rem;
 }
 
 .error-content p {
   font-family: 'Nunito', sans-serif;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0 0 1.5rem;
 }
 
@@ -143,8 +136,8 @@ onMounted(() => {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 1rem;
-  color: var(--warm-white);
-  background: var(--coral);
+  color: white;
+  background: var(--accent);
   border: none;
   border-radius: 100px;
   padding: 0.85em 2em;
@@ -154,7 +147,7 @@ onMounted(() => {
 
 .retry-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 107, 91, 0.35);
+  box-shadow: var(--shadow-accent);
 }
 
 @keyframes bounce {
