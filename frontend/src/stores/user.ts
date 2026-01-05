@@ -1,6 +1,8 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import { useRouter } from 'vue-router'
 import type { User, UserRole } from '@/api/types/dashboard.types'
+import { tokenUtils } from '@/utils/token'
 
 /**
  * User Store
@@ -34,11 +36,32 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /**
+   * Logout - clear token and redirect to login
+   */
+  function logout() {
+    tokenUtils.remove()
+    clearUser()
+    // Use window.location for hard redirect to clear any state
+    window.location.href = '/login'
+  }
+
+  /**
    * Check if user can perform a member-only action
    */
   function canPerformAction(requiresMember = true): boolean {
     if (!requiresMember) return true
     return isMember.value
+  }
+
+  /**
+   * Initialize user from token (if exists)
+   */
+  function initFromToken() {
+    if (tokenUtils.exists()) {
+      // In real app, we'd validate token with backend
+      // For now, just mark as potentially authenticated
+      isAuthenticated.value = true
+    }
   }
 
   return {
@@ -56,6 +79,8 @@ export const useUserStore = defineStore('user', () => {
     // Actions
     setUser,
     clearUser,
-    canPerformAction
+    logout,
+    canPerformAction,
+    initFromToken
   }
 })

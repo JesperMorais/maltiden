@@ -77,21 +77,11 @@ defineProps<Props>()
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Fraunces:wght@700;800&display=swap');
 
 .cta-section {
-  --coral: #ff6b5b;
-  --coral-dark: #e85a4a;
-  --coral-light: #ff8a7d;
-  --peach: #ffb599;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --text-muted: #6b5a56;
-  --cta-bg: #fff5eb;
-
   position: relative;
   padding: 6rem 2rem;
   padding-top: 4rem;
   padding-bottom: 6rem;
-  background: var(--cta-bg);
+  background: var(--bg-secondary);
   overflow: hidden;
 }
 
@@ -110,7 +100,7 @@ defineProps<Props>()
 .orb-1 {
   width: 500px;
   height: 500px;
-  background: linear-gradient(135deg, var(--peach) 0%, var(--coral-light) 100%);
+  background: linear-gradient(135deg, var(--peach) 0%, var(--accent-light) 100%);
   top: -150px;
   left: -150px;
   opacity: 0.4;
@@ -120,7 +110,7 @@ defineProps<Props>()
 .orb-2 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, #ffd93d 0%, var(--peach) 100%);
+  background: linear-gradient(135deg, var(--yellow-soft) 0%, var(--peach) 100%);
   bottom: -100px;
   right: -100px;
   opacity: 0.3;
@@ -135,7 +125,7 @@ defineProps<Props>()
 .sparkle {
   position: absolute;
   font-size: 1rem;
-  color: var(--coral);
+  color: var(--accent);
   opacity: 0.4;
   animation: twinkle 3s ease-in-out infinite;
   animation-delay: calc(var(--i) * 0.5s);
@@ -157,27 +147,25 @@ defineProps<Props>()
 
 .cta-content {
   text-align: center;
-  background: var(--warm-white);
+  background: var(--bg-primary);
   border-radius: 32px;
   padding: 4rem 3rem;
-  box-shadow:
-    0 20px 60px rgba(61, 44, 41, 0.08),
-    0 8px 24px rgba(61, 44, 41, 0.05),
-    0 0 0 1px rgba(255, 107, 91, 0.08);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
 }
 
 .cta-icon {
   width: 80px;
   height: 80px;
   margin: 0 auto 1.5rem;
-  background: linear-gradient(135deg, var(--peach) 0%, var(--coral-light) 100%);
+  background: linear-gradient(135deg, var(--peach) 0%, var(--accent-light) 100%);
   border-radius: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 2.5rem;
   transform: rotate(-6deg);
-  box-shadow: 0 8px 24px rgba(255, 107, 91, 0.25);
+  box-shadow: var(--shadow-accent);
   animation: wiggle 4s ease-in-out infinite;
 }
 
@@ -185,7 +173,7 @@ defineProps<Props>()
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: clamp(1.75rem, 4vw, 2.5rem);
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 1rem;
   line-height: 1.2;
 }
@@ -193,7 +181,7 @@ defineProps<Props>()
 .cta-description {
   font-family: 'Nunito', sans-serif;
   font-size: 1.15rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: 1.7;
   margin: 0 0 2rem;
   max-width: 500px;
@@ -224,7 +212,7 @@ defineProps<Props>()
 .cta-note {
   font-family: 'Nunito', sans-serif;
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -253,7 +241,7 @@ defineProps<Props>()
 .food-item {
   position: absolute;
   font-size: 3rem;
-  filter: drop-shadow(0 4px 12px rgba(61, 44, 41, 0.15));
+  filter: drop-shadow(var(--shadow-sm));
   animation: float 5s ease-in-out infinite;
 }
 

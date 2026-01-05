@@ -1,0 +1,109 @@
+/**
+ * Global Theme Variables
+ * Light mode is default, dark mode activated via [data-theme="dark"]
+ */
+
+:root {
+  /* Background colors */
+  --bg-primary: #fffcf7;
+  --bg-secondary: #fff8f0;
+  --bg-card: #ffffff;
+  --bg-hover: rgba(255, 107, 91, 0.05);
+
+  /* Text colors */
+  --text-primary: #3d2c29;
+  --text-secondary: #6b5a56;
+  --text-muted: #8a7a75;
+
+  /* Accent colors */
+  --accent: #ff6b5b;
+  --accent-dark: #e85a4a;
+  --accent-light: #ff8a7d;
+  --peach: #ffb599;
+  --yellow-soft: #ffd93d;
+  --orange-soft: #ffab5e;
+  --accent-gradient: linear-gradient(135deg, #ff6b5b 0%, #ffb599 100%);
+
+  /* Effects */
+  --shimmer-color: rgba(255, 255, 255, 0.4);
+
+  /* Border and overlay */
+  --border-color: rgba(61, 44, 41, 0.08);
+  --border-color-hover: rgba(255, 107, 91, 0.2);
+  --overlay-bg: rgba(61, 44, 41, 0.6);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(61, 44, 41, 0.08);
+  --shadow-md: 0 4px 16px rgba(61, 44, 41, 0.12);
+  --shadow-lg: 0 8px 32px rgba(61, 44, 41, 0.16);
+  --shadow-accent: 0 6px 20px rgba(255, 107, 91, 0.35);
+
+  /* Status colors */
+  --success: #48bb78;
+  --warning: #f6ad55;
+  --error: #e53e3e;
+
+  /* Role badges */
+  --role-owner-bg: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+  --role-member-bg: linear-gradient(135deg, #ff6b5b 0%, #ffb599 100%);
+  --role-guest-bg: rgba(61, 44, 41, 0.1);
+  --role-guest-text: #6b5a56;
+}
+
+[data-theme="dark"] {
+  /* Background colors */
+  --bg-primary: #1a1410;
+  --bg-secondary: #2d2420;
+  --bg-card: #3d322e;
+  --bg-hover: rgba(255, 138, 125, 0.1);
+
+  /* Text colors */
+  --text-primary: #f5f0ed;
+  --text-secondary: #b8aea8;
+  --text-muted: #8a817c;
+
+  /* Accent colors - slightly lighter for dark bg */
+  --accent: #ff8a7d;
+  --accent-dark: #ff6b5b;
+  --accent-light: #ffb599;
+  --peach: #ffcbb8;
+  --yellow-soft: #d4b535;
+  --orange-soft: #cc8a4e;
+  --accent-gradient: linear-gradient(135deg, #ff8a7d 0%, #ffcbb8 100%);
+
+  /* Effects */
+  --shimmer-color: rgba(255, 255, 255, 0.08);
+
+  /* Border and overlay */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-color-hover: rgba(255, 138, 125, 0.3);
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+
+  /* Shadows - darker and more subtle */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-accent: 0 6px 20px rgba(255, 138, 125, 0.25);
+
+  /* Status colors - slightly adjusted */
+  --success: #68d391;
+  --warning: #fbd38d;
+  --error: #fc8181;
+
+  /* Role badges */
+  --role-owner-bg: linear-gradient(135deg, #fbd38d 0%, #f6ad55 100%);
+  --role-member-bg: linear-gradient(135deg, #ff8a7d 0%, #ffcbb8 100%);
+  --role-guest-bg: rgba(255, 255, 255, 0.1);
+  --role-guest-text: #b8aea8;
+}
+
+/* Smooth transition when theme changes */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Global body styling */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
