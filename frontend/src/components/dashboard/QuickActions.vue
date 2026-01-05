@@ -70,8 +70,6 @@ function handleAction(eventName: 'generate-menu' | 'add-recipe' | 'invite-member
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
-
 .quick-actions {
   background: var(--bg-primary);
   border-radius: 20px;

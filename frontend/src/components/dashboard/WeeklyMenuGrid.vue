@@ -44,8 +44,6 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
-
 .weekly-menu {
   background: var(--bg-primary);
   border-radius: 24px;

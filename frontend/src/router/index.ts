@@ -1,9 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import LandingView from '@/views/LandingView.vue'
-import OnboardingView from '@/views/OnboardingView.vue'
-import LoginView from '@/views/LoginView.vue'
-import DashboardView from '@/views/DashboardView.vue'
-import AboutView from '@/views/AboutView.vue'
+import { useUserStore } from '@/stores/user'
+
+// Lazy load all views for code splitting
+const LandingView = () => import('@/views/LandingView.vue')
+const OnboardingView = () => import('@/views/OnboardingView.vue')
+const LoginView = () => import('@/views/LoginView.vue')
+const DashboardView = () => import('@/views/DashboardView.vue')
+const AboutView = () => import('@/views/AboutView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -30,7 +33,7 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
       component: DashboardView,
-      meta: { transition: 'page-fade' }
+      meta: { transition: 'page-fade', requiresAuth: true }
     },
     {
       path: '/about',
@@ -39,6 +42,21 @@ const router = createRouter({
       meta: { transition: 'page-fade' }
     },
   ],
+})
+
+// Authentication guard
+router.beforeEach((to, _from, next) => {
+  const userStore = useUserStore()
+
+  if (to.meta.requiresAuth && !userStore.isAuthenticated) {
+    // Redirect to login if not authenticated
+    next({ name: 'login', query: { redirect: to.fullPath } })
+  } else if (to.name === 'login' && userStore.isAuthenticated) {
+    // Redirect to dashboard if already authenticated
+    next({ name: 'dashboard' })
+  } else {
+    next()
+  }
 })
 
 export default router

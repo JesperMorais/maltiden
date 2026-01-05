@@ -7,13 +7,13 @@ import axios from 'axios'
 import type { AxiosError } from 'axios'
 import { tokenUtils } from '@/utils/token'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 /**
  * Configured Axios instance with interceptors
  */
 const apiClient = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'

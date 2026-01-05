@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
+import { useUserStore } from '@/stores/user'
+
+const router = useRouter()
+const userStore = useUserStore()
 
 type Choice = 'none' | 'join' | 'create'
 type JoinStep = 'code' | 'welcome' | 'member-or-guest' | 'member-form' | 'guest-form'
@@ -129,14 +133,31 @@ async function handleJoinAsGuest() {
   submitSuccess.value = true
 }
 
+const createError = ref('')
+
 async function handleCreate() {
   if (!canSubmitCreate.value) return
   isSubmitting.value = true
+  createError.value = ''
 
-  await new Promise(resolve => setTimeout(resolve, 1500))
+  // Call real backend registration
+  const success = await userStore.register(
+    createForm.value.name,
+    createForm.value.email,
+    createForm.value.password
+  )
 
   isSubmitting.value = false
-  submitSuccess.value = true
+
+  if (success) {
+    submitSuccess.value = true
+    // Redirect to dashboard after showing success
+    setTimeout(() => {
+      router.push('/dashboard')
+    }, 2000)
+  } else {
+    createError.value = userStore.error || 'Registreringen misslyckades'
+  }
 }
 </script>
 
@@ -518,6 +539,8 @@ async function handleCreate() {
                     />
                   </label>
 
+                  <p v-if="createError" class="form-error">{{ createError }}</p>
+
                   <BaseButton
                     variant="primary"
                     size="lg"
@@ -554,8 +577,6 @@ async function handleCreate() {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Fraunces:wght@700;800&display=swap');
-
 .onboarding-page {
   min-height: 100vh;
   padding: 2rem;

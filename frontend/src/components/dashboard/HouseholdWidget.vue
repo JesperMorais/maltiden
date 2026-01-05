@@ -148,8 +148,6 @@ function cancelRemove() {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
-
 .household-widget {
   background: var(--bg-primary);
   border-radius: 20px;
