@@ -29,5 +29,6 @@ func NewRouter(db *sql.DB) http.Handler {
 		http.HandlerFunc(householdHandler.GetMyHousehold),
 	))
 
-	return mux
+	// Wrap with CORS middleware for frontend development
+	return middleware.CORS(mux)
 }
