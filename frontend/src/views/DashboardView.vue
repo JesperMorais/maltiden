@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useUserStore } from '@/stores/user'
 import DashboardHeader from '@/components/dashboard/DashboardHeader.vue'
@@ -11,6 +12,7 @@ import ShoppingListWidget from '@/components/dashboard/ShoppingListWidget.vue'
 import SettingsModal from '@/components/dashboard/SettingsModal.vue'
 import type { MenuDay } from '@/api/types/dashboard.types'
 
+const router = useRouter()
 const dashboardStore = useDashboardStore()
 const userStore = useUserStore()
 
@@ -45,8 +47,7 @@ function handleCloseSettings() {
 }
 
 function handleGenerateMenu() {
-  console.log('Generate menu')
-  // TODO: Implement menu generation
+  router.push({ name: 'generate-menu' })
 }
 
 function handleAddRecipe() {

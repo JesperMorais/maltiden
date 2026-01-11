@@ -5,7 +5,9 @@
  * Set VITE_USE_REAL_API=true in environment to use real backend.
  */
 
-export const USE_MOCKS = import.meta.env.DEV && !import.meta.env.VITE_USE_REAL_API
+// Vite env vars are always strings, so we check against the string 'true'
+export const USE_MOCKS = import.meta.env.DEV && import.meta.env.VITE_USE_REAL_API !== 'true'
 
 export { mockLandingData } from './landing.mock'
 export { mockDashboardData, mockGuestDashboardData } from './dashboard.mock'
+export * from './offers.mock'
