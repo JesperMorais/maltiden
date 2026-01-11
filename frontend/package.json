@@ -8,7 +8,9 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:mock": "vite --mode mock",
     "build": "run-p type-check \"build-only {@}\" --",
+    "build:mock": "vite build --mode mock",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",

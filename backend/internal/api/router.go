@@ -19,10 +19,17 @@ func NewRouter(db *sql.DB) http.Handler {
 	authHandler := handlers.NewAuthHandler(authService)
 	householdHandler := handlers.NewHouseholdHandler(householdStorage)
 
+	// Tjek API service (POC)
+	tjekService := services.NewTjekService()
+	offersHandler := handlers.NewOffersHandler(tjekService)
+
 	// Public routes
 	mux.HandleFunc("GET /health", handlers.Health)
 	mux.HandleFunc("POST /auth/register", authHandler.Register)
 	mux.HandleFunc("POST /auth/login", authHandler.Login)
+	mux.HandleFunc("GET /offers/search", offersHandler.SearchOffers)
+	mux.HandleFunc("GET /offers/discounts", offersHandler.GetDiscounts)
+	mux.HandleFunc("GET /offers/stores", offersHandler.GetStores)
 
 	// Protected routes
 	mux.Handle("GET /households/me", middleware.RequireAuth(
