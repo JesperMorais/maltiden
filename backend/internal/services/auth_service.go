@@ -83,7 +83,7 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 	}
 
 	// Generate JWT
-	token, err := utils.GenerateToken(user.ID)
+	token, err := utils.GenerateToken(user.ID, user.HouseholdID)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (s *AuthService) Login(req domain.LoginRequest) (*domain.AuthResponse, erro
 	}
 
 	// Generate JWT
-	token, err := utils.GenerateToken(user.ID)
+	token, err := utils.GenerateToken(user.ID, user.HouseholdID)
 	if err != nil {
 		return nil, err
 	}
