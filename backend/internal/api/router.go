@@ -15,9 +15,14 @@ func NewRouter(db *sql.DB) http.Handler {
 	// Setup dependencies
 	userStorage := sqlite.NewUserStorage(db)
 	householdStorage := sqlite.NewHouseholdStorage(db)
+	recipeStorage := sqlite.NewRecipeStorage(db)
+
 	authService := services.NewAuthService(userStorage, householdStorage)
+	recipeService := services.NewRecipeService(recipeStorage)
+
 	authHandler := handlers.NewAuthHandler(authService)
 	householdHandler := handlers.NewHouseholdHandler(householdStorage)
+	recipeHandler := handlers.NewRecipeHandler(recipeService)
 
 	// Tjek API service (POC)
 	tjekService := services.NewTjekService()
@@ -30,10 +35,15 @@ func NewRouter(db *sql.DB) http.Handler {
 	mux.HandleFunc("GET /offers/search", offersHandler.SearchOffers)
 	mux.HandleFunc("GET /offers/discounts", offersHandler.GetDiscounts)
 	mux.HandleFunc("GET /offers/stores", offersHandler.GetStores)
+	mux.HandleFunc("GET /recipes", recipeHandler.GetAll)
+	mux.HandleFunc("GET /recipes/{id}", recipeHandler.GetByID)
 
 	// Protected routes
 	mux.Handle("GET /households/me", middleware.RequireAuth(
 		http.HandlerFunc(householdHandler.GetMyHousehold),
+	))
+	mux.Handle("POST /recipes", middleware.RequireAuth(
+		http.HandlerFunc(recipeHandler.Create),
 	))
 
 	// Wrap with CORS middleware for frontend development
