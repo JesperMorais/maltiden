@@ -10,6 +10,7 @@ import (
 type contextKey string
 
 const UserIDKey contextKey = "user_id"
+const HouseholdIDKey contextKey = "household_id"
 
 func RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -35,8 +36,9 @@ func RequireAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		// Add userID to context
+		// Add userID and householdID to context
 		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
+		ctx = context.WithValue(ctx, HouseholdIDKey, claims.HouseholdID)
 
 		// Call next handler
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -47,4 +49,10 @@ func RequireAuth(next http.Handler) http.Handler {
 func GetUserID(r *http.Request) string {
 	userID, _ := r.Context().Value(UserIDKey).(string)
 	return userID
+}
+
+// Helper to get householdID from context
+func GetHouseholdID(ctx context.Context) string {
+	householdID, _ := ctx.Value(HouseholdIDKey).(string)
+	return householdID
 }

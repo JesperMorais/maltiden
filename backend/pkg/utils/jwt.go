@@ -11,13 +11,15 @@ import (
 var jwtSecret = []byte(os.Getenv("JWT_SECRET")) //Read from env var
 
 type Claims struct {
-	UserID string `json:"user_id"`
+	UserID      string `json:"user_id"`
+	HouseholdID string `json:"household_id"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userID string) (string, error) {
+func GenerateToken(userID, householdID string) (string, error) {
 	claims := Claims{
-		UserID: userID,
+		UserID:      userID,
+		HouseholdID: householdID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
