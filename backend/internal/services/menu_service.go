@@ -23,7 +23,7 @@ func NewMenuService(menuStorage *sqlite.MenuStorage, recipeStorage *sqlite.Recip
 
 func (s *MenuService) Generate(householdID string, req domain.GenerateMenuRequest) (*domain.MenuResponse, error) {
 	// Get all recipes
-	recipes, err := s.recipeStorage.GetAll()
+	recipes, err := s.recipeStorage.GetAll(nil)
 	if err != nil {
 		return nil, err
 	}
