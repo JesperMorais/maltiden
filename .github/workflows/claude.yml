@@ -36,15 +36,12 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          # This is an optional setting that allows Claude to read CI results on PRs
-          additional_permissions: |
-            actions: read
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          prompt: "Update the pull request description to include a summary of changes."
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr:*)'
+          prompt: |
+            Follow the user's instructions from the @claude mention.
+            If no specific instructions are given, update the pull request description with a brief summary of changes.
+            Keep it concise - detailed review is handled by a separate workflow.
+            When mentioning code, include file references using the format: path/to/file.ts:line_number
+
           claude_args: |
-            --allowedTools "Bash(bun install),Bash(bun test:*),Bash(bun run format),Bash(bun typecheck)"
+            --allowedTools "Read,Write,Edit,Bash(git:*),Bash(gh:*),Bash(bun:*),Bash(go:*)"
             --model "claude-opus-4-5"
