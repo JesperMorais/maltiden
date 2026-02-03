@@ -17,13 +17,7 @@ func NewRecipeHandler(recipeService *services.RecipeService) *RecipeHandler {
 }
 
 func (h *RecipeHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	// Parse query parameters for filtering
-	filter := &domain.RecipeFilter{
-		Name: r.URL.Query().Get("name"),
-		Tag:  r.URL.Query().Get("tag"),
-	}
-
-	recipes, err := h.recipeService.GetAll(filter)
+	recipes, err := h.recipeService.GetAll()
 	if err != nil {
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return

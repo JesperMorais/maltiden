@@ -14,25 +14,10 @@ func NewRecipeStorage(db *sql.DB) *RecipeStorage {
 	return &RecipeStorage{db: db}
 }
 
-func (s *RecipeStorage) GetAll(filter *domain.RecipeFilter) ([]domain.RecipeSummary, error) {
-	query := `SELECT id, name, servings, emoji, tags FROM recipes WHERE 1=1`
-	args := []interface{}{}
+func (s *RecipeStorage) GetAll() ([]domain.RecipeSummary, error) {
+	query := `SELECT id, name, servings, emoji, tags FROM recipes ORDER BY name`
 
-	// Add name filter (case-insensitive partial match)
-	if filter != nil && filter.Name != "" {
-		query += ` AND LOWER(name) LIKE LOWER(?)`
-		args = append(args, "%"+filter.Name+"%")
-	}
-
-	// Add tag filter (JSON search)
-	if filter != nil && filter.Tag != "" {
-		query += ` AND tags LIKE ?`
-		args = append(args, "%\""+filter.Tag+"\"%")
-	}
-
-	query += ` ORDER BY name`
-
-	rows, err := s.db.Query(query, args...)
+	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, err
 	}

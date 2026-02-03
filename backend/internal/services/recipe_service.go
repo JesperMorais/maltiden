@@ -17,8 +17,8 @@ func NewRecipeService(recipeStorage *sqlite.RecipeStorage) *RecipeService {
 	return &RecipeService{recipeStorage: recipeStorage}
 }
 
-func (s *RecipeService) GetAll(filter *domain.RecipeFilter) ([]domain.RecipeSummary, error) {
-	return s.recipeStorage.GetAll(filter)
+func (s *RecipeService) GetAll() ([]domain.RecipeSummary, error) {
+	return s.recipeStorage.GetAll()
 }
 
 func (s *RecipeService) GetByID(id string) (*domain.Recipe, error) {

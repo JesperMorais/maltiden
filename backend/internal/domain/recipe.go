@@ -43,8 +43,3 @@ type RecipesResponse struct {
 type CreateRecipeResponse struct {
 	ID string `json:"id"`
 }
-
-type RecipeFilter struct {
-	Name string
-	Tag  string
-}
