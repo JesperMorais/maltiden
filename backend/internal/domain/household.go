@@ -27,3 +27,44 @@ type HouseholdMemberResponse struct {
 	Name string `json:"name"`
 	Role string `json:"role"`
 }
+
+// Invite codes
+
+type InviteCode struct {
+	ID          string    `json:"id"`
+	HouseholdID string    `json:"householdId"`
+	Code        string    `json:"code"`
+	ExpiresAt   time.Time `json:"expiresAt"`
+	UsedBy      *string   `json:"usedBy,omitempty"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type CreateInviteResponse struct {
+	Code      string    `json:"code"`
+	ExpiresAt time.Time `json:"expiresAt"`
+}
+
+type JoinHouseholdRequest struct {
+	Code string `json:"code"`
+}
+
+type JoinHouseholdResponse struct {
+	HouseholdID string `json:"householdId"`
+}
+
+// Member status
+
+type MemberStatus struct {
+	ID             string `json:"id"`
+	IsEatingToday  bool   `json:"isEatingToday"`
+	WantsLunchBox  bool   `json:"wantsLunchBox"`
+}
+
+type MemberStatusListResponse struct {
+	Members []MemberStatus `json:"members"`
+}
+
+type UpdateMemberStatusRequest struct {
+	IsEatingToday *bool `json:"isEatingToday,omitempty"`
+	WantsLunchBox *bool `json:"wantsLunchBox,omitempty"`
+}

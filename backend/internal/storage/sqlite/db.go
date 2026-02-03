@@ -54,6 +54,7 @@ func runMigrations(db *sql.DB) error {
 		{3, "migrations/003_create_recipes.sql"},
 		{4, "migrations/004_seed_recipes.sql"},
 		{5, "migrations/005_create_menus.sql"},
+		{6, "migrations/006_household_invites_and_member_status.sql"},
 	}
 
 	for _, m := range migrations {

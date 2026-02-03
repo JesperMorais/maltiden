@@ -20,12 +20,13 @@ func NewRouter(db *sql.DB) http.Handler {
 	shoppingStorage := sqlite.NewShoppingStorage(db)
 
 	authService := services.NewAuthService(userStorage, householdStorage)
+	householdService := services.NewHouseholdService(householdStorage, userStorage)
 	recipeService := services.NewRecipeService(recipeStorage)
 	menuService := services.NewMenuService(menuStorage, recipeStorage)
 	shoppingService := services.NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 
 	authHandler := handlers.NewAuthHandler(authService)
-	householdHandler := handlers.NewHouseholdHandler(householdStorage)
+	householdHandler := handlers.NewHouseholdHandler(householdService)
 	recipeHandler := handlers.NewRecipeHandler(recipeService)
 	menuHandler := handlers.NewMenuHandler(menuService)
 	shoppingHandler := handlers.NewShoppingHandler(shoppingService)
@@ -47,6 +48,21 @@ func NewRouter(db *sql.DB) http.Handler {
 	// Protected routes
 	mux.Handle("GET /households/me", middleware.RequireAuth(
 		http.HandlerFunc(householdHandler.GetMyHousehold),
+	))
+	mux.Handle("POST /households/invite", middleware.RequireAuth(
+		http.HandlerFunc(householdHandler.CreateInvite),
+	))
+	mux.Handle("POST /households/join", middleware.RequireAuth(
+		http.HandlerFunc(householdHandler.JoinHousehold),
+	))
+	mux.Handle("GET /households/members/status", middleware.RequireAuth(
+		http.HandlerFunc(householdHandler.GetMemberStatuses),
+	))
+	mux.Handle("PATCH /households/members/{id}/status", middleware.RequireAuth(
+		http.HandlerFunc(householdHandler.UpdateMemberStatus),
+	))
+	mux.Handle("DELETE /households/members/{id}", middleware.RequireAuth(
+		http.HandlerFunc(householdHandler.RemoveMember),
 	))
 	mux.Handle("POST /recipes", middleware.RequireAuth(
 		http.HandlerFunc(recipeHandler.Create),
