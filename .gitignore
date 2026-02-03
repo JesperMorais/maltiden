@@ -3,6 +3,7 @@ backend/maltiden
 backend/*.exe
 backend/*.db
 backend/*.sqlite
+backend/data/
 
 # === Node/Vue ===
 frontend/node_modules/
