@@ -1,0 +1,191 @@
+package services
+
+import (
+	"crypto/rand"
+	"errors"
+	"fmt"
+	"maltiden/internal/domain"
+	"maltiden/internal/storage/sqlite"
+	"math/big"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+type HouseholdService struct {
+	householdStorage *sqlite.HouseholdStorage
+	userStorage      *sqlite.UserStorage
+}
+
+func NewHouseholdService(householdStorage *sqlite.HouseholdStorage, userStorage *sqlite.UserStorage) *HouseholdService {
+	return &HouseholdService{
+		householdStorage: householdStorage,
+		userStorage:      userStorage,
+	}
+}
+
+func (s *HouseholdService) GetMyHousehold(userID string) (*domain.HouseholdResponse, error) {
+	return s.householdStorage.GetByUserID(userID)
+}
+
+// CreateInvite generates a 6-character invite code valid for 7 days.
+func (s *HouseholdService) CreateInvite(householdID string) (*domain.CreateInviteResponse, error) {
+	code, err := generateInviteCode()
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	invite := &domain.InviteCode{
+		ID:          "inv_" + uuid.New().String(),
+		HouseholdID: householdID,
+		Code:        code,
+		ExpiresAt:   now.Add(7 * 24 * time.Hour),
+		CreatedAt:   now,
+	}
+
+	if err := s.householdStorage.CreateInviteCode(invite); err != nil {
+		return nil, err
+	}
+
+	return &domain.CreateInviteResponse{
+		Code:      invite.Code,
+		ExpiresAt: invite.ExpiresAt,
+	}, nil
+}
+
+// JoinHousehold validates an invite code and adds the user to the household.
+func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHouseholdRequest) (*domain.JoinHouseholdResponse, error) {
+	if req.Code == "" {
+		return nil, errors.New("code is required")
+	}
+
+	invite, err := s.householdStorage.GetInviteByCode(req.Code)
+	if err != nil {
+		return nil, err
+	}
+	if invite == nil {
+		return nil, errors.New("invalid_code")
+	}
+
+	// Check if code is expired
+	if time.Now().After(invite.ExpiresAt) {
+		return nil, errors.New("invalid_code")
+	}
+
+	// Check if code has already been used
+	if invite.UsedBy != nil {
+		return nil, errors.New("invalid_code")
+	}
+
+	// Check if user is already a member of this household
+	isMember, err := s.householdStorage.IsMember(invite.HouseholdID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if isMember {
+		return nil, errors.New("already_member")
+	}
+
+	// Add user as member
+	member := &domain.HouseholdMember{
+		ID:          "hm_" + uuid.New().String(),
+		HouseholdID: invite.HouseholdID,
+		UserID:      userID,
+		Role:        "member",
+		JoinedAt:    time.Now(),
+	}
+	if err := s.householdStorage.AddMember(member); err != nil {
+		return nil, err
+	}
+
+	// Update user's household_id
+	if err := s.householdStorage.UpdateUserHousehold(userID, invite.HouseholdID); err != nil {
+		return nil, err
+	}
+
+	// Mark invite as used
+	if err := s.householdStorage.MarkInviteUsed(invite.ID, userID); err != nil {
+		return nil, err
+	}
+
+	return &domain.JoinHouseholdResponse{
+		HouseholdID: invite.HouseholdID,
+	}, nil
+}
+
+// GetMemberStatuses returns the eating/lunch-box status of all household members.
+func (s *HouseholdService) GetMemberStatuses(householdID string) (*domain.MemberStatusListResponse, error) {
+	statuses, err := s.householdStorage.GetMemberStatuses(householdID)
+	if err != nil {
+		return nil, err
+	}
+
+	if statuses == nil {
+		statuses = []domain.MemberStatus{}
+	}
+
+	return &domain.MemberStatusListResponse{
+		Members: statuses,
+	}, nil
+}
+
+// UpdateMemberStatus updates the eating/lunch-box status of a specific member.
+func (s *HouseholdService) UpdateMemberStatus(householdID, memberID string, req domain.UpdateMemberStatusRequest) error {
+	// Verify the target is a member of this household
+	isMember, err := s.householdStorage.IsMember(householdID, memberID)
+	if err != nil {
+		return err
+	}
+	if !isMember {
+		return errors.New("not_found")
+	}
+
+	return s.householdStorage.UpdateMemberStatus(householdID, memberID, req.IsEatingToday, req.WantsLunchBox)
+}
+
+// RemoveMember removes a member from the household. Owners cannot be removed, and
+// only owners/members can remove others.
+func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUserID string) error {
+	// Can't remove yourself
+	if requestingUserID == targetUserID {
+		return errors.New("cannot_remove")
+	}
+
+	// Check requesting user's role
+	requestingRole, err := s.householdStorage.GetMemberRole(householdID, requestingUserID)
+	if err != nil {
+		return err
+	}
+	if requestingRole == "" || requestingRole == "guest" {
+		return errors.New("forbidden")
+	}
+
+	// Check target's role — can't remove the owner
+	targetRole, err := s.householdStorage.GetMemberRole(householdID, targetUserID)
+	if err != nil {
+		return err
+	}
+	if targetRole == "" {
+		return errors.New("not_found")
+	}
+	if targetRole == "owner" {
+		return errors.New("cannot_remove")
+	}
+
+	return s.householdStorage.RemoveMember(householdID, targetUserID)
+}
+
+// generateInviteCode creates a random 6-character alphanumeric code.
+func generateInviteCode() (string, error) {
+	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // no 0/O/1/I to avoid confusion
+	code := make([]byte, 6)
+	for i := range code {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", fmt.Errorf("generating invite code: %w", err)
+		}
+		code[i] = charset[n.Int64()]
+	}
+	return string(code), nil
+}
