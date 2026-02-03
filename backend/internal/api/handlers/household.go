@@ -6,7 +6,6 @@ import (
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
 	"net/http"
-	"strings"
 )
 
 type HouseholdHandler struct {
@@ -40,9 +39,17 @@ func (h *HouseholdHandler) GetMyHousehold(w http.ResponseWriter, r *http.Request
 }
 
 func (h *HouseholdHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
 	householdID := middleware.GetHouseholdID(r.Context())
-	if householdID == "" {
+	if userID == "" || householdID == "" {
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	// Verify the user is still an active member with permission to invite
+	role, err := h.householdService.GetMemberRole(householdID, userID)
+	if err != nil || role == "" || role == "guest" {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
 		return
 	}
 
@@ -111,14 +118,11 @@ func (h *HouseholdHandler) UpdateMemberStatus(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Extract member ID from path: /households/members/{id}/status
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	if len(parts) < 5 {
+	memberID := r.PathValue("id")
+	if memberID == "" {
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
 		return
 	}
-	memberID := parts[len(parts)-2] // second to last is the {id}
 
 	var req domain.UpdateMemberStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -154,14 +158,11 @@ func (h *HouseholdHandler) RemoveMember(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Extract member ID from path: /households/members/{id}
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	if len(parts) < 4 {
+	targetID := r.PathValue("id")
+	if targetID == "" {
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
 		return
 	}
-	targetID := parts[len(parts)-1]
 
 	err := h.householdService.RemoveMember(householdID, userID, targetID)
 	if err != nil {

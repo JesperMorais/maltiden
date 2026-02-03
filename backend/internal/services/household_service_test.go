@@ -77,8 +77,8 @@ func TestCreateInvite(t *testing.T) {
 	if resp.Code == "" {
 		t.Error("expected non-empty invite code")
 	}
-	if len(resp.Code) != 6 {
-		t.Errorf("expected 6-char code, got %d chars: %q", len(resp.Code), resp.Code)
+	if len(resp.Code) != 8 {
+		t.Errorf("expected 8-char code, got %d chars: %q", len(resp.Code), resp.Code)
 	}
 	if resp.ExpiresAt.Before(time.Now()) {
 		t.Error("expected expiry to be in the future")
@@ -125,17 +125,19 @@ func TestJoinHousehold(t *testing.T) {
 		t.Fatalf("GetMyHousehold failed: %v", err)
 	}
 
-	// The user should be in the owner's household (but note: GetByUserID returns the FIRST household found)
-	// Since user is member of both their own and owner's household, let's verify membership differently
-	isMember, err := householdStorage.IsMember(owner.User.HouseholdID, joiner.User.ID)
+	// After joining, the user should only be in the owner's household (single-household enforcement)
+	if household.ID != owner.User.HouseholdID {
+		t.Errorf("expected joiner's household to be %s, got %s", owner.User.HouseholdID, household.ID)
+	}
+
+	// Verify joiner was removed from their original household
+	isMember, err := householdStorage.IsMember(joiner.User.HouseholdID, joiner.User.ID)
 	if err != nil {
 		t.Fatalf("IsMember check failed: %v", err)
 	}
-	if !isMember {
-		t.Error("expected joiner to be a member of owner's household")
+	if isMember {
+		t.Error("expected joiner to be removed from their original household")
 	}
-
-	_ = household
 }
 
 func TestJoinHousehold_InvalidCode(t *testing.T) {
