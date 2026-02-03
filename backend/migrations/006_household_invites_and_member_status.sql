@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS invite_codes (
     expires_at DATETIME NOT NULL,
     used_by TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (household_id) REFERENCES households(id),
-    FOREIGN KEY (used_by) REFERENCES users(id)
+    FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE,
+    FOREIGN KEY (used_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code);

@@ -28,7 +28,11 @@ func (s *HouseholdService) GetMyHousehold(userID string) (*domain.HouseholdRespo
 	return s.householdStorage.GetByUserID(userID)
 }
 
-// CreateInvite generates a 6-character invite code valid for 7 days.
+func (s *HouseholdService) GetMemberRole(householdID, userID string) (string, error) {
+	return s.householdStorage.GetMemberRole(householdID, userID)
+}
+
+// CreateInvite generates an 8-character invite code valid for 7 days.
 func (s *HouseholdService) CreateInvite(householdID string) (*domain.CreateInviteResponse, error) {
 	code, err := generateInviteCode()
 	if err != nil {
@@ -55,11 +59,14 @@ func (s *HouseholdService) CreateInvite(householdID string) (*domain.CreateInvit
 }
 
 // JoinHousehold validates an invite code and adds the user to the household.
+// The entire operation runs inside a database transaction to prevent race conditions.
+// Users can only belong to one household — joining a new one removes them from the old one.
 func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHouseholdRequest) (*domain.JoinHouseholdResponse, error) {
 	if req.Code == "" {
 		return nil, errors.New("code is required")
 	}
 
+	// Validate invite code before starting the transaction
 	invite, err := s.householdStorage.GetInviteByCode(req.Code)
 	if err != nil {
 		return nil, err
@@ -67,19 +74,22 @@ func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHousehold
 	if invite == nil {
 		return nil, errors.New("invalid_code")
 	}
-
-	// Check if code is expired
 	if time.Now().After(invite.ExpiresAt) {
 		return nil, errors.New("invalid_code")
 	}
-
-	// Check if code has already been used
 	if invite.UsedBy != nil {
 		return nil, errors.New("invalid_code")
 	}
 
-	// Check if user is already a member of this household
-	isMember, err := s.householdStorage.IsMember(invite.HouseholdID, userID)
+	// Begin transaction for the mutating operations
+	tx, err := s.householdStorage.DB().Begin()
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Re-check membership inside transaction to prevent race conditions
+	isMember, err := s.householdStorage.IsMemberTx(tx, invite.HouseholdID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +97,18 @@ func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHousehold
 		return nil, errors.New("already_member")
 	}
 
-	// Add user as member
+	// Remove user from their current household (single-household enforcement)
+	currentHouseholdID, err := s.householdStorage.GetUserHouseholdID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if currentHouseholdID != "" {
+		if err := s.householdStorage.RemoveMemberTx(tx, currentHouseholdID, userID); err != nil {
+			return nil, err
+		}
+	}
+
+	// Add user as member of new household
 	member := &domain.HouseholdMember{
 		ID:          "hm_" + uuid.New().String(),
 		HouseholdID: invite.HouseholdID,
@@ -95,18 +116,22 @@ func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHousehold
 		Role:        "member",
 		JoinedAt:    time.Now(),
 	}
-	if err := s.householdStorage.AddMember(member); err != nil {
+	if err := s.householdStorage.AddMemberTx(tx, member); err != nil {
 		return nil, err
 	}
 
 	// Update user's household_id
-	if err := s.householdStorage.UpdateUserHousehold(userID, invite.HouseholdID); err != nil {
+	if err := s.householdStorage.UpdateUserHouseholdTx(tx, userID, invite.HouseholdID); err != nil {
 		return nil, err
 	}
 
 	// Mark invite as used
-	if err := s.householdStorage.MarkInviteUsed(invite.ID, userID); err != nil {
+	if err := s.householdStorage.MarkInviteUsedTx(tx, invite.ID, userID); err != nil {
 		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return &domain.JoinHouseholdResponse{
@@ -176,10 +201,10 @@ func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUse
 	return s.householdStorage.RemoveMember(householdID, targetUserID)
 }
 
-// generateInviteCode creates a random 6-character alphanumeric code.
+// generateInviteCode creates a random 8-character alphanumeric code (~40 bits of entropy).
 func generateInviteCode() (string, error) {
 	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // no 0/O/1/I to avoid confusion
-	code := make([]byte, 6)
+	code := make([]byte, 8)
 	for i := range code {
 		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
 		if err != nil {
