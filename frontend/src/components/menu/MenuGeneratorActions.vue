@@ -6,7 +6,7 @@ interface Props {
   totalDays?: number
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   totalDays: 5
 })
 

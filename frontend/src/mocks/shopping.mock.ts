@@ -50,7 +50,7 @@ const mockShoppingList: ShoppingList = {
   ]
 }
 
-export async function mockGetShoppingList(menuId?: string): Promise<ShoppingList> {
+export async function mockGetShoppingList(_menuId?: string): Promise<ShoppingList> {
   await delay(300)
   return JSON.parse(JSON.stringify(mockShoppingList)) // Deep clone
 }
