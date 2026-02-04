@@ -30,14 +30,15 @@ function generateWeekDays(): MenuDay[] {
 
     const dayIndex = date.getDay()
     const isToday = date.toDateString() === today.toDateString()
+    const meal = meals[i] ?? null
 
     return {
-      date: date.toISOString().split('T')[0],
-      dayName: days[dayIndex],
-      dayShort: daysShort[dayIndex],
-      meal: meals[i],
+      date: date.toISOString().split('T')[0]!,
+      dayName: days[dayIndex]!,
+      dayShort: daysShort[dayIndex]!,
+      meal,
       isToday,
-      isSkipped: meals[i] === null
+      isSkipped: meal === null
     }
   })
 }
