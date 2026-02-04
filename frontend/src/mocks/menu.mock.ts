@@ -19,7 +19,7 @@ const mockRecipes = [
 function getDateString(daysFromNow: number): string {
   const date = new Date()
   date.setDate(date.getDate() + daysFromNow)
-  return date.toISOString().split('T')[0]
+  return date.toISOString().split('T')[0]!
 }
 
 export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Menu> {
@@ -30,7 +30,7 @@ export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Me
 
   for (let i = 0; i < request.days; i++) {
     const date = getDateString(i)
-    const recipe = mockRecipes[i % mockRecipes.length]
+    const recipe = mockRecipes[i % mockRecipes.length]!
 
     if (skipDays.has(date)) {
       days.push({ date, skip: true, servings: 0 })
