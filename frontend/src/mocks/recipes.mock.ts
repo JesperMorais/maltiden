@@ -141,7 +141,7 @@ export async function mockGetRecipe(id: string): Promise<Recipe> {
   return { ...recipe }
 }
 
-export async function mockCreateRecipe(recipe: CreateRecipeRequest): Promise<{ id: string }> {
+export async function mockCreateRecipe(_recipe: CreateRecipeRequest): Promise<{ id: string }> {
   await delay(500)
 
   const newId = 'rec_' + Date.now()

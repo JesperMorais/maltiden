@@ -243,7 +243,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
           }
         })
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to generate menu:', e)
       error.value = 'Kunde inte generera meny. Försök igen.'
       throw e
@@ -293,7 +293,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
           // Locked - keep unchanged
         })
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to regenerate menu:', e)
       error.value = 'Kunde inte generera nya recept. Försök igen.'
       throw e
@@ -343,7 +343,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       router.push({ name: 'dashboard' })
 
       return true
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to save menu:', e)
       error.value = 'Kunde inte spara menyn. Försök igen.'
       return false
