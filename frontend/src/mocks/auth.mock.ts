@@ -17,7 +17,7 @@ export async function mockLogin(email: string, password: string): Promise<AuthRe
     throw { response: { status: 401, data: { error: 'invalid_credentials' } } }
   }
 
-  const name = email.split('@')[0]
+  const name = email.split('@')[0] ?? email
 
   return {
     token: 'mock_jwt_token_' + Date.now(),

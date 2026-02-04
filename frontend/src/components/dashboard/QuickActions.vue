@@ -5,9 +5,7 @@ import LockedAction from '@/components/common/LockedAction.vue'
 const userStore = useUserStore()
 
 const emit = defineEmits<{
-  'generate-menu': []
-  'add-recipe': []
-  'invite-member': []
+  (e: 'generate-menu' | 'add-recipe' | 'invite-member'): void
 }>()
 
 const actions = [

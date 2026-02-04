@@ -68,7 +68,7 @@ function getWeekDates(startDate?: Date): Date[] {
  * Format date as ISO string (YYYY-MM-DD)
  */
 function formatDateISO(date: Date): string {
-  return date.toISOString().split('T')[0]
+  return date.toISOString().split('T')[0]!
 }
 
 /**
@@ -76,7 +76,7 @@ function formatDateISO(date: Date): string {
  */
 function getDayName(date: Date): string {
   const dayNames = ['Söndag', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag']
-  return dayNames[date.getDay()]
+  return dayNames[date.getDay()]!
 }
 
 /**
@@ -84,7 +84,7 @@ function getDayName(date: Date): string {
  */
 function getDayShort(date: Date): string {
   const dayShorts = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
-  return dayShorts[date.getDay()]
+  return dayShorts[date.getDay()]!
 }
 
 // ============================================
@@ -278,13 +278,14 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
         draftMenu.value.days.forEach((day, index) => {
           if (!lockedDays.value.has(day.date)) {
             // Unlocked - replace with new recipe
-            if (newMenu.days[newDayIndex]) {
+            const newDay = newMenu.days[newDayIndex]
+            if (newDay) {
               draftMenu.value!.days[index] = {
                 ...day,
-                recipeId: newMenu.days[newDayIndex].recipeId,
-                recipeName: newMenu.days[newDayIndex].recipeName,
-                emoji: newMenu.days[newDayIndex].emoji,
-                servings: newMenu.days[newDayIndex].servings
+                recipeId: newDay.recipeId,
+                recipeName: newDay.recipeName,
+                emoji: newDay.emoji,
+                servings: newDay.servings
               }
             }
             newDayIndex++
