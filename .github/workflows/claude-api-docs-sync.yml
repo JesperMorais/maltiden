@@ -19,6 +19,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Sync API documentation
         uses: anthropics/claude-code-action@v1
