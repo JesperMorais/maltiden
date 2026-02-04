@@ -164,6 +164,7 @@ package claude
 
 import (
     "bytes"
+    "context"
     "encoding/json"
     "fmt"
     "io"
@@ -174,7 +175,7 @@ import (
 
 const (
     BaseURL        = "https://api.anthropic.com/v1/messages"
-    DefaultModel   = "claude-sonnet-4-5"
+    DefaultModel   = "claude-sonnet-4.5-20250929"
     DefaultTimeout = 30 * time.Second
 )
 
@@ -223,17 +224,21 @@ type Usage struct {
     OutputTokens int `json:"output_tokens"`
 }
 
-func NewClient() *Client {
+func NewClient() (*Client, error) {
+    apiKey := os.Getenv("ANTHROPIC_API_KEY")
+    if apiKey == "" {
+        return nil, fmt.Errorf("ANTHROPIC_API_KEY environment variable not set")
+    }
     return &Client{
-        apiKey: os.Getenv("ANTHROPIC_API_KEY"),
+        apiKey: apiKey,
         httpClient: &http.Client{
             Timeout: DefaultTimeout,
         },
         model: DefaultModel,
-    }
+    }, nil
 }
 
-func (c *Client) SendMessage(req Request) (*Response, error) {
+func (c *Client) SendMessage(ctx context.Context, req Request) (*Response, error) {
     if req.Model == "" {
         req.Model = c.model
     }
@@ -243,7 +248,7 @@ func (c *Client) SendMessage(req Request) (*Response, error) {
         return nil, fmt.Errorf("marshal request: %w", err)
     }
 
-    httpReq, err := http.NewRequest("POST", BaseURL, bytes.NewReader(body))
+    httpReq, err := http.NewRequestWithContext(ctx, "POST", BaseURL, bytes.NewReader(body))
     if err != nil {
         return nil, fmt.Errorf("create request: %w", err)
     }
@@ -284,10 +289,12 @@ Create `backend/internal/services/recipe_parser_service.go`:
 package services
 
 import (
+    "context"
     "encoding/json"
     "fmt"
     "maltiden/internal/domain"
     "maltiden/pkg/claude"
+    "time"
 )
 
 // JSON Schema for structured output
@@ -355,10 +362,14 @@ type RecipeParserService struct {
     claudeClient *claude.Client
 }
 
-func NewRecipeParserService() *RecipeParserService {
-    return &RecipeParserService{
-        claudeClient: claude.NewClient(),
+func NewRecipeParserService() (*RecipeParserService, error) {
+    client, err := claude.NewClient()
+    if err != nil {
+        return nil, fmt.Errorf("failed to create Claude client: %w", err)
     }
+    return &RecipeParserService{
+        claudeClient: client,
+    }, nil
 }
 
 type parsedRecipeResponse struct {
@@ -399,7 +410,11 @@ func (s *RecipeParserService) ParseRecipe(rawText string) (*domain.ParseRecipeRe
         },
     }
 
-    resp, err := s.claudeClient.SendMessage(req)
+    // Create context with timeout
+    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+    defer cancel()
+
+    resp, err := s.claudeClient.SendMessage(ctx, req)
     if err != nil {
         return nil, fmt.Errorf("claude API error: %w", err)
     }
@@ -459,42 +474,88 @@ func NewRecipeParserHandler(
     }
 }
 
+// ErrorResponse represents a standardized error response
+type ErrorResponse struct {
+    Error string `json:"error"`
+}
+
 // POST /recipes/parse - Parse raw text into structured recipe
 func (h *RecipeParserHandler) ParseRecipe(w http.ResponseWriter, r *http.Request) {
     var req domain.ParseRecipeRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, `{"error": "invalid_request"}`, http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(ErrorResponse{Error: "invalid_request"})
+        return
+    }
+
+    // Validate input at handler level
+    if req.RawText == "" {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(ErrorResponse{Error: "rawText is required"})
+        return
+    }
+    if len(req.RawText) > 10000 {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(ErrorResponse{Error: "input too long (max 10000 characters)"})
         return
     }
 
     result, err := h.parserService.ParseRecipe(req.RawText)
     if err != nil {
-        http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to parse recipe"})
         return
     }
 
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(result)
+    if err := json.NewEncoder(w).Encode(result); err != nil {
+        // Log error (in production, use proper logging)
+        // log.Printf("Error encoding response: %v", err)
+    }
 }
 
 // POST /recipes/parse-and-save - Parse and immediately save
 func (h *RecipeParserHandler) ParseAndSave(w http.ResponseWriter, r *http.Request) {
     var req domain.ParseRecipeRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, `{"error": "invalid_request"}`, http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(ErrorResponse{Error: "invalid_request"})
+        return
+    }
+
+    // Validate input at handler level
+    if req.RawText == "" {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(ErrorResponse{Error: "rawText is required"})
+        return
+    }
+    if len(req.RawText) > 10000 {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(ErrorResponse{Error: "input too long (max 10000 characters)"})
         return
     }
 
     parsed, err := h.parserService.ParseRecipe(req.RawText)
     if err != nil {
-        http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to parse recipe"})
         return
     }
 
     // Save the parsed recipe
     created, err := h.recipeService.Create(parsed.Recipe)
     if err != nil {
-        http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to save recipe"})
         return
     }
 
@@ -506,7 +567,10 @@ func (h *RecipeParserHandler) ParseAndSave(w http.ResponseWriter, r *http.Reques
     }
 
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(response)
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        // Log error (in production, use proper logging)
+        // log.Printf("Error encoding response: %v", err)
+    }
 }
 ```
 
@@ -517,7 +581,10 @@ Add to `backend/internal/api/router.go`:
 ```go
 // In SetupRoutes or similar function:
 
-parserService := services.NewRecipeParserService()
+parserService, err := services.NewRecipeParserService()
+if err != nil {
+    log.Fatalf("Failed to initialize recipe parser service: %v", err)
+}
 parserHandler := handlers.NewRecipeParserHandler(parserService, recipeService)
 
 // Protected routes (require auth)
@@ -527,11 +594,31 @@ mux.Handle("POST /recipes/parse-and-save", authMiddleware(http.HandlerFunc(parse
 
 ### 1.7 Environment Variable
 
-Add to deployment/env:
+The Claude API client requires an API key to authenticate with Anthropic's services.
 
+**Obtaining an API Key:**
+1. Sign up at [console.anthropic.com](https://console.anthropic.com/)
+2. Navigate to API Keys section
+3. Create a new API key
+4. Copy the key (starts with `sk-ant-api03-`)
+
+**Setting up the environment variable:**
+
+For local development (`.env` file):
 ```bash
 ANTHROPIC_API_KEY=sk-ant-api03-xxxxx
 ```
+
+For production deployment:
+- Use your hosting provider's environment variable management
+- Or use a secrets manager (AWS Secrets Manager, Google Secret Manager, etc.)
+- Never commit the API key to version control
+
+**Security notes:**
+- Keep separate API keys for dev/staging/production environments
+- Rotate keys periodically
+- Never expose in frontend code or logs
+- The application will fail to start if the key is not set
 
 ### 1.8 Dev Version Endpoints
 
@@ -640,6 +727,8 @@ func (s *RecipeParserService) validateOutput(parsed *parsedRecipeResponse) error
 #### 2.2.1 Rate Limiter Implementation
 
 Create `backend/pkg/ratelimit/limiter.go`:
+
+**Note for production:** The implementation below is suitable for development and small-scale deployments. For production at scale, consider using established libraries like `golang.org/x/time/rate` or distributed rate limiting with Redis to handle multiple server instances correctly.
 
 ```go
 package ratelimit
