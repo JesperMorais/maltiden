@@ -34,6 +34,11 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      - name: Vulnerability check
+        uses: golang/govulncheck-action@v1
+        with:
+          work-dir: backend
+
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
