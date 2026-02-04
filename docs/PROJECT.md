@@ -7,13 +7,43 @@ Svensk receptapp för veckoplanering och smarta inköpslistor.
 - **Jesper** – Lead frontend (Vue)
 - **Philip** – Lead tester
 
-## Tech Stack
-- **Backend:** Go (monolith, lager-separation)
-- **Frontend:** Vue 3 (PWA)
+## Tech Stack & Versioner
+
+- **Backend:** Go 1.24 (monolith, lager-separation)
+- **Frontend:** Vue 3, Vite, TypeScript strict, Node >=22.12.0
 - **Databas:** SQLite
 - **Hosting:** Fly.io (prod), lokal utveckling
 - **Auth:** Google OAuth, Apple Sign In, Email/lösenord
 - **AI:** Claude API (receptparsning, kylskåpsscan)
+
+### Versionskontroll — VIKTIGT
+
+Gissa ALDRIG versioner av verktyg eller GitHub Actions. Verifiera ALLTID senaste version innan du skriver workflows, Dockerfiles eller liknande.
+
+**GitHub Actions (kör dessa för att kolla senaste):**
+```bash
+gh api repos/actions/checkout/releases/latest --jq '.tag_name'
+gh api repos/actions/setup-go/releases/latest --jq '.tag_name'
+gh api repos/actions/setup-node/releases/latest --jq '.tag_name'
+gh api repos/anthropics/claude-code-action/releases/latest --jq '.tag_name'
+```
+
+**Go & Node:**
+```bash
+curl -s https://go.dev/dl/?mode=json | head -5    # Senaste Go
+head -3 backend/go.mod                              # Vad projektet använder
+jq '.engines' frontend/package.json                 # Vad projektet kräver
+```
+
+**Senast verifierade (2026-02-04):**
+| Verktyg | Senaste | Projektet använder |
+|---------|---------|-------------------|
+| `actions/checkout` | v6 | v6 |
+| `actions/setup-go` | v6 | v6 |
+| `actions/setup-node` | v6 | v6 |
+| `anthropics/claude-code-action` | v1 | v1 |
+| Go | 1.25.6 (1.24.12 stöds) | 1.24 (go.mod) |
+| Node | v22.22.0 LTS | >=22.12.0 (package.json) |
 
 ## Arkitektur
 
