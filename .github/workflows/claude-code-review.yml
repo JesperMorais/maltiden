@@ -10,6 +10,7 @@ jobs:
       contents: read
       pull-requests: write
       id-token: write
+      checks: write # Required for track_progress feature
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
