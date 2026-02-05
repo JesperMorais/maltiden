@@ -4,7 +4,7 @@
 #
 
 app = 'maltiden'
-primary_region = 'ams'
+primary_region = 'arn'
 
 [build]
 
