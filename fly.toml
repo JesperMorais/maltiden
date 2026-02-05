@@ -1,0 +1,23 @@
+app = 'maltiden'
+primary_region = 'arn'
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  DATABASE_PATH = "/data/maltiden.db"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+[mounts]
+  source = "maltiden_data"
+  destination = "/data"
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '256mb'
