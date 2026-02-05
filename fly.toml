@@ -1,11 +1,12 @@
+# fly.toml app configuration file generated for maltiden on 2026-02-05T15:04:42Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
 app = 'maltiden'
-primary_region = 'arn'
+primary_region = 'ams'
 
 [build]
-  dockerfile = "Dockerfile"
-
-[env]
-  DATABASE_PATH = "/data/maltiden.db"
 
 [http_service]
   internal_port = 8080
@@ -13,11 +14,10 @@ primary_region = 'arn'
   auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-
-[mounts]
-  source = "maltiden_data"
-  destination = "/data"
+  processes = ['app']
 
 [[vm]]
-  size = 'shared-cpu-1x'
-  memory = '256mb'
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 256
