@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { parseRecipe, createRecipe } from '@/api/recipes.api'
 import type { ParseRecipeResponse, CreateRecipeRequest } from '@/api/recipes.api'
@@ -49,8 +49,9 @@ async function handleParse() {
     confidence.value = result.confidence
     warnings.value = result.warnings ?? []
     step.value = 'edit'
-  } catch (err: any) {
-    parseError.value = err?.response?.data?.error || 'Kunde inte tolka receptet. Försök igen.'
+  } catch (err: unknown) {
+    const e = err as { response?: { data?: { error?: string } } }
+    parseError.value = e?.response?.data?.error || 'Kunde inte tolka receptet. Försök igen.'
   } finally {
     isParsing.value = false
   }
@@ -68,13 +69,13 @@ async function handleSave() {
   isSaving.value = true
 
   try {
-    const { emoji, ...recipeData } = editableRecipe.value
-    await createRecipe(recipeData)
+    const { name, servings, ingredients, instructions, tags } = editableRecipe.value
+    await createRecipe({ name, servings, ingredients, instructions, tags })
 
     savedName.value = editableRecipe.value.name
     savedEmoji.value = editableRecipe.value.emoji || '🍽️'
     step.value = 'success'
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Save failed:', err)
   } finally {
     isSaving.value = false
