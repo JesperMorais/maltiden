@@ -2,9 +2,11 @@ package api
 
 import (
 	"database/sql"
+	"log"
 	"maltiden/internal/api/handlers"
 	"maltiden/internal/services"
 	"maltiden/internal/storage/sqlite"
+	"maltiden/pkg/claude"
 	"maltiden/pkg/middleware"
 	"net/http"
 )
@@ -34,6 +36,16 @@ func NewRouter(db *sql.DB) http.Handler {
 	// Tjek API service (POC)
 	tjekService := services.NewTjekService()
 	offersHandler := handlers.NewOffersHandler(tjekService)
+
+	// Recipe parser (Claude API) - optional, degrades gracefully if ANTHROPIC_API_KEY not set
+	var parserHandler *handlers.RecipeParserHandler
+	claudeClient, err := claude.NewClient()
+	if err != nil {
+		log.Printf("Warning: Recipe parser disabled: %v", err)
+	} else {
+		parserService := services.NewRecipeParserService(claudeClient)
+		parserHandler = handlers.NewRecipeParserHandler(parserService, recipeService)
+	}
 
 	// Public routes
 	mux.HandleFunc("GET /health", handlers.Health)
@@ -67,6 +79,14 @@ func NewRouter(db *sql.DB) http.Handler {
 	mux.Handle("POST /recipes", middleware.RequireAuth(
 		http.HandlerFunc(recipeHandler.Create),
 	))
+	if parserHandler != nil {
+		mux.Handle("POST /recipes/parse", middleware.RequireAuth(
+			http.HandlerFunc(parserHandler.ParseRecipe),
+		))
+		mux.Handle("POST /recipes/parse-and-save", middleware.RequireAuth(
+			http.HandlerFunc(parserHandler.ParseAndSave),
+		))
+	}
 	mux.Handle("POST /menus/generate", middleware.RequireAuth(
 		http.HandlerFunc(menuHandler.Generate),
 	))
