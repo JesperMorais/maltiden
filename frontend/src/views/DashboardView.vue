@@ -10,6 +10,7 @@ import QuickActions from '@/components/dashboard/QuickActions.vue'
 import HouseholdWidget from '@/components/dashboard/HouseholdWidget.vue'
 import ShoppingListWidget from '@/components/dashboard/ShoppingListWidget.vue'
 import SettingsModal from '@/components/dashboard/SettingsModal.vue'
+import DashboardSkeleton from '@/components/skeleton/layouts/DashboardSkeleton.vue'
 import type { MenuDay } from '@/api/types/dashboard.types'
 
 const router = useRouter()
@@ -82,13 +83,8 @@ function handleViewShoppingList() {
 
 <template>
   <div class="dashboard-page">
-    <!-- Loading state -->
-    <div v-if="dashboardStore.isLoading" class="loading-state">
-      <div class="loader">
-        <span class="loader-icon">🍳</span>
-        <p class="loader-text">Laddar din dashboard...</p>
-      </div>
-    </div>
+    <!-- Skeleton loading state -->
+    <DashboardSkeleton v-if="dashboardStore.isLoading" />
 
     <!-- Error state -->
     <div v-else-if="dashboardStore.error" class="error-state">
@@ -166,33 +162,6 @@ function handleViewShoppingList() {
 .dashboard-page {
   min-height: 100vh;
   background: var(--bg-secondary);
-}
-
-/* Loading state */
-.loading-state {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-primary);
-}
-
-.loader {
-  text-align: center;
-}
-
-.loader-icon {
-  font-size: 4rem;
-  display: block;
-  animation: bounce 1s ease-in-out infinite;
-}
-
-.loader-text {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  font-size: 1.1rem;
-  color: var(--text-secondary);
-  margin-top: 1rem;
 }
 
 /* Error state */
@@ -274,12 +243,6 @@ function handleViewShoppingList() {
   gap: 1rem;
   position: sticky;
   top: calc(70px + 2rem); /* Header height + padding */
-}
-
-/* Animations */
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
 }
 
 /* Responsive */
