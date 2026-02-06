@@ -55,6 +55,10 @@ function handleAddRecipe() {
   // TODO: Navigate to add recipe
 }
 
+function handleParseRecipe() {
+  router.push({ name: 'parse-recipe' })
+}
+
 function handleInviteMember() {
   console.log('Invite member')
   // TODO: Show invite modal
@@ -129,6 +133,7 @@ function handleViewShoppingList() {
               @generate-menu="handleGenerateMenu"
               @add-recipe="handleAddRecipe"
               @invite-member="handleInviteMember"
+              @parse-recipe="handleParseRecipe"
             />
 
             <HouseholdWidget
