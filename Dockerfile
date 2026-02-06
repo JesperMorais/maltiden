@@ -1,4 +1,15 @@
-# Build stage
+# Frontend build stage
+FROM node:20-bookworm AS frontend-builder
+
+WORKDIR /build
+
+COPY frontend/package*.json ./
+RUN npm ci
+
+COPY frontend/ .
+RUN npm run build-only
+
+# Backend build stage
 FROM golang:1.24-bookworm AS builder
 
 WORKDIR /build
@@ -20,6 +31,7 @@ WORKDIR /app
 
 COPY --from=builder /build/server .
 COPY --from=builder /build/migrations/ ./migrations/
+COPY --from=frontend-builder /build/dist ./static/
 
 EXPOSE 8080
 

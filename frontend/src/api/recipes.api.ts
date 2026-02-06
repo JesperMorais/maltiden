@@ -5,7 +5,7 @@
 
 import apiClient from './client'
 import { USE_MOCKS } from '@/mocks'
-import { mockGetRecipes, mockGetRecipe, mockCreateRecipe } from '@/mocks/recipes.mock'
+import { mockGetRecipes, mockGetRecipe, mockCreateRecipe, mockParseRecipe, mockParseAndSaveRecipe } from '@/mocks/recipes.mock'
 
 export interface Ingredient {
   name: string
@@ -32,6 +32,18 @@ export interface CreateRecipeRequest {
   ingredients: Ingredient[]
   instructions: string[]
   tags: string[]
+}
+
+export interface ParseRecipeRequest {
+  rawText: string
+  source?: string
+}
+
+export interface ParseRecipeResponse {
+  recipe: CreateRecipeRequest & { emoji?: string }
+  confidence: number
+  warnings?: string[]
+  rawText: string
 }
 
 /**
@@ -67,5 +79,29 @@ export async function createRecipe(recipe: CreateRecipeRequest): Promise<{ id: s
   }
 
   const { data } = await apiClient.post<{ id: string }>('/recipes', recipe)
+  return data
+}
+
+/**
+ * Parse unstructured recipe text into structured data
+ */
+export async function parseRecipe(req: ParseRecipeRequest): Promise<ParseRecipeResponse> {
+  if (USE_MOCKS) {
+    return mockParseRecipe(req)
+  }
+
+  const { data } = await apiClient.post<ParseRecipeResponse>('/recipes/parse', req, { timeout: 60000 })
+  return data
+}
+
+/**
+ * Parse recipe text and save immediately
+ */
+export async function parseAndSaveRecipe(req: ParseRecipeRequest): Promise<ParseRecipeResponse & { id: string }> {
+  if (USE_MOCKS) {
+    return mockParseAndSaveRecipe(req)
+  }
+
+  const { data } = await apiClient.post<ParseRecipeResponse & { id: string }>('/recipes/parse-and-save', req, { timeout: 60000 })
   return data
 }

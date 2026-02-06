@@ -2,7 +2,7 @@
  * Recipes API Mock Data
  */
 
-import type { RecipeSummary, Recipe, CreateRecipeRequest } from '@/api/recipes.api'
+import type { RecipeSummary, Recipe, CreateRecipeRequest, ParseRecipeRequest, ParseRecipeResponse } from '@/api/recipes.api'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -146,4 +146,42 @@ export async function mockCreateRecipe(_recipe: CreateRecipeRequest): Promise<{ 
 
   const newId = 'rec_' + Date.now()
   return { id: newId }
+}
+
+export async function mockParseRecipe(_req: ParseRecipeRequest): Promise<ParseRecipeResponse> {
+  await delay(1500)
+
+  return {
+    recipe: {
+      name: 'Pasta Carbonara',
+      servings: 4,
+      emoji: '🍝',
+      ingredients: [
+        { name: 'spaghetti', amount: 400, unit: 'g' },
+        { name: 'guanciale eller bacon', amount: 200, unit: 'g' },
+        { name: 'äggulor', amount: 4, unit: 'st' },
+        { name: 'parmesan, riven', amount: 100, unit: 'g' },
+        { name: 'svartpeppar', amount: 0, unit: 'efter smak' }
+      ],
+      instructions: [
+        'Koka pastan enligt förpackningen',
+        'Stek baconet knaprigt',
+        'Vispa ihop äggulor och parmesan',
+        'Blanda het pasta med bacon, ta från värmen',
+        'Rör ner äggblandningen, salta och peppra'
+      ],
+      tags: ['pasta', 'italienskt', 'snabb']
+    },
+    confidence: 0.95,
+    warnings: [],
+    rawText: _req.rawText
+  }
+}
+
+export async function mockParseAndSaveRecipe(req: ParseRecipeRequest): Promise<ParseRecipeResponse & { id: string }> {
+  const parsed = await mockParseRecipe(req)
+  return {
+    ...parsed,
+    id: 'rec_' + Date.now()
+  }
 }
