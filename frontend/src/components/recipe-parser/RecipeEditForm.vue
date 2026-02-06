@@ -34,7 +34,7 @@ function updateField<K extends keyof EditableRecipe>(field: K, value: EditableRe
 
 function updateIngredient(index: number, field: keyof Ingredient, value: string | number) {
   const ingredients = [...props.recipe.ingredients]
-  ingredients[index] = { ...ingredients[index], [field]: value }
+  ingredients[index] = { ...ingredients[index], [field]: value } as Ingredient
   updateField('ingredients', ingredients)
 }
 
