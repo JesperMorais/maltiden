@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 Phase: 6 of 7 (Performance & Database)
-Plan: 1 of 2 (Phase 6 in progress)
-Status: In progress
-Last activity: 2026-02-09 — Completed 06-01-PLAN.md (Tjek API optimization)
+Plan: 2 of 2 (Phase 6 complete)
+Status: Phase complete
+Last activity: 2026-02-09 — Completed 06-02-PLAN.md (Database optimization)
 
-Progress: ██████████░ 86% (11/13 plans complete)
+Progress: ███████████ 92% (12/13 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 3.4 min
-- Total execution time: 0.67 hours
+- Total plans completed: 12
+- Average duration: 3.3 min
+- Total execution time: 0.73 hours
 
 **By Phase:**
 
@@ -32,7 +32,7 @@ Progress: ██████████░ 86% (11/13 plans complete)
 | 03-findings-report-fix-plan | 2/2 | 10min | 5min |
 | 04-critical-security-data-integrity | 3/3 | 6min | 2min |
 | 05-error-handling-input-validation | 2/2 | 11min | 5.5min |
-| 06-performance-database | 1/2 | 2min | 2min |
+| 06-performance-database | 2/2 | 7min | 3.5min |
 
 ## Accumulated Context
 
@@ -78,6 +78,11 @@ See PROJECT.md Key Decisions table (6 decisions from v1.0, all marked Good).
 | Semaphore limits concurrent Tjek requests to 5 | 06-01 | Performance - prevents overwhelming external API | Good |
 | 1-hour TTL for all Tjek API responses | 06-01 | Performance - safe since offers change weekly | Good |
 | Reduce HTTP timeout from 30s to 10s | 06-01 | Performance - 30s was excessive for API calls | Good |
+| Use WAL mode with synchronous=NORMAL for SQLite | 06-02 | Performance - safe with WAL, reduces fsync | Good |
+| Conservative connection pool: 25 max open (single writer, multiple readers) | 06-02 | Performance - appropriate for SQLite limitations | Good |
+| 5-second context timeout for all queries | 06-02 | Reliability - prevents runaway queries | Good |
+| Batch recipe fetching changes 5 queries → 1 query for 5-day menu | 06-02 | Performance - eliminates N+1 in shopping lists | Good |
+| Create context internally in storage methods | 06-02 | Architecture - handlers don't pass context yet | Good |
 
 ### Deferred Issues
 
@@ -96,6 +101,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 06-01-PLAN.md (Tjek API optimization)
+Stopped at: Completed 06-02-PLAN.md (Database optimization)
 Resume file: None
-Next up: Phase 6 Plan 2 (Database optimizations)
+Next up: Phase 7 (Refactoring & Architecture)
