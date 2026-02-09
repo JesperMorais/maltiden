@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 ## Current Position
 
-Phase: 5 of 7 (Error Handling & Input Validation)
-Plan: 2 of 2 (Phase 5 complete)
-Status: Phase complete
-Last activity: 2026-02-09 — Completed 05-02-PLAN.md (input validation sweep)
+Phase: 6 of 7 (Performance & Database)
+Plan: 1 of 2 (Phase 6 in progress)
+Status: In progress
+Last activity: 2026-02-09 — Completed 06-01-PLAN.md (Tjek API optimization)
 
-Progress: ██████████░ 79% (5/7 phases complete, Phase 5: 2/2 plans)
+Progress: ██████████░ 86% (11/13 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
 - Total plans completed: 11
-- Average duration: 3.5 min
-- Total execution time: 0.63 hours
+- Average duration: 3.4 min
+- Total execution time: 0.67 hours
 
 **By Phase:**
 
@@ -32,6 +32,7 @@ Progress: ██████████░ 79% (5/7 phases complete, Phase 5: 2
 | 03-findings-report-fix-plan | 2/2 | 10min | 5min |
 | 04-critical-security-data-integrity | 3/3 | 6min | 2min |
 | 05-error-handling-input-validation | 2/2 | 11min | 5.5min |
+| 06-performance-database | 1/2 | 2min | 2min |
 
 ## Accumulated Context
 
@@ -69,6 +70,15 @@ See PROJECT.md Key Decisions table (6 decisions from v1.0, all marked Good).
 | Menu 0-value defaults preserved for backwards compat | 05-02 | Compatibility - frontend may send 0 for defaults | Good |
 | Password whitespace NOT trimmed | 05-02 | Security - preserves intentional user input | Good |
 
+**Phase 6 decisions:**
+
+| Decision | Phase-Plan | Impact | Status |
+|----------|------------|--------|--------|
+| Use sync.Mutex + map instead of sync.Map for TTL cache | 06-01 | Performance - simpler and correct for TTL expiry | Good |
+| Semaphore limits concurrent Tjek requests to 5 | 06-01 | Performance - prevents overwhelming external API | Good |
+| 1-hour TTL for all Tjek API responses | 06-01 | Performance - safe since offers change weekly | Good |
+| Reduce HTTP timeout from 30s to 10s | 06-01 | Performance - 30s was excessive for API calls | Good |
+
 ### Deferred Issues
 
 - 93 backend findings being addressed in this milestone (see FIX-PLAN.md)
@@ -86,6 +96,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 05-02-PLAN.md (Phase 5 complete)
+Stopped at: Completed 06-01-PLAN.md (Tjek API optimization)
 Resume file: None
-Next up: Phase 6 (Performance & Database)
+Next up: Phase 6 Plan 2 (Database optimizations)
