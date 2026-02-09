@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
+	"errors"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -26,15 +26,21 @@ func (h *MenuHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req domain.GenerateMenuRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid_request")
+	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
 	menu, err := h.menuService.Generate(householdID, req)
 	if err != nil {
-		log.Printf("ERROR [GenerateMenu] %v", err)
-		WriteError(w, http.StatusInternalServerError, "internal_error")
+		switch {
+		case errors.Is(err, domain.ErrInvalidDays):
+			WriteError(w, http.StatusBadRequest, "invalid_days")
+		case errors.Is(err, domain.ErrInvalidServings):
+			WriteError(w, http.StatusBadRequest, "invalid_servings")
+		default:
+			log.Printf("ERROR [GenerateMenu] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
 		return
 	}
 

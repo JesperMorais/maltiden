@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"maltiden/internal/domain"
@@ -73,8 +72,7 @@ func (h *HouseholdHandler) JoinHousehold(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req domain.JoinHouseholdRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid_request")
+	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
@@ -122,14 +120,12 @@ func (h *HouseholdHandler) UpdateMemberStatus(w http.ResponseWriter, r *http.Req
 	}
 
 	memberID := r.PathValue("id")
-	if memberID == "" {
-		WriteError(w, http.StatusBadRequest, "invalid_request")
+	if !ValidateID(w, memberID, "member_id") {
 		return
 	}
 
 	var req domain.UpdateMemberStatusRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid_request")
+	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
@@ -162,8 +158,7 @@ func (h *HouseholdHandler) RemoveMember(w http.ResponseWriter, r *http.Request) 
 	}
 
 	targetID := r.PathValue("id")
-	if targetID == "" {
-		WriteError(w, http.StatusBadRequest, "invalid_request")
+	if !ValidateID(w, targetID, "member_id") {
 		return
 	}
 
