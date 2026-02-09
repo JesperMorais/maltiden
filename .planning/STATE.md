@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 Phase: 4 of 7 (Critical Security & Data Integrity)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-09 — Milestone v1.1 Fix created
+Plan: 1 of 1 (Plan 04-01 complete)
+Status: Phase complete
+Last activity: 2026-02-09 — Completed 04-01-PLAN.md (JWT auth hardening)
 
-Progress: ██████░░░░ 43% (3/7 phases complete — v1.0 phases counted)
+Progress: ████████░░ 57% (4/7 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6 (v1.0)
-- Average duration: 4.2 min
-- Total execution time: 0.42 hours
+- Total plans completed: 7
+- Average duration: 3.9 min
+- Total execution time: 0.45 hours
 
 **By Phase:**
 
@@ -30,12 +30,21 @@ Progress: ██████░░░░ 43% (3/7 phases complete — v1.0 phase
 | 01-deep-code-review | 2/2 | 8min | 4min |
 | 02-architecture-performance-review | 2/2 | 7min | 3.5min |
 | 03-findings-report-fix-plan | 2/2 | 10min | 5min |
+| 04-critical-security-data-integrity | 1/1 | 2min | 2min |
 
 ## Accumulated Context
 
 ### Decisions
 
 See PROJECT.md Key Decisions table (6 decisions from v1.0, all marked ✓ Good).
+
+**Phase 4 decisions:**
+
+| Decision | Phase-Plan | Impact | Status |
+|----------|------------|--------|--------|
+| JWT_SECRET min 32 chars, validated at startup | 04-01 | Security - prevents weak secrets | ✓ Good |
+| HS256 algorithm pinned in keyfunc callback | 04-01 | Security - prevents "none" attack | ✓ Good |
+| Shopping endpoints require authentication | 04-01 | Security - closes auth bypass | ✓ Good |
 
 ### Deferred Issues
 
@@ -53,7 +62,7 @@ None — implementation ready to begin.
 
 ## Session Continuity
 
-Last session: 2026-02-09
-Stopped at: Milestone v1.1 Fix initialization
+Last session: 2026-02-09T14:06:15Z
+Stopped at: Completed 04-01-PLAN.md (JWT auth hardening)
 Resume file: None
-Next up: Plan Phase 4 (Critical Security & Data Integrity)
+Next up: Plan Phase 5 or continue Phase 4 if more plans needed
