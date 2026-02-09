@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 )
@@ -27,17 +28,56 @@ func parseTjekTime(s string) time.Time {
 	return time.Time{}
 }
 
+// cacheEntry represents a cached API response with TTL
+type cacheEntry struct {
+	data      interface{}
+	expiresAt time.Time
+}
+
 type TjekService struct {
 	baseURL    string
 	httpClient *http.Client
+	cache      map[string]cacheEntry
+	cacheMu    sync.Mutex
 }
 
 func NewTjekService() *TjekService {
 	return &TjekService{
 		baseURL: "https://api.etilbudsavis.dk/v2",
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 10 * time.Second,
 		},
+		cache: make(map[string]cacheEntry),
+	}
+}
+
+// getFromCache retrieves a cached entry if it exists and hasn't expired
+func (s *TjekService) getFromCache(key string) (interface{}, bool) {
+	s.cacheMu.Lock()
+	defer s.cacheMu.Unlock()
+
+	entry, exists := s.cache[key]
+	if !exists {
+		return nil, false
+	}
+
+	// Check if expired
+	if time.Now().After(entry.expiresAt) {
+		delete(s.cache, key)
+		return nil, false
+	}
+
+	return entry.data, true
+}
+
+// setCache stores an entry in cache with TTL
+func (s *TjekService) setCache(key string, data interface{}, ttl time.Duration) {
+	s.cacheMu.Lock()
+	defer s.cacheMu.Unlock()
+
+	s.cache[key] = cacheEntry{
+		data:      data,
+		expiresAt: time.Now().Add(ttl),
 	}
 }
 
@@ -454,6 +494,12 @@ func (s *TjekService) GetTopDiscounts(lat, lng float64, radius int, excludeStore
 
 // getCatalogs fetches weekly flyers near a location
 func (s *TjekService) getCatalogs(lat, lng float64, radius int) ([]catalogResponse, error) {
+	// Check cache first
+	cacheKey := fmt.Sprintf("catalogs:%f:%f:%d", lat, lng, radius)
+	if cached, ok := s.getFromCache(cacheKey); ok {
+		return cached.([]catalogResponse), nil
+	}
+
 	endpoint := fmt.Sprintf("%s/catalogs", s.baseURL)
 	params := url.Values{}
 	params.Set("r_lat", fmt.Sprintf("%f", lat))
@@ -478,11 +524,20 @@ func (s *TjekService) getCatalogs(lat, lng float64, radius int) ([]catalogRespon
 		return nil, err
 	}
 
+	// Cache for 1 hour
+	s.setCache(cacheKey, catalogs, time.Hour)
+
 	return catalogs, nil
 }
 
 // getCatalogOffers fetches all offers from a specific catalog
 func (s *TjekService) getCatalogOffers(catalog catalogResponse, store storeResponse) ([]domain.TjekOffer, error) {
+	// Check cache first
+	cacheKey := fmt.Sprintf("hotspots:%s", catalog.ID)
+	if cached, ok := s.getFromCache(cacheKey); ok {
+		return cached.([]domain.TjekOffer), nil
+	}
+
 	endpoint := fmt.Sprintf("%s/catalogs/%s/hotspots", s.baseURL, catalog.ID)
 
 	resp, err := s.httpClient.Get(endpoint)
@@ -534,11 +589,20 @@ func (s *TjekService) getCatalogOffers(catalog catalogResponse, store storeRespo
 		})
 	}
 
+	// Cache for 1 hour
+	s.setCache(cacheKey, offers, time.Hour)
+
 	return offers, nil
 }
 
 // getStores fetches physical store locations near a location
 func (s *TjekService) getStores(lat, lng float64, radius int) ([]storeResponse, error) {
+	// Check cache first
+	cacheKey := fmt.Sprintf("stores:%f:%f:%d", lat, lng, radius)
+	if cached, ok := s.getFromCache(cacheKey); ok {
+		return cached.([]storeResponse), nil
+	}
+
 	endpoint := fmt.Sprintf("%s/stores", s.baseURL)
 	params := url.Values{}
 	params.Set("r_lat", fmt.Sprintf("%f", lat))
@@ -561,6 +625,9 @@ func (s *TjekService) getStores(lat, lng float64, radius int) ([]storeResponse, 
 	if err := json.NewDecoder(resp.Body).Decode(&stores); err != nil {
 		return nil, err
 	}
+
+	// Cache for 1 hour
+	s.setCache(cacheKey, stores, time.Hour)
 
 	return stores, nil
 }
