@@ -29,7 +29,7 @@ func NewRouter(db *sql.DB) http.Handler {
 	householdHandler := handlers.NewHouseholdHandler(householdService)
 	recipeHandler := handlers.NewRecipeHandler(recipeService)
 	menuHandler := handlers.NewMenuHandler(menuService)
-	shoppingHandler := handlers.NewShoppingHandler(shoppingService)
+	shoppingHandler := handlers.NewShoppingHandler(shoppingService, menuStorage)
 
 	// Tjek API service (POC)
 	tjekService := services.NewTjekService()

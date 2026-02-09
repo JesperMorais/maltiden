@@ -4,16 +4,21 @@ import (
 	"encoding/json"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
+	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/middleware"
 	"net/http"
 )
 
 type ShoppingHandler struct {
 	shoppingService *services.ShoppingService
+	menuStorage     *sqlite.MenuStorage
 }
 
-func NewShoppingHandler(shoppingService *services.ShoppingService) *ShoppingHandler {
-	return &ShoppingHandler{shoppingService: shoppingService}
+func NewShoppingHandler(shoppingService *services.ShoppingService, menuStorage *sqlite.MenuStorage) *ShoppingHandler {
+	return &ShoppingHandler{
+		shoppingService: shoppingService,
+		menuStorage:     menuStorage,
+	}
 }
 
 func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request) {
@@ -27,6 +32,21 @@ func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request
 	menuID := r.URL.Query().Get("menuId")
 	if menuID == "" {
 		http.Error(w, `{"error":"menu_id_required"}`, http.StatusBadRequest)
+		return
+	}
+
+	// IDOR protection: verify menu belongs to user's household
+	menuHouseholdID, err := h.menuStorage.GetHouseholdIDByMenuID(menuID)
+	if err != nil {
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+	if menuHouseholdID == "" {
+		http.Error(w, `{"error":"menu_not_found"}`, http.StatusNotFound)
+		return
+	}
+	if menuHouseholdID != householdID {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
 		return
 	}
 
@@ -63,6 +83,21 @@ func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	menuID := r.URL.Query().Get("menuId")
 	if menuID == "" {
 		http.Error(w, `{"error":"menu_id_required"}`, http.StatusBadRequest)
+		return
+	}
+
+	// IDOR protection: verify menu belongs to user's household
+	menuHouseholdID, err := h.menuStorage.GetHouseholdIDByMenuID(menuID)
+	if err != nil {
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+	if menuHouseholdID == "" {
+		http.Error(w, `{"error":"menu_not_found"}`, http.StatusNotFound)
+		return
+	}
+	if menuHouseholdID != householdID {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
 		return
 	}
 
