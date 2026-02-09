@@ -9,6 +9,8 @@ on:
     types: [opened, assigned]
   pull_request_review:
     types: [submitted]
+  pull_request:                    
+    types: [opened, edited, reopened]
 
 jobs:
   claude:
@@ -16,14 +18,16 @@ jobs:
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude'))) ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.body, '@claude'))  
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
       issues: write
       id-token: write
-      actions: read # Required for Claude to read CI results on PRs
+      actions: read
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -38,10 +42,23 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
           prompt: |
-            Follow the user's instructions from the @claude mention.
-            If no specific instructions are given, update the pull request description with a brief summary of changes.
-            Keep it concise - detailed review is handled by a separate workflow.
-            When mentioning code, include file references using the format: path/to/file.ts:line_number
+            You are an automated code assistant.
+
+            Only act when explicit actionable instructions are provided in the @claude comment.
+
+            If no actionable instruction is found:
+              - Do nothing.
+              - Do not reply.
+              - Do not acknowledge.
+
+            Execute the instructions exactly as written.
+            Do not infer intent.
+            Do not perform fallback actions.
+
+            Keep responses concise, precise, and actionable.
+
+            When referencing code, always include file and line numbers using:
+            path/to/file.ts:line_number
 
           claude_args: |
             --allowedTools "Read,Write,Edit,Bash(git:*),Bash(gh:*),Bash(bun:*),Bash(go:*)"
