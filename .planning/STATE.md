@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Fix all critical, high, and medium-severity backend issues identified in the code review.
-**Current focus:** v1.1 Fix milestone — Phase 5 (Error Handling & Input Validation)
+**Current focus:** v1.1 Fix milestone — Phase 6 (Performance & Database)
 
 ## Current Position
 
 Phase: 5 of 7 (Error Handling & Input Validation)
-Plan: 1 of 2
-Status: In progress
-Last activity: 2026-02-09 — Completed 05-01-PLAN.md (error handling infrastructure)
+Plan: 2 of 2 (Phase 5 complete)
+Status: Phase complete
+Last activity: 2026-02-09 — Completed 05-02-PLAN.md (input validation sweep)
 
-Progress: █████████░ 71% (4/7 phases complete, Phase 5: 1/2 plans)
+Progress: ██████████░ 79% (5/7 phases complete, Phase 5: 2/2 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 3.4 min
-- Total execution time: 0.57 hours
+- Total plans completed: 11
+- Average duration: 3.5 min
+- Total execution time: 0.63 hours
 
 **By Phase:**
 
@@ -31,7 +31,7 @@ Progress: █████████░ 71% (4/7 phases complete, Phase 5: 1/2 
 | 02-architecture-performance-review | 2/2 | 7min | 3.5min |
 | 03-findings-report-fix-plan | 2/2 | 10min | 5min |
 | 04-critical-security-data-integrity | 3/3 | 6min | 2min |
-| 05-error-handling-input-validation | 1/2 | 6min | 6min |
+| 05-error-handling-input-validation | 2/2 | 11min | 5.5min |
 
 ## Accumulated Context
 
@@ -64,6 +64,10 @@ See PROJECT.md Key Decisions table (6 decisions from v1.0, all marked Good).
 | Local writeError in middleware (avoids import cycle) | 05-01 | Architecture - clean package boundaries | Good |
 | Generic "service_unavailable" for offers errors | 05-01 | Security - prevents upstream error leakage | Good |
 | Error logging with handler name prefix pattern | 05-01 | Observability - grep-based log analysis | Good |
+| DecodeJSON helper combines MaxBytesReader + Content-Type + decode | 05-02 | Security - impossible to forget body limits | Good |
+| ValidateID uses length check for prefixed UUIDs | 05-02 | Correctness - works with rec_, hm_, menu_ prefixes | Good |
+| Menu 0-value defaults preserved for backwards compat | 05-02 | Compatibility - frontend may send 0 for defaults | Good |
+| Password whitespace NOT trimmed | 05-02 | Security - preserves intentional user input | Good |
 
 ### Deferred Issues
 
@@ -82,6 +86,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 05-01-PLAN.md
+Stopped at: Completed 05-02-PLAN.md (Phase 5 complete)
 Resume file: None
-Next up: 05-02-PLAN.md (input validation)
+Next up: Phase 6 (Performance & Database)
