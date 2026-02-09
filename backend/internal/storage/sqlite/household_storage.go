@@ -1,8 +1,10 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 	"maltiden/internal/domain"
+	"time"
 )
 
 type HouseholdStorage struct {
@@ -18,11 +20,14 @@ func (s *HouseholdStorage) DB() *sql.DB {
 }
 
 func (s *HouseholdStorage) Create(household *domain.Household) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	query := `
 		INSERT INTO households (id, name, created_at)
 		VALUES (?, ?, ?)
 	`
-	_, err := s.db.Exec(query, household.ID, household.Name, household.CreatedAt)
+	_, err := s.db.ExecContext(ctx, query, household.ID, household.Name, household.CreatedAt)
 	return err
 }
 
@@ -37,11 +42,14 @@ func (s *HouseholdStorage) CreateTx(tx *sql.Tx, household *domain.Household) err
 }
 
 func (s *HouseholdStorage) AddMember(member *domain.HouseholdMember) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	query := `
 		INSERT INTO household_members (id, household_id, user_id, role, joined_at)
 		VALUES (?, ?, ?, ?, ?)
 	`
-	_, err := s.db.Exec(query,
+	_, err := s.db.ExecContext(ctx, query,
 		member.ID, member.HouseholdID, member.UserID, member.Role, member.JoinedAt,
 	)
 	return err
@@ -60,6 +68,9 @@ func (s *HouseholdStorage) AddMemberTx(tx *sql.Tx, member *domain.HouseholdMembe
 }
 
 func (s *HouseholdStorage) GetByUserID(userID string) (*domain.HouseholdResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	// Get household
 	householdQuery := `
 		SELECT h.id, h.name
@@ -70,7 +81,7 @@ func (s *HouseholdStorage) GetByUserID(userID string) (*domain.HouseholdResponse
 	`
 
 	var household domain.HouseholdResponse
-	err := s.db.QueryRow(householdQuery, userID).Scan(&household.ID, &household.Name)
+	err := s.db.QueryRowContext(ctx, householdQuery, userID).Scan(&household.ID, &household.Name)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -87,7 +98,7 @@ func (s *HouseholdStorage) GetByUserID(userID string) (*domain.HouseholdResponse
 		ORDER BY hm.joined_at ASC
 	`
 
-	rows, err := s.db.Query(membersQuery, household.ID)
+	rows, err := s.db.QueryContext(ctx, membersQuery, household.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -108,17 +119,23 @@ func (s *HouseholdStorage) GetByUserID(userID string) (*domain.HouseholdResponse
 // Invite code methods
 
 func (s *HouseholdStorage) CreateInviteCode(invite *domain.InviteCode) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	query := `
 		INSERT INTO invite_codes (id, household_id, code, expires_at, created_at)
 		VALUES (?, ?, ?, ?, ?)
 	`
-	_, err := s.db.Exec(query,
+	_, err := s.db.ExecContext(ctx, query,
 		invite.ID, invite.HouseholdID, invite.Code, invite.ExpiresAt, invite.CreatedAt,
 	)
 	return err
 }
 
 func (s *HouseholdStorage) GetInviteByCode(code string) (*domain.InviteCode, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	query := `
 		SELECT id, household_id, code, expires_at, used_by, created_at
 		FROM invite_codes
@@ -127,7 +144,7 @@ func (s *HouseholdStorage) GetInviteByCode(code string) (*domain.InviteCode, err
 
 	var invite domain.InviteCode
 	var usedBy sql.NullString
-	err := s.db.QueryRow(query, code).Scan(
+	err := s.db.QueryRowContext(ctx, query, code).Scan(
 		&invite.ID, &invite.HouseholdID, &invite.Code,
 		&invite.ExpiresAt, &usedBy, &invite.CreatedAt,
 	)
@@ -156,6 +173,9 @@ func (s *HouseholdStorage) MarkInviteUsedTx(tx *sql.Tx, codeID, userID string) e
 // Member status methods
 
 func (s *HouseholdStorage) GetMemberStatuses(householdID string) ([]domain.MemberStatus, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	query := `
 		SELECT hm.user_id, hm.is_eating_today, hm.wants_lunch_box
 		FROM household_members hm
@@ -163,7 +183,7 @@ func (s *HouseholdStorage) GetMemberStatuses(householdID string) ([]domain.Membe
 		ORDER BY hm.joined_at ASC
 	`
 
-	rows, err := s.db.Query(query, householdID)
+	rows, err := s.db.QueryContext(ctx, query, householdID)
 	if err != nil {
 		return nil, err
 	}
@@ -186,6 +206,9 @@ func (s *HouseholdStorage) GetMemberStatuses(householdID string) ([]domain.Membe
 
 // UpdateMemberStatus performs a single atomic UPDATE for both fields.
 func (s *HouseholdStorage) UpdateMemberStatus(householdID, userID string, isEatingToday *bool, wantsLunchBox *bool) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	boolToInt := func(b bool) int {
 		if b {
 			return 1
@@ -195,7 +218,7 @@ func (s *HouseholdStorage) UpdateMemberStatus(householdID, userID string, isEati
 
 	// Use explicit queries based on which fields are provided
 	if isEatingToday != nil && wantsLunchBox != nil {
-		_, err := s.db.Exec(
+		_, err := s.db.ExecContext(ctx,
 			`UPDATE household_members SET is_eating_today = ?, wants_lunch_box = ? WHERE household_id = ? AND user_id = ?`,
 			boolToInt(*isEatingToday), boolToInt(*wantsLunchBox), householdID, userID,
 		)
@@ -203,7 +226,7 @@ func (s *HouseholdStorage) UpdateMemberStatus(householdID, userID string, isEati
 	}
 
 	if isEatingToday != nil {
-		_, err := s.db.Exec(
+		_, err := s.db.ExecContext(ctx,
 			`UPDATE household_members SET is_eating_today = ? WHERE household_id = ? AND user_id = ?`,
 			boolToInt(*isEatingToday), householdID, userID,
 		)
@@ -211,7 +234,7 @@ func (s *HouseholdStorage) UpdateMemberStatus(householdID, userID string, isEati
 	}
 
 	if wantsLunchBox != nil {
-		_, err := s.db.Exec(
+		_, err := s.db.ExecContext(ctx,
 			`UPDATE household_members SET wants_lunch_box = ? WHERE household_id = ? AND user_id = ?`,
 			boolToInt(*wantsLunchBox), householdID, userID,
 		)
@@ -224,8 +247,11 @@ func (s *HouseholdStorage) UpdateMemberStatus(householdID, userID string, isEati
 // Member management
 
 func (s *HouseholdStorage) GetMemberRole(householdID, userID string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	var role string
-	err := s.db.QueryRow(
+	err := s.db.QueryRowContext(ctx,
 		`SELECT role FROM household_members WHERE household_id = ? AND user_id = ?`,
 		householdID, userID,
 	).Scan(&role)
@@ -236,7 +262,10 @@ func (s *HouseholdStorage) GetMemberRole(householdID, userID string) (string, er
 }
 
 func (s *HouseholdStorage) RemoveMember(householdID, userID string) error {
-	_, err := s.db.Exec(
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(ctx,
 		`DELETE FROM household_members WHERE household_id = ? AND user_id = ?`,
 		householdID, userID,
 	)
@@ -253,8 +282,11 @@ func (s *HouseholdStorage) RemoveMemberTx(tx *sql.Tx, householdID, userID string
 }
 
 func (s *HouseholdStorage) IsMember(householdID, userID string) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	var count int
-	err := s.db.QueryRow(
+	err := s.db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM household_members WHERE household_id = ? AND user_id = ?`,
 		householdID, userID,
 	).Scan(&count)
@@ -272,7 +304,10 @@ func (s *HouseholdStorage) IsMemberTx(tx *sql.Tx, householdID, userID string) (b
 }
 
 func (s *HouseholdStorage) UpdateUserHousehold(userID, householdID string) error {
-	_, err := s.db.Exec(
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(ctx,
 		`UPDATE users SET household_id = ? WHERE id = ?`,
 		householdID, userID,
 	)
@@ -290,8 +325,11 @@ func (s *HouseholdStorage) UpdateUserHouseholdTx(tx *sql.Tx, userID, householdID
 
 // GetUserHouseholdID returns the user's current household_id.
 func (s *HouseholdStorage) GetUserHouseholdID(userID string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	var householdID sql.NullString
-	err := s.db.QueryRow(
+	err := s.db.QueryRowContext(ctx,
 		`SELECT household_id FROM users WHERE id = ?`, userID,
 	).Scan(&householdID)
 	if err != nil {
