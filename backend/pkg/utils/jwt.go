@@ -2,13 +2,13 @@ package utils
 
 import (
 	"errors"
-	"os"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = []byte(os.Getenv("JWT_SECRET")) //Read from env var
+var jwtSecret []byte
 
 type Claims struct {
 	UserID      string `json:"user_id"`
@@ -16,7 +16,21 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+// InitJWTSecret validates and initializes the JWT secret.
+// Must be called once at application startup before any JWT operations.
+func InitJWTSecret(secret string) error {
+	if len(secret) < 32 {
+		return errors.New("JWT_SECRET must be at least 32 characters")
+	}
+	jwtSecret = []byte(secret)
+	return nil
+}
+
 func GenerateToken(userID, householdID string) (string, error) {
+	if len(jwtSecret) == 0 {
+		return "", errors.New("JWT secret not initialized")
+	}
+
 	claims := Claims{
 		UserID:      userID,
 		HouseholdID: householdID,
@@ -33,6 +47,10 @@ func GenerateToken(userID, householdID string) (string, error) {
 func ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{},
 		error) {
+		// Validate algorithm to prevent "none" attack
+		if token.Method.Alg() != "HS256" {
+			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
+		}
 		return jwtSecret, nil
 	})
 
