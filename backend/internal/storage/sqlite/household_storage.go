@@ -27,6 +27,16 @@ func (s *HouseholdStorage) Create(household *domain.Household) error {
 	return err
 }
 
+// CreateTx inserts a household within a transaction.
+func (s *HouseholdStorage) CreateTx(tx *sql.Tx, household *domain.Household) error {
+	query := `
+		INSERT INTO households (id, name, created_at)
+		VALUES (?, ?, ?)
+	`
+	_, err := tx.Exec(query, household.ID, household.Name, household.CreatedAt)
+	return err
+}
+
 func (s *HouseholdStorage) AddMember(member *domain.HouseholdMember) error {
 	query := `
 		INSERT INTO household_members (id, household_id, user_id, role, joined_at)
