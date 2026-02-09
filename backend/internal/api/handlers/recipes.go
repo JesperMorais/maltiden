@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"net/http"
-	"strings"
 )
 
 type RecipeHandler struct {
@@ -38,14 +36,11 @@ func (h *RecipeHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RecipeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from path: /recipes/{id}
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	if len(parts) < 3 {
-		WriteError(w, http.StatusBadRequest, "invalid_request")
+	// Use PathValue instead of manual path splitting (VALID-03)
+	id := r.PathValue("id")
+	if !ValidateID(w, id, "recipe_id") {
 		return
 	}
-	id := parts[len(parts)-1]
 
 	recipe, err := h.recipeService.GetByID(id)
 	if err != nil {
@@ -64,8 +59,7 @@ func (h *RecipeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req domain.CreateRecipeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid_request")
+	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
@@ -80,6 +74,10 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusBadRequest, "ingredients_required")
 		case errors.Is(err, domain.ErrInstructionsRequired):
 			WriteError(w, http.StatusBadRequest, "instructions_required")
+		case errors.Is(err, domain.ErrNameTooLong):
+			WriteError(w, http.StatusBadRequest, "name_too_long")
+		case errors.Is(err, domain.ErrTooManyIngredients):
+			WriteError(w, http.StatusBadRequest, "too_many_ingredients")
 		default:
 			log.Printf("ERROR [CreateRecipe] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")

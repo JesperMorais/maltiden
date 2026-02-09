@@ -24,9 +24,17 @@ var (
 	// Resource
 	ErrNotFound = errors.New("not_found")
 
+	// Resource
+	ErrInvalidDays = errors.New("invalid_days")
+
 	// Recipe validation
 	ErrNameRequired         = errors.New("name_required")
 	ErrInvalidServings      = errors.New("invalid_servings")
 	ErrIngredientsRequired  = errors.New("ingredients_required")
 	ErrInstructionsRequired = errors.New("instructions_required")
+	ErrNameTooLong          = errors.New("name_too_long")
+	ErrTooManyIngredients   = errors.New("too_many_ingredients")
+
+	// Auth validation
+	ErrInvalidEmail = errors.New("invalid_email")
 )

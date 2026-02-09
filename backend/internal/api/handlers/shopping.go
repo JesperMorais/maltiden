@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -31,8 +30,7 @@ func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request
 	}
 
 	menuID := r.URL.Query().Get("menuId")
-	if menuID == "" {
-		WriteError(w, http.StatusBadRequest, "menu_id_required")
+	if !ValidateID(w, menuID, "menu_id") {
 		return
 	}
 
@@ -75,16 +73,14 @@ func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract item ID from path using PathValue
+	// Extract and validate item ID from path
 	itemID := r.PathValue("id")
-	if itemID == "" {
-		WriteError(w, http.StatusBadRequest, "invalid_request")
+	if !ValidateID(w, itemID, "item_id") {
 		return
 	}
 
 	menuID := r.URL.Query().Get("menuId")
-	if menuID == "" {
-		WriteError(w, http.StatusBadRequest, "menu_id_required")
+	if !ValidateID(w, menuID, "menu_id") {
 		return
 	}
 
@@ -105,8 +101,7 @@ func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req domain.UpdateShoppingItemRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid_request")
+	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 

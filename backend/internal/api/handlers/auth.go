@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"maltiden/internal/domain"
@@ -18,14 +17,11 @@ func NewAuthHandler(authService *services.AuthService) *AuthHandler {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	// Parse JSON body
 	var req domain.RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid_request")
+	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
-	// Call service
 	resp, err := h.authService.Register(req)
 	if err != nil {
 		switch {
@@ -33,6 +29,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusBadRequest, "weak_password")
 		case errors.Is(err, domain.ErrDuplicateEmail):
 			WriteError(w, http.StatusConflict, "email_already_exists")
+		case errors.Is(err, domain.ErrInvalidEmail):
+			WriteError(w, http.StatusBadRequest, "invalid_email")
 		default:
 			log.Printf("ERROR [Register] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
@@ -40,19 +38,15 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return JSON
 	WriteJSON(w, http.StatusCreated, resp)
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	// Parse JSON body
 	var req domain.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid_request")
+	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
-	// Call service
 	resp, err := h.authService.Login(req)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidCredentials) {
@@ -64,6 +58,5 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return JSON
 	WriteJSON(w, http.StatusOK, resp)
 }
