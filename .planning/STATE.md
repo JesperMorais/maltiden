@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 Phase: 4 of 7 (Critical Security & Data Integrity)
-Plan: 1 of 1 (Plan 04-01 complete)
-Status: Phase complete
-Last activity: 2026-02-09 — Completed 04-01-PLAN.md (JWT auth hardening)
+Plan: 2 of 3 (Plan 04-02 complete)
+Status: In progress
+Last activity: 2026-02-09 — Completed 04-02-PLAN.md (IDOR protection & transaction safety)
 
-Progress: ████████░░ 57% (4/7 phases complete)
+Progress: ████████░░ 57% (4/7 phases complete, Phase 4: 2/3 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 3.9 min
-- Total execution time: 0.45 hours
+- Total plans completed: 8
+- Average duration: 3.4 min
+- Total execution time: 0.48 hours
 
 **By Phase:**
 
@@ -30,7 +30,7 @@ Progress: ████████░░ 57% (4/7 phases complete)
 | 01-deep-code-review | 2/2 | 8min | 4min |
 | 02-architecture-performance-review | 2/2 | 7min | 3.5min |
 | 03-findings-report-fix-plan | 2/2 | 10min | 5min |
-| 04-critical-security-data-integrity | 1/1 | 2min | 2min |
+| 04-critical-security-data-integrity | 2/3 | 4min | 2min |
 
 ## Accumulated Context
 
@@ -45,6 +45,9 @@ See PROJECT.md Key Decisions table (6 decisions from v1.0, all marked ✓ Good).
 | JWT_SECRET min 32 chars, validated at startup | 04-01 | Security - prevents weak secrets | ✓ Good |
 | HS256 algorithm pinned in keyfunc callback | 04-01 | Security - prevents "none" attack | ✓ Good |
 | Shopping endpoints require authentication | 04-01 | Security - closes auth bypass | ✓ Good |
+| Shopping handlers verify menu belongs to user's household | 04-02 | Security - prevents IDOR attacks | ✓ Good |
+| Registration flow wrapped in database transaction | 04-02 | Data integrity - prevents orphaned records | ✓ Good |
+| MenuStorage injected into ShoppingHandler for IDOR verification | 04-02 | Architecture - enables ownership checks | ✓ Good |
 
 ### Deferred Issues
 
@@ -62,7 +65,7 @@ None — implementation ready to begin.
 
 ## Session Continuity
 
-Last session: 2026-02-09T14:06:15Z
-Stopped at: Completed 04-01-PLAN.md (JWT auth hardening)
+Last session: 2026-02-09T14:11:42Z
+Stopped at: Completed 04-02-PLAN.md (IDOR protection & transaction safety)
 Resume file: None
-Next up: Plan Phase 5 or continue Phase 4 if more plans needed
+Next up: Continue Phase 4 with 04-03-PLAN.md
