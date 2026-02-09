@@ -155,3 +155,22 @@ func (s *MenuStorage) GetByID(id string) (*domain.Menu, error) {
 
 	return &menu, rows.Err()
 }
+
+// GetHouseholdIDByMenuID returns the household_id for a given menu_id.
+// Returns empty string if menu not found.
+func (s *MenuStorage) GetHouseholdIDByMenuID(menuID string) (string, error) {
+	var householdID string
+	err := s.db.QueryRow(
+		`SELECT household_id FROM menus WHERE id = ?`,
+		menuID,
+	).Scan(&householdID)
+
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+
+	return householdID, nil
+}
