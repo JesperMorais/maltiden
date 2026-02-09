@@ -1,7 +1,6 @@
 package services
 
 import (
-	"errors"
 	"maltiden/internal/domain"
 	"maltiden/internal/storage/sqlite"
 	"time"
@@ -27,16 +26,16 @@ func (s *RecipeService) GetByID(id string) (*domain.Recipe, error) {
 
 func (s *RecipeService) Create(req domain.CreateRecipeRequest) (*domain.CreateRecipeResponse, error) {
 	if req.Name == "" {
-		return nil, errors.New("name_required")
+		return nil, domain.ErrNameRequired
 	}
 	if req.Servings <= 0 {
-		return nil, errors.New("invalid_servings")
+		return nil, domain.ErrInvalidServings
 	}
 	if len(req.Ingredients) == 0 {
-		return nil, errors.New("ingredients_required")
+		return nil, domain.ErrIngredientsRequired
 	}
 	if len(req.Instructions) == 0 {
-		return nil, errors.New("instructions_required")
+		return nil, domain.ErrInstructionsRequired
 	}
 
 	recipe := &domain.Recipe{

@@ -2,7 +2,6 @@ package services
 
 import (
 	"database/sql"
-	"errors"
 	"maltiden/internal/domain"
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/utils"
@@ -28,7 +27,7 @@ func NewAuthService(db *sql.DB, userStorage *sqlite.UserStorage, householdStorag
 func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse, error) {
 	// Validate input
 	if len(req.Password) < 8 {
-		return nil, errors.New("password must be at least 8 characters")
+		return nil, domain.ErrWeakPassword
 	}
 
 	// Check if email already exists
@@ -37,7 +36,7 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 		return nil, err
 	}
 	if existing != nil {
-		return nil, errors.New("email already exists")
+		return nil, domain.ErrDuplicateEmail
 	}
 
 	hash, err := utils.HashPassword(req.Password)
@@ -116,12 +115,12 @@ func (s *AuthService) Login(req domain.LoginRequest) (*domain.AuthResponse, erro
 		return nil, err
 	}
 	if user == nil {
-		return nil, errors.New("invalid credentials")
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	// Validate password
 	if !utils.CheckPassword(req.Password, user.PasswordHash) {
-		return nil, errors.New("invalid credentials")
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	// Generate JWT
