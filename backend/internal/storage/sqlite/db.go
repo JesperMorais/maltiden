@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -29,6 +30,30 @@ func Open(path string) (*sql.DB, error) {
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		return nil, fmt.Errorf("enable foreign keys: %w", err)
 	}
+
+	// Enable WAL mode for concurrent reads during writes
+	var walMode string
+	if err := db.QueryRow("PRAGMA journal_mode=WAL").Scan(&walMode); err != nil {
+		return nil, fmt.Errorf("enable WAL mode: %w", err)
+	}
+	if walMode != "wal" {
+		return nil, fmt.Errorf("failed to enable WAL mode, got: %s", walMode)
+	}
+
+	// Safe with WAL, reduces fsync calls
+	if _, err := db.Exec("PRAGMA synchronous=NORMAL"); err != nil {
+		return nil, fmt.Errorf("set synchronous mode: %w", err)
+	}
+
+	// Wait 5s instead of failing immediately on lock contention
+	if _, err := db.Exec("PRAGMA busy_timeout=5000"); err != nil {
+		return nil, fmt.Errorf("set busy timeout: %w", err)
+	}
+
+	// Configure connection pool (conservative for SQLite)
+	db.SetMaxOpenConns(25)    // single writer, multiple readers with WAL
+	db.SetMaxIdleConns(5)     // keep a few warm connections
+	db.SetConnMaxLifetime(5 * time.Minute) // recycle connections periodically
 
 	// Run Migrations
 	if err := runMigrations(db); err != nil {
