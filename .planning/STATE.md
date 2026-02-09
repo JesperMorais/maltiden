@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 2 of 3 (Architecture & Performance Review)
-Plan: 1 of 2 complete
-Status: In progress
-Last activity: 2026-02-09 — Completed 02-01-PLAN.md (architecture review)
+Plan: 2 of 2 complete
+Status: Phase complete
+Last activity: 2026-02-09 — Completed 02-02-PLAN.md (performance review)
 
-Progress: ████░░░░░░ 50% (3/6 plans complete)
+Progress: ████████░░ 67% (4/6 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 4 min
-- Total execution time: 0.20 hours
+- Total plans completed: 4
+- Average duration: 3.75 min
+- Total execution time: 0.25 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-deep-code-review | 2/2 | 8min | 4min |
-| 02-architecture-performance-review | 1/2 | 4min | 4min |
+| 02-architecture-performance-review | 2/2 | 7min | 3.5min |
 
 **Recent Trend:**
-- Last 5 plans: 4min, 4min, 4min
-- Trend: Consistent 4min average
+- Last 5 plans: 4min, 4min, 4min, 3min
+- Trend: Consistent ~4min average
 
 ## Accumulated Context
 
@@ -52,6 +52,9 @@ Recent decisions affecting current work:
 | 2026-02-09 | 02-01 | Error string matching is systemic fragility | Pattern appears in 6+ handlers with no sentinel errors - changing error text breaks HTTP routing |
 | 2026-02-09 | 02-01 | Package-level state blocks testing and security | JWT secret, context keys at package level prevent testing and create security risk |
 | 2026-02-09 | 02-01 | Focus on systemic patterns, not individual bugs | Phase 1 found 58 issues; Phase 2 identifies the PATTERNS those reveal (error handling, validation, transactions) |
+| 2026-02-09 | 02-02 | SQLite WAL mode must be enabled before production | Eliminates "database locked" errors under concurrent load - enables concurrent reads during writes |
+| 2026-02-09 | 02-02 | Tjek API caching provides 600x speedup | 1-hour TTL cache transforms worst endpoint from 6s to 10ms for cached requests |
+| 2026-02-09 | 02-02 | Concurrent API fetching reduces latency 5x | 20+ sequential HTTP calls (6s) vs 5 concurrent batches (1.2s) |
 
 ### Deferred Issues
 
@@ -74,9 +77,18 @@ None yet.
 - **Observability Gaps:** No structured logging, errors swallowed without traces, can't debug production issues
 - **Total Remediation Effort:** 34-52 hours estimated for all 21 architecture findings
 
+**From Phase 2 (02-02 Performance Review):**
+- **External API Bottleneck:** Tjek service makes 20+ sequential HTTP calls (6s latency) - primary performance blocker
+- **No Caching Strategy:** Every offers request hits external API - 600x speedup potential with 1-hour TTL cache
+- **Database Configuration:** SQLite WAL mode disabled - blocks concurrent reads during writes, causes "database locked" errors
+- **N+1 Query Pattern:** Shopping list generation fetches recipes individually - 80% reduction possible with batch query
+- **Deployment Config:** fly.toml has conflicting memory settings (1GB vs 256MB unclear)
+- **Before Production:** 6 high-severity performance issues requiring 10-14 hours immediate fixes
+- **Total Remediation Effort:** 18-28 hours estimated for all 17 performance findings
+
 ## Session Continuity
 
-Last session: 2026-02-09 12:22:27 UTC
-Stopped at: Completed 02-01-PLAN.md (architecture review)
+Last session: 2026-02-09 12:29:00 UTC
+Stopped at: Completed 02-02-PLAN.md (performance review)
 Resume file: None
-Next up: Plan 02-02 (performance review - N+1 queries, caching, deployment config)
+Next up: Phase 3 — Findings Report & Prioritization (create consolidated report and prioritized fix plan)
