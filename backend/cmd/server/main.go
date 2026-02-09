@@ -7,9 +7,16 @@ import (
 
 	"maltiden/internal/api"
 	"maltiden/internal/storage/sqlite"
+	"maltiden/pkg/utils"
 )
 
 func main() {
+	// Validate JWT secret before any other setup
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if err := utils.InitJWTSecret(jwtSecret); err != nil {
+		log.Fatal("JWT_SECRET must be at least 32 characters")
+	}
+
 	// Get config from env variables
 	port := os.Getenv("PORT")
 	if port == "" {
