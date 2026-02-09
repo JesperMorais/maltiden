@@ -28,11 +28,23 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest) (*domain.CreateRe
 	if req.Name == "" {
 		return nil, domain.ErrNameRequired
 	}
+	// VALID-10: name length upper bound
+	if len(req.Name) > 200 {
+		return nil, domain.ErrNameTooLong
+	}
 	if req.Servings <= 0 {
+		return nil, domain.ErrInvalidServings
+	}
+	// VALID-11: servings upper bound
+	if req.Servings > 100 {
 		return nil, domain.ErrInvalidServings
 	}
 	if len(req.Ingredients) == 0 {
 		return nil, domain.ErrIngredientsRequired
+	}
+	// VALID-12: ingredients array size upper bound
+	if len(req.Ingredients) > 50 {
+		return nil, domain.ErrTooManyIngredients
 	}
 	if len(req.Instructions) == 0 {
 		return nil, domain.ErrInstructionsRequired

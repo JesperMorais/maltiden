@@ -22,6 +22,24 @@ func NewMenuService(menuStorage *sqlite.MenuStorage, recipeStorage *sqlite.Recip
 }
 
 func (s *MenuService) Generate(householdID string, req domain.GenerateMenuRequest) (*domain.MenuResponse, error) {
+	// Validate and default days (VALID-13)
+	days := req.Days
+	if days == 0 {
+		days = 5 // backwards-compatible default
+	}
+	if days < 1 || days > 31 {
+		return nil, domain.ErrInvalidDays
+	}
+
+	// Validate and default servings (VALID-14)
+	servings := req.Servings
+	if servings == 0 {
+		servings = 4 // backwards-compatible default
+	}
+	if servings < 1 || servings > 100 {
+		return nil, domain.ErrInvalidServings
+	}
+
 	// Get all recipes
 	recipes, err := s.recipeStorage.GetAll(nil)
 	if err != nil {
@@ -30,16 +48,6 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 
 	if len(recipes) == 0 {
 		return nil, nil
-	}
-
-	// Default values
-	days := req.Days
-	if days <= 0 {
-		days = 5
-	}
-	servings := req.Servings
-	if servings <= 0 {
-		servings = 4
 	}
 
 	// Build skip days map
