@@ -26,8 +26,8 @@ func (s *RecipeStorage) GetAll(filter *domain.RecipeFilter) ([]domain.RecipeSumm
 
 	// Add tag filter (JSON search)
 	if filter != nil && filter.Tag != "" {
-		query += ` AND tags LIKE ?`
-		args = append(args, "%\""+filter.Tag+"\"%")
+		query += ` AND id IN (SELECT r2.id FROM recipes r2, json_each(r2.tags) WHERE json_each.value = ?)`
+		args = append(args, filter.Tag)
 	}
 
 	query += ` ORDER BY name`

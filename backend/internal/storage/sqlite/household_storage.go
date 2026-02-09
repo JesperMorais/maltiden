@@ -3,7 +3,6 @@ package sqlite
 import (
 	"database/sql"
 	"maltiden/internal/domain"
-	"strings"
 )
 
 type HouseholdStorage struct {
@@ -187,34 +186,39 @@ func (s *HouseholdStorage) GetMemberStatuses(householdID string) ([]domain.Membe
 
 // UpdateMemberStatus performs a single atomic UPDATE for both fields.
 func (s *HouseholdStorage) UpdateMemberStatus(householdID, userID string, isEatingToday *bool, wantsLunchBox *bool) error {
-	updates := []string{}
-	args := []interface{}{}
+	boolToInt := func(b bool) int {
+		if b {
+			return 1
+		}
+		return 0
+	}
+
+	// Use explicit queries based on which fields are provided
+	if isEatingToday != nil && wantsLunchBox != nil {
+		_, err := s.db.Exec(
+			`UPDATE household_members SET is_eating_today = ?, wants_lunch_box = ? WHERE household_id = ? AND user_id = ?`,
+			boolToInt(*isEatingToday), boolToInt(*wantsLunchBox), householdID, userID,
+		)
+		return err
+	}
 
 	if isEatingToday != nil {
-		updates = append(updates, "is_eating_today = ?")
-		if *isEatingToday {
-			args = append(args, 1)
-		} else {
-			args = append(args, 0)
-		}
+		_, err := s.db.Exec(
+			`UPDATE household_members SET is_eating_today = ? WHERE household_id = ? AND user_id = ?`,
+			boolToInt(*isEatingToday), householdID, userID,
+		)
+		return err
 	}
+
 	if wantsLunchBox != nil {
-		updates = append(updates, "wants_lunch_box = ?")
-		if *wantsLunchBox {
-			args = append(args, 1)
-		} else {
-			args = append(args, 0)
-		}
+		_, err := s.db.Exec(
+			`UPDATE household_members SET wants_lunch_box = ? WHERE household_id = ? AND user_id = ?`,
+			boolToInt(*wantsLunchBox), householdID, userID,
+		)
+		return err
 	}
 
-	if len(updates) == 0 {
-		return nil
-	}
-
-	args = append(args, householdID, userID)
-	query := "UPDATE household_members SET " + strings.Join(updates, ", ") + " WHERE household_id = ? AND user_id = ?"
-	_, err := s.db.Exec(query, args...)
-	return err
+	return nil
 }
 
 // Member management
