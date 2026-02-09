@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"maltiden/internal/storage/sqlite"
@@ -25,93 +26,95 @@ func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request
 	// Verify authenticated user has householdID
 	householdID := middleware.GetHouseholdID(r.Context())
 	if householdID == "" {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	menuID := r.URL.Query().Get("menuId")
 	if menuID == "" {
-		http.Error(w, `{"error":"menu_id_required"}`, http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "menu_id_required")
 		return
 	}
 
 	// IDOR protection: verify menu belongs to user's household
 	menuHouseholdID, err := h.menuStorage.GetHouseholdIDByMenuID(menuID)
 	if err != nil {
-		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		log.Printf("ERROR [GetShoppingList] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
 	if menuHouseholdID == "" {
-		http.Error(w, `{"error":"menu_not_found"}`, http.StatusNotFound)
+		WriteError(w, http.StatusNotFound, "menu_not_found")
 		return
 	}
 	if menuHouseholdID != householdID {
-		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+		WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 
 	list, err := h.shoppingService.GetShoppingList(menuID)
 	if err != nil {
-		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		log.Printf("ERROR [GetShoppingList] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
 
 	if list == nil {
-		http.Error(w, `{"error":"menu_not_found"}`, http.StatusNotFound)
+		WriteError(w, http.StatusNotFound, "menu_not_found")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(list)
+	WriteJSON(w, http.StatusOK, list)
 }
 
 func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	// Verify authenticated user has householdID
 	householdID := middleware.GetHouseholdID(r.Context())
 	if householdID == "" {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	// Extract item ID from path using PathValue
 	itemID := r.PathValue("id")
 	if itemID == "" {
-		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
 
 	menuID := r.URL.Query().Get("menuId")
 	if menuID == "" {
-		http.Error(w, `{"error":"menu_id_required"}`, http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "menu_id_required")
 		return
 	}
 
 	// IDOR protection: verify menu belongs to user's household
 	menuHouseholdID, err := h.menuStorage.GetHouseholdIDByMenuID(menuID)
 	if err != nil {
-		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		log.Printf("ERROR [UpdateShoppingItem] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
 	if menuHouseholdID == "" {
-		http.Error(w, `{"error":"menu_not_found"}`, http.StatusNotFound)
+		WriteError(w, http.StatusNotFound, "menu_not_found")
 		return
 	}
 	if menuHouseholdID != householdID {
-		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+		WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 
 	var req domain.UpdateShoppingItemRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
 
 	if err := h.shoppingService.UpdateItemChecked(menuID, itemID, req.Checked); err != nil {
-		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		log.Printf("ERROR [UpdateShoppingItem] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+	WriteJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
