@@ -73,8 +73,12 @@ func NewRouter(db *sql.DB) http.Handler {
 	mux.Handle("GET /menus/current", middleware.RequireAuth(
 		http.HandlerFunc(menuHandler.GetCurrent),
 	))
-	mux.HandleFunc("GET /shopping-list", shoppingHandler.GetShoppingList)
-	mux.HandleFunc("PATCH /shopping-list/items/{id}", shoppingHandler.UpdateItem)
+	mux.Handle("GET /shopping-list", middleware.RequireAuth(
+		http.HandlerFunc(shoppingHandler.GetShoppingList),
+	))
+	mux.Handle("PATCH /shopping-list/items/{id}", middleware.RequireAuth(
+		http.HandlerFunc(shoppingHandler.UpdateItem),
+	))
 
 	// Wrap with CORS middleware for frontend development
 	return middleware.CORS(mux)

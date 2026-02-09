@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
+	"maltiden/pkg/middleware"
 	"net/http"
-	"strings"
 )
 
 type ShoppingHandler struct {
@@ -17,6 +17,13 @@ func NewShoppingHandler(shoppingService *services.ShoppingService) *ShoppingHand
 }
 
 func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request) {
+	// Verify authenticated user has householdID
+	householdID := middleware.GetHouseholdID(r.Context())
+	if householdID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	menuID := r.URL.Query().Get("menuId")
 	if menuID == "" {
 		http.Error(w, `{"error":"menu_id_required"}`, http.StatusBadRequest)
@@ -39,14 +46,19 @@ func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request
 }
 
 func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
-	// Extract item ID from path: /shopping-list/items/{id}
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	if len(parts) < 4 {
+	// Verify authenticated user has householdID
+	householdID := middleware.GetHouseholdID(r.Context())
+	if householdID == "" {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	// Extract item ID from path using PathValue
+	itemID := r.PathValue("id")
+	if itemID == "" {
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
 		return
 	}
-	itemID := parts[len(parts)-1]
 
 	menuID := r.URL.Query().Get("menuId")
 	if menuID == "" {
