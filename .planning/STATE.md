@@ -4,22 +4,22 @@
 
 See: .planning/PROJECT.md (updated 2026-02-09)
 
-**Core value:** Surface every actionable issue in the backend — bugs, security gaps, architectural debt, performance problems — and produce a prioritized plan to fix them.
-**Current focus:** v1.0 Pre-Fix milestone complete — Planning next milestone
+**Core value:** Fix all critical, high, and medium-severity backend issues identified in the code review.
+**Current focus:** v1.1 Fix milestone — Phase 4 (Critical Security & Data Integrity)
 
 ## Current Position
 
-Phase: 3 of 3 (all complete)
-Plan: All complete
-Status: ✅ v1.0 Pre-Fix milestone shipped
-Last activity: 2026-02-09 — Milestone v1.0 archived
+Phase: 4 of 7 (Critical Security & Data Integrity)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-02-09 — Milestone v1.1 Fix created
 
-Progress: ██████████ 100% (6/6 plans complete)
+Progress: ██████░░░░ 43% (3/7 phases complete — v1.0 phases counted)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 6 (v1.0)
 - Average duration: 4.2 min
 - Total execution time: 0.42 hours
 
@@ -35,19 +35,25 @@ Progress: ██████████ 100% (6/6 plans complete)
 
 ### Decisions
 
-See PROJECT.md Key Decisions table (6 decisions, all marked ✓ Good).
+See PROJECT.md Key Decisions table (6 decisions from v1.0, all marked ✓ Good).
 
 ### Deferred Issues
 
-- 93 backend findings to be addressed in implementation milestone (see FIX-PLAN.md)
+- 93 backend findings being addressed in this milestone (see FIX-PLAN.md)
+- FIX-PLAN Batch mapping: Batches 1-2 → Phase 4, Batches 3-4 → Phase 5, Batches 5-6 → Phase 6, Batches 7-9 → Phase 7
 
 ### Blockers/Concerns
 
-None — review complete. Implementation ready to begin.
+None — implementation ready to begin.
+
+### Roadmap Evolution
+
+- v1.0 Pre-Fix: Backend code review, 3 phases (Phase 1-3) — shipped 2026-02-09
+- v1.1 Fix: Implement prioritized fixes, 4 phases (Phase 4-7) — created 2026-02-09
 
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: v1.0 Pre-Fix milestone archived
+Stopped at: Milestone v1.1 Fix initialization
 Resume file: None
-Next up: Plan implementation milestone using FIX-PLAN.md batches
+Next up: Plan Phase 4 (Critical Security & Data Integrity)
