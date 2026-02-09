@@ -86,6 +86,24 @@ func (s *ShoppingService) GetShoppingList(menuID string) (*domain.ShoppingList, 
 		return nil, err
 	}
 
+	// Collect all unique recipe IDs from non-skip days
+	recipeIDs := make([]string, 0, len(menu.Days))
+	recipeIDSet := make(map[string]bool)
+	for _, day := range menu.Days {
+		if !day.Skip && day.RecipeID != "" {
+			if !recipeIDSet[day.RecipeID] {
+				recipeIDs = append(recipeIDs, day.RecipeID)
+				recipeIDSet[day.RecipeID] = true
+			}
+		}
+	}
+
+	// Batch fetch all recipes (eliminates N+1 query problem)
+	recipes, err := s.recipeStorage.GetByIDs(recipeIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	// Aggregate ingredients from all recipes
 	aggregated := make(map[string]*domain.ShoppingItem)
 
@@ -94,8 +112,8 @@ func (s *ShoppingService) GetShoppingList(menuID string) (*domain.ShoppingList, 
 			continue
 		}
 
-		recipe, err := s.recipeStorage.GetByID(day.RecipeID)
-		if err != nil || recipe == nil {
+		recipe, ok := recipes[day.RecipeID]
+		if !ok {
 			continue
 		}
 
