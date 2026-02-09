@@ -40,10 +40,10 @@ Plans:
 **Goal**: Establish error infrastructure (sentinel errors, error response helpers) and sweep all input validation gaps (FIX-PLAN Batches 3-4)
 **Depends on**: Phase 4
 **Research**: Unlikely (internal patterns, Go error conventions)
-**Plans**: TBD
 
 Plans:
-- [ ] 05-01: TBD (run /gsd:plan-phase 5 to break down)
+- [ ] 05-01: Error Infrastructure (ERROR-01, ERROR-02, ERROR-03, VALID-01)
+- [ ] 05-02: Input Validation Sweep (VALID-02 through VALID-16)
 
 #### Phase 6: Performance & Database
 **Goal**: Fix external API performance (Tjek caching, concurrent fetching) and database configuration (WAL mode, connection pool, N+1 queries) (FIX-PLAN Batches 5-6)
@@ -75,6 +75,6 @@ None
 | 2. Architecture & Performance Review | v1.0 | 2/2 | ✅ Complete | 2026-02-09 |
 | 3. Findings Report & Fix Plan | v1.0 | 2/2 | ✅ Complete | 2026-02-09 |
 | 4. Critical Security & Data Integrity | v1.1 | 3/3 | ✅ Complete | 2026-02-09 |
-| 5. Error Handling & Input Validation | v1.1 | 0/? | Not started | - |
+| 5. Error Handling & Input Validation | v1.1 | 0/2 | Not started | - |
 | 6. Performance & Database | v1.1 | 0/? | Not started | - |
 | 7. Architecture, Deployment & Polish | v1.1 | 0/? | Not started | - |
