@@ -5,6 +5,7 @@ import (
 	"maltiden/internal/domain"
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/utils"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,6 +26,15 @@ func NewAuthService(db *sql.DB, userStorage *sqlite.UserStorage, householdStorag
 }
 
 func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse, error) {
+	// Trim whitespace from inputs (VALID-15)
+	req.Email = strings.TrimSpace(req.Email)
+	req.Name = strings.TrimSpace(req.Name)
+
+	// Basic email format validation
+	if !strings.Contains(req.Email, "@") || !strings.Contains(req.Email, ".") {
+		return nil, domain.ErrInvalidEmail
+	}
+
 	// Validate input
 	if len(req.Password) < 8 {
 		return nil, domain.ErrWeakPassword
@@ -109,6 +119,9 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 }
 
 func (s *AuthService) Login(req domain.LoginRequest) (*domain.AuthResponse, error) {
+	// Trim whitespace from email (VALID-15)
+	req.Email = strings.TrimSpace(req.Email)
+
 	// Get user from DB
 	user, err := s.userStorage.GetByEmail(req.Email)
 	if err != nil {
