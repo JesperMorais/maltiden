@@ -3,6 +3,8 @@ package sqlite
 import (
 	"database/sql"
 	"maltiden/internal/domain"
+
+	"github.com/google/uuid"
 )
 
 type MenuStorage struct {
@@ -44,7 +46,7 @@ func (s *MenuStorage) Create(menu *domain.Menu) error {
 		_, err = tx.Exec(
 			`INSERT INTO menu_days (id, menu_id, date, recipe_id, servings, skip)
 			 VALUES (?, ?, ?, ?, ?, ?)`,
-			menu.ID+"_"+day.Date, menu.ID, day.Date, recipeID, day.Servings, skip,
+			"md_"+uuid.New().String(), menu.ID, day.Date, recipeID, day.Servings, skip,
 		)
 		if err != nil {
 			return err
