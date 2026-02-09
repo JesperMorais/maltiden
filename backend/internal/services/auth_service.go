@@ -1,6 +1,7 @@
 package services
 
 import (
+	"database/sql"
 	"errors"
 	"maltiden/internal/domain"
 	"maltiden/internal/storage/sqlite"
@@ -11,12 +12,14 @@ import (
 )
 
 type AuthService struct {
+	db               *sql.DB
 	userStorage      *sqlite.UserStorage
 	householdStorage *sqlite.HouseholdStorage
 }
 
-func NewAuthService(userStorage *sqlite.UserStorage, householdStorage *sqlite.HouseholdStorage) *AuthService {
+func NewAuthService(db *sql.DB, userStorage *sqlite.UserStorage, householdStorage *sqlite.HouseholdStorage) *AuthService {
 	return &AuthService{
+		db:               db,
 		userStorage:      userStorage,
 		householdStorage: householdStorage,
 	}
@@ -47,13 +50,20 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 	householdID := "hh_" + uuid.New().String()
 	now := time.Now()
 
+	// Begin transaction for atomic registration
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	// Create household
 	household := &domain.Household{
 		ID:        householdID,
 		Name:      req.Name + "'s household",
 		CreatedAt: now,
 	}
-	if err := s.householdStorage.Create(household); err != nil {
+	if err := s.householdStorage.CreateTx(tx, household); err != nil {
 		return nil, err
 	}
 
@@ -66,7 +76,7 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 		HouseholdID:  householdID,
 		CreatedAt:    now,
 	}
-	if err := s.userStorage.Create(user); err != nil {
+	if err := s.userStorage.CreateTx(tx, user); err != nil {
 		return nil, err
 	}
 
@@ -78,7 +88,12 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 		Role:        "owner",
 		JoinedAt:    now,
 	}
-	if err := s.householdStorage.AddMember(member); err != nil {
+	if err := s.householdStorage.AddMemberTx(tx, member); err != nil {
+		return nil, err
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 

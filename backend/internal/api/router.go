@@ -19,7 +19,7 @@ func NewRouter(db *sql.DB) http.Handler {
 	menuStorage := sqlite.NewMenuStorage(db)
 	shoppingStorage := sqlite.NewShoppingStorage(db)
 
-	authService := services.NewAuthService(userStorage, householdStorage)
+	authService := services.NewAuthService(db, userStorage, householdStorage)
 	householdService := services.NewHouseholdService(householdStorage, userStorage)
 	recipeService := services.NewRecipeService(recipeStorage)
 	menuService := services.NewMenuService(menuStorage, recipeStorage)
