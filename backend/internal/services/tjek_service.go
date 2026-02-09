@@ -6,6 +6,7 @@ import (
 	"maltiden/internal/domain"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -79,6 +80,58 @@ func (s *TjekService) setCache(key string, data interface{}, ttl time.Duration) 
 		data:      data,
 		expiresAt: time.Now().Add(ttl),
 	}
+}
+
+// doWithRetry retries HTTP requests on transient failures with exponential backoff
+func (s *TjekService) doWithRetry(fn func() (*http.Response, error)) (*http.Response, error) {
+	maxAttempts := 3
+	backoffs := []time.Duration{0, 100 * time.Millisecond, 200 * time.Millisecond}
+
+	var lastErr error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		if attempt > 0 {
+			time.Sleep(backoffs[attempt])
+		}
+
+		resp, err := fn()
+
+		// Success case
+		if err == nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return resp, nil
+		}
+
+		// Determine if we should retry
+		shouldRetry := false
+
+		// Network errors - always retry
+		if err != nil {
+			lastErr = err
+			shouldRetry = true
+		} else {
+			// HTTP errors
+			if resp.StatusCode == 429 || resp.StatusCode >= 500 {
+				// Rate limit or server error - retry
+				lastErr = fmt.Errorf("HTTP %d", resp.StatusCode)
+				shouldRetry = true
+				if resp.Body != nil {
+					resp.Body.Close()
+				}
+			} else {
+				// 4xx client error (except 429) - don't retry
+				return resp, nil
+			}
+		}
+
+		// Last attempt or shouldn't retry - return error
+		if !shouldRetry || attempt == maxAttempts-1 {
+			if resp != nil {
+				return resp, lastErr
+			}
+			return nil, lastErr
+		}
+	}
+
+	return nil, lastErr
 }
 
 // catalogResponse represents a weekly flyer/catalog
@@ -323,13 +376,9 @@ func (s *TjekService) GetAvailableStores(lat, lng float64, radius int) ([]string
 	}
 
 	// Sort alphabetically
-	for i := 0; i < len(stores)-1; i++ {
-		for j := i + 1; j < len(stores); j++ {
-			if stores[j] < stores[i] {
-				stores[i], stores[j] = stores[j], stores[i]
-			}
-		}
-	}
+	sort.Slice(stores, func(i, j int) bool {
+		return stores[i] < stores[j]
+	})
 
 	return stores, nil
 }
@@ -351,8 +400,7 @@ func (s *TjekService) SearchOffers(req domain.OfferSearchRequest) (*domain.Offer
 		}
 	}
 
-	// Step 3: Get offers from each catalog
-	var allOffers []domain.TjekOffer
+	// Step 3: Filter catalogs before concurrent fetch
 	query := strings.ToLower(req.Query)
 
 	// Build exclude map for fast lookup
@@ -361,28 +409,60 @@ func (s *TjekService) SearchOffers(req domain.OfferSearchRequest) (*domain.Offer
 		excludeMap[strings.ToLower(store)] = true
 	}
 
+	// Filter to relevant catalogs
+	var relevantCatalogs []catalogResponse
 	for _, catalog := range catalogs {
-		// Filter to grocery stores
 		if !isGroceryStore(catalog.Branding.Name) {
 			continue
 		}
-
-		// Skip excluded stores
 		if excludeMap[strings.ToLower(catalog.Branding.Name)] {
 			continue
 		}
+		relevantCatalogs = append(relevantCatalogs, catalog)
+	}
 
-		// Get store address
-		store := storesByDealer[catalog.DealerID]
+	// Step 4: Fetch offers concurrently (max 5 goroutines)
+	type catalogOffers struct {
+		catalog catalogResponse
+		offers  []domain.TjekOffer
+	}
 
-		// Get offers from this catalog
-		offers, err := s.getCatalogOffers(catalog, store)
-		if err != nil {
-			continue
-		}
+	resultsCh := make(chan catalogOffers, len(relevantCatalogs))
+	sem := make(chan struct{}, 5) // Limit to 5 concurrent requests
+	var wg sync.WaitGroup
 
-		// Filter by search query and skip combo offers
-		for _, offer := range offers {
+	for _, catalog := range relevantCatalogs {
+		wg.Add(1)
+		go func(cat catalogResponse) {
+			defer wg.Done()
+
+			// Acquire semaphore
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			// Get store address
+			store := storesByDealer[cat.DealerID]
+
+			// Fetch offers
+			offers, err := s.getCatalogOffers(cat, store)
+			if err != nil {
+				return
+			}
+
+			resultsCh <- catalogOffers{catalog: cat, offers: offers}
+		}(catalog)
+	}
+
+	// Close results channel when all goroutines complete
+	go func() {
+		wg.Wait()
+		close(resultsCh)
+	}()
+
+	// Step 5: Collect and filter results
+	var allOffers []domain.TjekOffer
+	for result := range resultsCh {
+		for _, offer := range result.offers {
 			// Skip combo offers (multiple products in one deal)
 			if isComboOffer(offer.Heading) {
 				continue
@@ -422,36 +502,68 @@ func (s *TjekService) GetTopDiscounts(lat, lng float64, radius int, excludeStore
 		}
 	}
 
-	// Step 3: Get offers from each catalog, only with discounts
+	// Step 3: Filter catalogs before concurrent fetch
+	excludeMap := make(map[string]bool)
+	for _, store := range excludeStores {
+		excludeMap[strings.ToLower(store)] = true
+	}
+
+	// Filter to relevant catalogs
+	var relevantCatalogs []catalogResponse
+	for _, catalog := range catalogs {
+		if !isGroceryStore(catalog.Branding.Name) {
+			continue
+		}
+		if excludeMap[strings.ToLower(catalog.Branding.Name)] {
+			continue
+		}
+		relevantCatalogs = append(relevantCatalogs, catalog)
+	}
+
+	// Step 4: Fetch offers concurrently (max 5 goroutines)
+	type catalogOffers struct {
+		catalog catalogResponse
+		offers  []domain.TjekOffer
+	}
+
+	resultsCh := make(chan catalogOffers, len(relevantCatalogs))
+	sem := make(chan struct{}, 5) // Limit to 5 concurrent requests
+	var wg sync.WaitGroup
+
+	for _, catalog := range relevantCatalogs {
+		wg.Add(1)
+		go func(cat catalogResponse) {
+			defer wg.Done()
+
+			// Acquire semaphore
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			store := storesByDealer[cat.DealerID]
+			offers, err := s.getCatalogOffers(cat, store)
+			if err != nil {
+				return
+			}
+
+			resultsCh <- catalogOffers{catalog: cat, offers: offers}
+		}(catalog)
+	}
+
+	// Close results channel when all goroutines complete
+	go func() {
+		wg.Wait()
+		close(resultsCh)
+	}()
+
+	// Step 5: Collect offers with discounts
 	type offerWithDiscount struct {
 		offer    domain.TjekOffer
 		discount float64
 	}
 	var discountedOffers []offerWithDiscount
 
-	// Build exclude map for fast lookup
-	excludeMap := make(map[string]bool)
-	for _, store := range excludeStores {
-		excludeMap[strings.ToLower(store)] = true
-	}
-
-	for _, catalog := range catalogs {
-		if !isGroceryStore(catalog.Branding.Name) {
-			continue
-		}
-
-		// Skip excluded stores
-		if excludeMap[strings.ToLower(catalog.Branding.Name)] {
-			continue
-		}
-
-		store := storesByDealer[catalog.DealerID]
-		offers, err := s.getCatalogOffers(catalog, store)
-		if err != nil {
-			continue
-		}
-
-		for _, offer := range offers {
+	for result := range resultsCh {
+		for _, offer := range result.offers {
 			// Skip combo offers
 			if isComboOffer(offer.Heading) {
 				continue
@@ -469,15 +581,11 @@ func (s *TjekService) GetTopDiscounts(lat, lng float64, radius int, excludeStore
 	}
 
 	// Sort by discount percentage (highest first)
-	for i := 0; i < len(discountedOffers)-1; i++ {
-		for j := i + 1; j < len(discountedOffers); j++ {
-			if discountedOffers[j].discount > discountedOffers[i].discount {
-				discountedOffers[i], discountedOffers[j] = discountedOffers[j], discountedOffers[i]
-			}
-		}
-	}
+	sort.Slice(discountedOffers, func(i, j int) bool {
+		return discountedOffers[i].discount > discountedOffers[j].discount
+	})
 
-	// Extract sorted offers
+	// Extract sorted offers (top 50)
 	var result []domain.TjekOffer
 	for _, item := range discountedOffers {
 		result = append(result, item.offer)
@@ -509,7 +617,9 @@ func (s *TjekService) getCatalogs(lat, lng float64, radius int) ([]catalogRespon
 
 	fullURL := fmt.Sprintf("%s?%s", endpoint, params.Encode())
 
-	resp, err := s.httpClient.Get(fullURL)
+	resp, err := s.doWithRetry(func() (*http.Response, error) {
+		return s.httpClient.Get(fullURL)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -540,7 +650,9 @@ func (s *TjekService) getCatalogOffers(catalog catalogResponse, store storeRespo
 
 	endpoint := fmt.Sprintf("%s/catalogs/%s/hotspots", s.baseURL, catalog.ID)
 
-	resp, err := s.httpClient.Get(endpoint)
+	resp, err := s.doWithRetry(func() (*http.Response, error) {
+		return s.httpClient.Get(endpoint)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -611,7 +723,9 @@ func (s *TjekService) getStores(lat, lng float64, radius int) ([]storeResponse, 
 
 	fullURL := fmt.Sprintf("%s?%s", endpoint, params.Encode())
 
-	resp, err := s.httpClient.Get(fullURL)
+	resp, err := s.doWithRetry(func() (*http.Response, error) {
+		return s.httpClient.Get(fullURL)
+	})
 	if err != nil {
 		return nil, err
 	}
