@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
+	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"net/http"
@@ -19,40 +21,49 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Parse JSON body
 	var req domain.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
 
 	// Call service
 	resp, err := h.authService.Register(req)
 	if err != nil {
-		//TODO: Better error handling (different status codes)
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+		switch {
+		case errors.Is(err, domain.ErrWeakPassword):
+			WriteError(w, http.StatusBadRequest, "weak_password")
+		case errors.Is(err, domain.ErrDuplicateEmail):
+			WriteError(w, http.StatusConflict, "email_already_exists")
+		default:
+			log.Printf("ERROR [Register] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
 		return
 	}
 
 	// Return JSON
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(resp)
+	WriteJSON(w, http.StatusCreated, resp)
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Parse JSON body
 	var req domain.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
 
 	// Call service
 	resp, err := h.authService.Login(req)
 	if err != nil {
-		http.Error(w, `{"error":"invalid_credentials"}`, http.StatusUnauthorized)
+		if errors.Is(err, domain.ErrInvalidCredentials) {
+			WriteError(w, http.StatusUnauthorized, "invalid_credentials")
+		} else {
+			log.Printf("ERROR [Login] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
 		return
 	}
 
 	// Return JSON
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	WriteJSON(w, http.StatusOK, resp)
 }

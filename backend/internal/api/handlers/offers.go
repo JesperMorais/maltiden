@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
+	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"net/http"
@@ -71,13 +71,13 @@ func (h *OffersHandler) SearchOffers(w http.ResponseWriter, r *http.Request) {
 	// Call Tjek API
 	result, err := h.tjekService.SearchOffers(req)
 	if err != nil {
-		http.Error(w, `{"error":"failed to fetch offers","details":"`+err.Error()+`"}`, http.StatusBadGateway)
+		log.Printf("ERROR [SearchOffers] %v", err)
+		WriteError(w, http.StatusBadGateway, "service_unavailable")
 		return
 	}
 
 	// Return JSON response
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	WriteJSON(w, http.StatusOK, result)
 }
 
 func (h *OffersHandler) GetDiscounts(w http.ResponseWriter, r *http.Request) {
@@ -113,12 +113,12 @@ func (h *OffersHandler) GetDiscounts(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.tjekService.GetTopDiscounts(lat, lng, radius, excludeStores)
 	if err != nil {
-		http.Error(w, `{"error":"failed to fetch discounts","details":"`+err.Error()+`"}`, http.StatusBadGateway)
+		log.Printf("ERROR [GetDiscounts] %v", err)
+		WriteError(w, http.StatusBadGateway, "service_unavailable")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	WriteJSON(w, http.StatusOK, result)
 }
 
 func (h *OffersHandler) GetStores(w http.ResponseWriter, r *http.Request) {
@@ -144,12 +144,12 @@ func (h *OffersHandler) GetStores(w http.ResponseWriter, r *http.Request) {
 
 	stores, err := h.tjekService.GetAvailableStores(lat, lng, radius)
 	if err != nil {
-		http.Error(w, `{"error":"failed to fetch stores","details":"`+err.Error()+`"}`, http.StatusBadGateway)
+		log.Printf("ERROR [GetStores] %v", err)
+		WriteError(w, http.StatusBadGateway, "service_unavailable")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"stores": stores,
 	})
 }

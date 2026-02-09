@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"maltiden/pkg/utils"
 	"net/http"
 	"strings"
@@ -12,19 +13,27 @@ type contextKey string
 const UserIDKey contextKey = "user_id"
 const HouseholdIDKey contextKey = "household_id"
 
+// writeError writes a JSON error response from middleware.
+// Duplicated here to avoid import cycle with handlers package.
+func writeError(w http.ResponseWriter, status int, code string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{"error": code})
+}
+
 func RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get auth header
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+			writeError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
 
 		// Extract token (format: Bearer <token>)
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			http.Error(w, `{"error":"invalid_token_format"}`, http.StatusUnauthorized)
+			writeError(w, http.StatusUnauthorized, "invalid_token_format")
 			return
 		}
 		token := parts[1]
@@ -32,7 +41,7 @@ func RequireAuth(next http.Handler) http.Handler {
 		// Validate JWT
 		claims, err := utils.ValidateToken(token)
 		if err != nil {
-			http.Error(w, `{"error":"invalid_token"}`, http.StatusUnauthorized)
+			writeError(w, http.StatusUnauthorized, "invalid_token")
 			return
 		}
 
