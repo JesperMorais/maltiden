@@ -21,37 +21,44 @@ func writeError(w http.ResponseWriter, status int, code string) {
 	json.NewEncoder(w).Encode(map[string]string{"error": code})
 }
 
-func RequireAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get auth header
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			writeError(w, http.StatusUnauthorized, "unauthorized")
-			return
-		}
+// TokenValidator defines the interface for validating JWT tokens.
+type TokenValidator interface {
+	ValidateToken(tokenString string) (*utils.Claims, error)
+}
 
-		// Extract token (format: Bearer <token>)
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			writeError(w, http.StatusUnauthorized, "invalid_token_format")
-			return
-		}
-		token := parts[1]
+func RequireAuth(validator TokenValidator) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Get auth header
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				writeError(w, http.StatusUnauthorized, "unauthorized")
+				return
+			}
 
-		// Validate JWT
-		claims, err := utils.ValidateToken(token)
-		if err != nil {
-			writeError(w, http.StatusUnauthorized, "invalid_token")
-			return
-		}
+			// Extract token (format: Bearer <token>)
+			parts := strings.Split(authHeader, " ")
+			if len(parts) != 2 || parts[0] != "Bearer" {
+				writeError(w, http.StatusUnauthorized, "invalid_token_format")
+				return
+			}
+			token := parts[1]
 
-		// Add userID and householdID to context
-		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
-		ctx = context.WithValue(ctx, HouseholdIDKey, claims.HouseholdID)
+			// Validate JWT
+			claims, err := validator.ValidateToken(token)
+			if err != nil {
+				writeError(w, http.StatusUnauthorized, "invalid_token")
+				return
+			}
 
-		// Call next handler
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+			// Add userID and householdID to context
+			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
+			ctx = context.WithValue(ctx, HouseholdIDKey, claims.HouseholdID)
+
+			// Call next handler
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
 // Helper to get userID from context

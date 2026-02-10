@@ -6,6 +6,7 @@ import (
 	"maltiden/internal/services"
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/middleware"
+	"maltiden/pkg/utils"
 	"net/http"
 	"os"
 	"strings"
@@ -21,7 +22,7 @@ type dependencies struct {
 	health    *handlers.HealthHandler
 }
 
-func wireDependencies(db *sql.DB) *dependencies {
+func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	// Storage layer
 	userStorage := sqlite.NewUserStorage(db)
 	householdStorage := sqlite.NewHouseholdStorage(db)
@@ -30,7 +31,7 @@ func wireDependencies(db *sql.DB) *dependencies {
 	shoppingStorage := sqlite.NewShoppingStorage(db)
 
 	// Service layer
-	authService := services.NewAuthService(db, userStorage, householdStorage)
+	authService := services.NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := services.NewHouseholdService(householdStorage, userStorage)
 	recipeService := services.NewRecipeService(recipeStorage)
 	menuService := services.NewMenuService(menuStorage, recipeStorage)
@@ -49,11 +50,11 @@ func wireDependencies(db *sql.DB) *dependencies {
 	}
 }
 
-func NewRouter(db *sql.DB) http.Handler {
+func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux := http.NewServeMux()
 
 	// Wire dependencies
-	deps := wireDependencies(db)
+	deps := wireDependencies(db, jwtService)
 
 	// Public routes
 	mux.HandleFunc("GET /health", deps.health.Check)
@@ -66,37 +67,37 @@ func NewRouter(db *sql.DB) http.Handler {
 	mux.HandleFunc("GET /recipes/{id}", deps.recipe.GetByID)
 
 	// Protected routes
-	mux.Handle("GET /households/me", middleware.RequireAuth(
+	mux.Handle("GET /households/me", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.household.GetMyHousehold),
 	))
-	mux.Handle("POST /households/invite", middleware.RequireAuth(
+	mux.Handle("POST /households/invite", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.household.CreateInvite),
 	))
-	mux.Handle("POST /households/join", middleware.RequireAuth(
+	mux.Handle("POST /households/join", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.household.JoinHousehold),
 	))
-	mux.Handle("GET /households/members/status", middleware.RequireAuth(
+	mux.Handle("GET /households/members/status", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.household.GetMemberStatuses),
 	))
-	mux.Handle("PATCH /households/members/{id}/status", middleware.RequireAuth(
+	mux.Handle("PATCH /households/members/{id}/status", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.household.UpdateMemberStatus),
 	))
-	mux.Handle("DELETE /households/members/{id}", middleware.RequireAuth(
+	mux.Handle("DELETE /households/members/{id}", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.household.RemoveMember),
 	))
-	mux.Handle("POST /recipes", middleware.RequireAuth(
+	mux.Handle("POST /recipes", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.recipe.Create),
 	))
-	mux.Handle("POST /menus/generate", middleware.RequireAuth(
+	mux.Handle("POST /menus/generate", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.menu.Generate),
 	))
-	mux.Handle("GET /menus/current", middleware.RequireAuth(
+	mux.Handle("GET /menus/current", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.menu.GetCurrent),
 	))
-	mux.Handle("GET /shopping-list", middleware.RequireAuth(
+	mux.Handle("GET /shopping-list", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.shopping.GetShoppingList),
 	))
-	mux.Handle("PATCH /shopping-list/items/{id}", middleware.RequireAuth(
+	mux.Handle("PATCH /shopping-list/items/{id}", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.shopping.UpdateItem),
 	))
 

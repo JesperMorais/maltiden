@@ -14,13 +14,15 @@ type AuthService struct {
 	db               *sql.DB
 	userStorage      domain.UserRepository
 	householdStorage domain.HouseholdRepository
+	jwtService       *utils.JWTService
 }
 
-func NewAuthService(db *sql.DB, userStorage domain.UserRepository, householdStorage domain.HouseholdRepository) *AuthService {
+func NewAuthService(db *sql.DB, userStorage domain.UserRepository, householdStorage domain.HouseholdRepository, jwtService *utils.JWTService) *AuthService {
 	return &AuthService{
 		db:               db,
 		userStorage:      userStorage,
 		householdStorage: householdStorage,
+		jwtService:       jwtService,
 	}
 }
 
@@ -106,7 +108,7 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 	}
 
 	// Generate JWT
-	token, err := utils.GenerateToken(user.ID, user.HouseholdID)
+	token, err := s.jwtService.GenerateToken(user.ID, user.HouseholdID)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +138,7 @@ func (s *AuthService) Login(req domain.LoginRequest) (*domain.AuthResponse, erro
 	}
 
 	// Generate JWT
-	token, err := utils.GenerateToken(user.ID, user.HouseholdID)
+	token, err := s.jwtService.GenerateToken(user.ID, user.HouseholdID)
 	if err != nil {
 		return nil, err
 	}
