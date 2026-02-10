@@ -33,10 +33,6 @@ defineEmits<{
 </template>
 
 <style scoped>
-:deep(.recipe-spotlight) {
-  border-radius: 20px;
-}
-
 .recipe-card {
   cursor: pointer;
   text-align: center;

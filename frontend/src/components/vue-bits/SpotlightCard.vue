@@ -8,6 +8,7 @@
     @mouseleave="handleMouseLeave"
     class="spotlight-card"
     :class="props.className"
+    :style="{ borderRadius: props.borderRadius }"
   >
     <div
       class="spotlight-overlay"
@@ -27,11 +28,13 @@ import { ref, useTemplateRef } from 'vue'
 interface SpotlightCardProps {
   className?: string
   spotlightColor?: string
+  borderRadius?: string
 }
 
 const props = withDefaults(defineProps<SpotlightCardProps>(), {
   className: '',
   spotlightColor: 'rgba(255, 107, 91, 0.15)',
+  borderRadius: '20px',
 })
 
 const divRef = useTemplateRef<HTMLDivElement>('divRef')

@@ -3,6 +3,7 @@ import { RouterLink } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
+import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
 
 interface Props {
   title: string
@@ -37,6 +38,21 @@ const themeStore = useThemeStore()
         </button>
       </div>
     </nav>
+
+    <!-- Interactive wave background -->
+    <WavesBackground
+      line-color="rgba(255, 107, 91, 0.12)"
+      background-color="transparent"
+      :wave-speed-x="0.01"
+      :wave-speed-y="0.004"
+      :wave-amp-x="40"
+      :wave-amp-y="20"
+      :x-gap="12"
+      :y-gap="36"
+      :friction="0.92"
+      :tension="0.006"
+      :max-cursor-move="120"
+    />
 
     <!-- Decorative background elements -->
     <div class="hero-bg">
