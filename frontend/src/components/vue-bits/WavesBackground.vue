@@ -6,7 +6,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch, type CSSProperties, useTemplateRef } from 'vue'
+import { onMounted, onUnmounted, watch, reactive, type CSSProperties, useTemplateRef } from 'vue'
 
 class Grad {
   x: number
@@ -57,9 +57,15 @@ class Noise {
     seed = Math.floor(seed)
     if (seed < 256) seed |= seed << 8
     for (let i = 0; i < 256; i++) {
-      const v = i & 1 ? this.p[i]! ^ (seed & 255) : this.p[i]! ^ ((seed >> 8) & 255)
+      const pVal = this.p[i]
+      if (pVal === undefined) continue
+      const v = i & 1 ? pVal ^ (seed & 255) : pVal ^ ((seed >> 8) & 255)
       this.perm[i] = this.perm[i + 256] = v
-      this.gradP[i] = this.gradP[i + 256] = this.grad3[v! % 12]!
+      const gradIdx = v % 12
+      const grad = this.grad3[gradIdx]
+      if (grad) {
+        this.gradP[i] = this.gradP[i + 256] = grad
+      }
     }
   }
 
@@ -70,10 +76,19 @@ class Noise {
     let X = Math.floor(x), Y = Math.floor(y)
     x -= X; y -= Y
     X &= 255; Y &= 255
-    const n00 = this.gradP[X + this.perm[Y]!]!.dot2(x, y)
-    const n01 = this.gradP[X + this.perm[Y + 1]!]!.dot2(x, y - 1)
-    const n10 = this.gradP[X + 1 + this.perm[Y]!]!.dot2(x - 1, y)
-    const n11 = this.gradP[X + 1 + this.perm[Y + 1]!]!.dot2(x - 1, y - 1)
+
+    const permY = this.perm[Y] ?? 0
+    const permY1 = this.perm[Y + 1] ?? 0
+    const gp00 = this.gradP[X + permY]
+    const gp01 = this.gradP[X + permY1]
+    const gp10 = this.gradP[X + 1 + permY]
+    const gp11 = this.gradP[X + 1 + permY1]
+
+    const n00 = gp00 ? gp00.dot2(x, y) : 0
+    const n01 = gp01 ? gp01.dot2(x, y - 1) : 0
+    const n10 = gp10 ? gp10.dot2(x - 1, y) : 0
+    const n11 = gp11 ? gp11.dot2(x - 1, y - 1) : 0
+
     const u = this.fade(x)
     return this.lerp(this.lerp(n00, n10, u), this.lerp(n01, n11, u), this.fade(y))
   }
@@ -89,12 +104,6 @@ interface Point {
 interface Mouse {
   x: number; y: number; lx: number; ly: number
   sx: number; sy: number; v: number; vs: number; a: number; set: boolean
-}
-
-interface Config {
-  lineColor: string; waveSpeedX: number; waveSpeedY: number
-  waveAmpX: number; waveAmpY: number; friction: number
-  tension: number; maxCursorMove: number; xGap: number; yGap: number
 }
 
 interface WavesProps {
@@ -137,11 +146,18 @@ let bounding = { width: 0, height: 0, left: 0, top: 0 }
 let noise: Noise | null = null
 let lines: Point[][] = []
 const mouse: Mouse = { x: -10, y: 0, lx: 0, ly: 0, sx: 0, sy: 0, v: 0, vs: 0, a: 0, set: false }
-let config: Config = {
-  lineColor: props.lineColor, waveSpeedX: props.waveSpeedX, waveSpeedY: props.waveSpeedY,
-  waveAmpX: props.waveAmpX, waveAmpY: props.waveAmpY, friction: props.friction,
-  tension: props.tension, maxCursorMove: props.maxCursorMove, xGap: props.xGap, yGap: props.yGap,
-}
+const config = reactive({
+  lineColor: props.lineColor,
+  waveSpeedX: props.waveSpeedX,
+  waveSpeedY: props.waveSpeedY,
+  waveAmpX: props.waveAmpX,
+  waveAmpY: props.waveAmpY,
+  friction: props.friction,
+  tension: props.tension,
+  maxCursorMove: props.maxCursorMove,
+  xGap: props.xGap,
+  yGap: props.yGap,
+})
 let frameId: number | null = null
 
 const setSize = () => {
@@ -219,12 +235,16 @@ const drawLines = () => {
   ctx.beginPath()
   ctx.strokeStyle = config.lineColor
   lines.forEach((points) => {
-    let p1 = moved(points[0]!, false)
+    const firstPoint = points[0]
+    if (!firstPoint) return
+    let p1 = moved(firstPoint, false)
     ctx!.moveTo(p1.x, p1.y)
     points.forEach((p, idx) => {
       const isLast = idx === points.length - 1
       p1 = moved(p, !isLast)
-      const p2 = moved(points[idx + 1] || points[points.length - 1]!, !isLast)
+      const nextPoint = points[idx + 1] ?? points[points.length - 1]
+      if (!nextPoint) return
+      const p2 = moved(nextPoint, !isLast)
       ctx!.lineTo(p1.x, p1.y)
       if (isLast) ctx!.moveTo(p2.x, p2.y)
     })
@@ -265,7 +285,10 @@ const updateMouse = (x: number, y: number) => {
 }
 
 const onMouseMove = (e: MouseEvent) => { updateMouse(e.clientX, e.clientY) }
-const onTouchMove = (e: TouchEvent) => { const touch = e.touches[0]!; updateMouse(touch.clientX, touch.clientY) }
+const onTouchMove = (e: TouchEvent) => {
+  const touch = e.touches[0]
+  if (touch) updateMouse(touch.clientX, touch.clientY)
+}
 
 onMounted(() => {
   const canvas = canvasRef.value
@@ -277,7 +300,7 @@ onMounted(() => {
   frameId = requestAnimationFrame(tick)
   window.addEventListener('resize', onResize)
   window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('touchmove', onTouchMove, { passive: false })
+  window.addEventListener('touchmove', onTouchMove, { passive: true })
 })
 
 onUnmounted(() => {
@@ -290,11 +313,11 @@ onUnmounted(() => {
 watch(
   () => [props.lineColor, props.waveSpeedX, props.waveSpeedY, props.waveAmpX, props.waveAmpY, props.friction, props.tension, props.maxCursorMove, props.xGap, props.yGap],
   () => {
-    config = {
+    Object.assign(config, {
       lineColor: props.lineColor, waveSpeedX: props.waveSpeedX, waveSpeedY: props.waveSpeedY,
       waveAmpX: props.waveAmpX, waveAmpY: props.waveAmpY, friction: props.friction,
       tension: props.tension, maxCursorMove: props.maxCursorMove, xGap: props.xGap, yGap: props.yGap,
-    }
+    })
   },
 )
 </script>

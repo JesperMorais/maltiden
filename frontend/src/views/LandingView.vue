@@ -4,6 +4,7 @@ import { useLandingStore } from '@/stores/landing'
 import HeroSection from '@/components/landing/HeroSection.vue'
 import FeaturesSection from '@/components/landing/FeaturesSection.vue'
 import CtaSection from '@/components/landing/CtaSection.vue'
+import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
 
 const landingStore = useLandingStore()
 
@@ -14,6 +15,18 @@ onMounted(() => {
 
 <template>
   <main class="landing-page">
+    <!-- Animated wave background -->
+    <WavesBackground
+      line-color="rgba(255, 107, 91, 0.08)"
+      background-color="transparent"
+      :wave-speed-x="0.008"
+      :wave-speed-y="0.003"
+      :wave-amp-x="30"
+      :wave-amp-y="15"
+      :x-gap="14"
+      :y-gap="40"
+    />
+
     <!-- Loading state -->
     <div v-if="landingStore.isLoading" class="loading-state">
       <div class="loader">
@@ -66,6 +79,7 @@ onMounted(() => {
   min-height: 100vh;
   background: var(--bg-secondary);
   overflow-x: hidden;
+  position: relative;
 }
 
 /* Loading state */
@@ -75,6 +89,8 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   background: linear-gradient(165deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  position: relative;
+  z-index: 1;
 }
 
 .loader {
@@ -103,6 +119,8 @@ onMounted(() => {
   justify-content: center;
   background: linear-gradient(165deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   padding: 2rem;
+  position: relative;
+  z-index: 1;
 }
 
 .error-content {

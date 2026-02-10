@@ -120,7 +120,7 @@ function handleViewShoppingList() {
         <div class="dashboard-greeting">
           <RotatingText
             :texts="greetingTexts"
-            :rotation-interval="3000"
+            :rotation-interval="4500"
             split-by="words"
             :stagger-duration="0.03"
             main-class-name="greeting-text"
