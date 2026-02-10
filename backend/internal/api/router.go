@@ -58,6 +58,9 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	// Wire dependencies
 	deps := wireDependencies(db, jwtService)
 
+	// Rate limiter for auth endpoints: 5 requests/sec, burst of 10
+	authLimiter := middleware.NewRateLimiter(5, 10)
+
 	// Recipe parser (Claude API) - optional, degrades gracefully if ANTHROPIC_API_KEY not set
 	var parserHandler *handlers.RecipeParserHandler
 	claudeClient, err := claude.NewClient()
@@ -72,8 +75,8 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 
 	// Public routes
 	mux.HandleFunc("GET /health", deps.health.Check)
-	mux.HandleFunc("POST /auth/register", deps.auth.Register)
-	mux.HandleFunc("POST /auth/login", deps.auth.Login)
+	mux.Handle("POST /auth/register", authLimiter.Limit(http.HandlerFunc(deps.auth.Register)))
+	mux.Handle("POST /auth/login", authLimiter.Limit(http.HandlerFunc(deps.auth.Login)))
 	mux.HandleFunc("GET /offers/search", deps.offers.SearchOffers)
 	mux.HandleFunc("GET /offers/discounts", deps.offers.GetDiscounts)
 	mux.HandleFunc("GET /offers/stores", deps.offers.GetStores)

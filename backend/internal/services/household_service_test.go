@@ -60,7 +60,7 @@ func createTestUser(t *testing.T, authService *AuthService, email, name string) 
 	t.Helper()
 	resp, err := authService.Register(domain.RegisterRequest{
 		Email:    email,
-		Password: "testpassword123",
+		Password: "Testpassword123",
 		Name:     name,
 	})
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -49,16 +50,18 @@ func DecodeJSON(w http.ResponseWriter, r *http.Request, maxBytes int64, dst inte
 	return true
 }
 
-// ValidateID checks that a path/query parameter ID is non-empty and has a minimum length
-// consistent with the prefixed UUID format used in this codebase (e.g., "rec_abc123...").
+// prefixedUUIDPattern matches IDs in the format "prefix_<uuid>" (e.g., "rec_550e8400-...").
+var prefixedUUIDPattern = regexp.MustCompile(`^[a-z]{2,5}_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+// ValidateID checks that a path/query parameter ID is non-empty and matches the
+// prefixed UUID format used in this codebase (e.g., "rec_550e8400-e29b-...").
 // Returns false if validation failed (error already written to w). Addresses VALID-04.
 func ValidateID(w http.ResponseWriter, id, paramName string) bool {
 	if id == "" {
 		WriteError(w, http.StatusBadRequest, paramName+"_required")
 		return false
 	}
-	// IDs are prefix + UUID (e.g., "rec_<uuid>"), minimum length is prefix + underscore + UUID
-	if len(id) < 4 {
+	if !prefixedUUIDPattern.MatchString(id) {
 		WriteError(w, http.StatusBadRequest, "invalid_"+paramName)
 		return false
 	}

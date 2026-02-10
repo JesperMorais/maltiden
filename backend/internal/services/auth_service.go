@@ -7,6 +7,7 @@ import (
 	"net/mail"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/google/uuid"
 )
@@ -37,8 +38,30 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 		return nil, domain.ErrInvalidEmail
 	}
 
-	// Validate input
+	// Validate password strength: min 8 chars, at least 3 of 4 character types
 	if len(req.Password) < 8 {
+		return nil, domain.ErrWeakPassword
+	}
+	var hasUpper, hasLower, hasDigit, hasSpecial bool
+	for _, r := range req.Password {
+		switch {
+		case unicode.IsUpper(r):
+			hasUpper = true
+		case unicode.IsLower(r):
+			hasLower = true
+		case unicode.IsDigit(r):
+			hasDigit = true
+		default:
+			hasSpecial = true
+		}
+	}
+	types := 0
+	for _, has := range []bool{hasUpper, hasLower, hasDigit, hasSpecial} {
+		if has {
+			types++
+		}
+	}
+	if types < 3 {
 		return nil, domain.ErrWeakPassword
 	}
 
