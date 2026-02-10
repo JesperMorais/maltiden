@@ -27,8 +27,6 @@ jobs:
       issues: write
       id-token: write
       actions: read
-    env:
-      CLAUDE_OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -39,7 +37,7 @@ jobs:
 
       - name: Authenticate gh CLI with Claude OAuth
         run: |
-          echo $CLAUDE_OAUTH | gh auth login --with-token
+          gh auth login --with-token <<< "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}"
 
       - name: Run Claude Code
         id: claude
@@ -48,23 +46,10 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
           prompt: |
-            You are an automated code assistant.
-
-            Only act when explicit actionable instructions are provided in the @claude comment.
-
-            If no actionable instruction is found:
-              - Do nothing.
-              - Do not reply.
-              - Do not acknowledge.
-
-            Execute the instructions exactly as written.
-            Do not infer intent.
-            Do not perform fallback actions.
-
+            Follow the user's instructions from the @claude mention.
+            If no specific instructions are given, provide a brief summary of the PR changes.
             Keep responses concise, precise, and actionable.
-
-            When referencing code, always include file and line numbers using:
-            path/to/file.ts:line_number
+            When referencing code, include file and line numbers using: path/to/file.ts:line_number
 
           claude_args: |
             --allowedTools "Read,Write,Edit,Bash(git:*),Bash(gh:*),Bash(bun:*),Bash(go:*)"
@@ -74,7 +59,9 @@ jobs:
         run: |
           git config user.name "Claude Bot"
           git config user.email "claude-bot@github.com"
-          git branch
-          git status
-          git push origin HEAD
+          if [ -n "$(git status --porcelain)" ] || [ "$(git rev-parse HEAD)" != "$(git rev-parse @{u} 2>/dev/null)" ]; then
+            git push origin HEAD
+          else
+            echo "No changes to push"
+          fi
         shell: bash
