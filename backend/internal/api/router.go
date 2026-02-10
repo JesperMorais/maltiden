@@ -7,6 +7,8 @@ import (
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/middleware"
 	"net/http"
+	"os"
+	"strings"
 )
 
 type dependencies struct {
@@ -16,6 +18,7 @@ type dependencies struct {
 	menu      *handlers.MenuHandler
 	shopping  *handlers.ShoppingHandler
 	offers    *handlers.OffersHandler
+	health    *handlers.HealthHandler
 }
 
 func wireDependencies(db *sql.DB) *dependencies {
@@ -42,6 +45,7 @@ func wireDependencies(db *sql.DB) *dependencies {
 		menu:      handlers.NewMenuHandler(menuService),
 		shopping:  handlers.NewShoppingHandler(shoppingService, menuStorage),
 		offers:    handlers.NewOffersHandler(tjekService),
+		health:    handlers.NewHealthHandler(db),
 	}
 }
 
@@ -52,7 +56,7 @@ func NewRouter(db *sql.DB) http.Handler {
 	deps := wireDependencies(db)
 
 	// Public routes
-	mux.HandleFunc("GET /health", handlers.Health)
+	mux.HandleFunc("GET /health", deps.health.Check)
 	mux.HandleFunc("POST /auth/register", deps.auth.Register)
 	mux.HandleFunc("POST /auth/login", deps.auth.Login)
 	mux.HandleFunc("GET /offers/search", deps.offers.SearchOffers)
@@ -96,6 +100,13 @@ func NewRouter(db *sql.DB) http.Handler {
 		http.HandlerFunc(deps.shopping.UpdateItem),
 	))
 
-	// Wrap with CORS middleware for frontend development
-	return middleware.CORS(mux)
+	// Get CORS origins from environment or use development defaults
+	corsOrigins := os.Getenv("CORS_ORIGINS")
+	if corsOrigins == "" {
+		corsOrigins = "http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173"
+	}
+	allowedOrigins := strings.Split(corsOrigins, ",")
+
+	// Wrap with middleware: request ID inside CORS
+	return middleware.CORS(allowedOrigins)(middleware.RequestID(mux))
 }
