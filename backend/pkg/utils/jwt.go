@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -19,10 +20,13 @@ type JWTService struct {
 }
 
 // NewJWTService creates a new JWT service with the provided secret.
-// Returns an error if the secret is less than 32 characters.
+// Requires a non-empty secret. In production (FLY_APP_NAME set), enforces 32+ characters.
 func NewJWTService(secret string) (*JWTService, error) {
-	if len(secret) < 32 {
-		return nil, errors.New("JWT_SECRET must be at least 32 characters")
+	if secret == "" {
+		return nil, errors.New("JWT_SECRET is required")
+	}
+	if os.Getenv("FLY_APP_NAME") != "" && len(secret) < 32 {
+		return nil, errors.New("JWT_SECRET must be at least 32 characters in production")
 	}
 	return &JWTService{secret: []byte(secret)}, nil
 }
