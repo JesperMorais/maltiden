@@ -12,7 +12,16 @@ import HouseholdWidget from '@/components/dashboard/HouseholdWidget.vue'
 import ShoppingListWidget from '@/components/dashboard/ShoppingListWidget.vue'
 import SettingsModal from '@/components/dashboard/SettingsModal.vue'
 import DashboardSkeleton from '@/components/skeleton/layouts/DashboardSkeleton.vue'
+import FadeContent from '@/components/vue-bits/FadeContent.vue'
+import RotatingText from '@/components/vue-bits/RotatingText.vue'
 import type { MenuDay } from '@/api/types/dashboard.types'
+
+const greetingTexts = [
+  'Vad blir det till middag?',
+  'Planera veckans mat',
+  'Dags att laga gott!',
+  'Inspireras av nya recept',
+]
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
@@ -107,40 +116,61 @@ function handleViewShoppingList() {
       />
 
       <main class="dashboard-content">
+        <!-- Rotating greeting -->
+        <div class="dashboard-greeting">
+          <RotatingText
+            :texts="greetingTexts"
+            :rotation-interval="3000"
+            split-by="words"
+            :stagger-duration="0.03"
+            main-class-name="greeting-text"
+          />
+        </div>
+
         <div class="dashboard-grid">
           <!-- Main content area -->
           <div class="main-area">
-            <TodaysMeal
-              :meal="dashboardStore.todaysMeal"
-              :is-day-off="!prefsStore.isTodayActive"
-              @click="handleMealClick"
-            />
+            <FadeContent :duration="800" :blur="true">
+              <TodaysMeal
+                :meal="dashboardStore.todaysMeal"
+                :is-day-off="!prefsStore.isTodayActive"
+                @click="handleMealClick"
+              />
+            </FadeContent>
 
-            <WeeklyMenuGrid
-              :weekly-menu="dashboardStore.weeklyMenu"
-              @day-click="handleDayClick"
-            />
+            <FadeContent :duration="800" :delay="150" :blur="true">
+              <WeeklyMenuGrid
+                :weekly-menu="dashboardStore.weeklyMenu"
+                @day-click="handleDayClick"
+              />
+            </FadeContent>
           </div>
 
           <!-- Sidebar -->
           <aside class="sidebar">
-            <QuickActions
-              @generate-menu="handleGenerateMenu"
-              @view-recipes="handleViewRecipes"
-              @invite-member="handleInviteMember"
-            />
+            <FadeContent :duration="600" :delay="200">
+              <QuickActions
+                @generate-menu="handleGenerateMenu"
+                @view-recipes="handleViewRecipes"
+                @invite-member="handleInviteMember"
+              />
+            </FadeContent>
 
-            <HouseholdWidget
-              :members="dashboardStore.householdMembers"
-              :invite-code="dashboardStore.inviteCode"
-              @show-invite="handleShowInvite"
-              @remove-member="handleRemoveMember"
-            />
+            <FadeContent :duration="600" :delay="300">
+              <HouseholdWidget
+                :members="dashboardStore.householdMembers"
+                :invite-code="dashboardStore.inviteCode"
+                @show-invite="handleShowInvite"
+                @remove-member="handleRemoveMember"
+              />
+            </FadeContent>
 
-            <ShoppingListWidget
-              :shopping-list="dashboardStore.shoppingList"
-              @view-list="handleViewShoppingList"
-            />
+            <FadeContent :duration="600" :delay="400">
+              <ShoppingListWidget
+                :shopping-list="dashboardStore.shoppingList"
+                @view-list="handleViewShoppingList"
+              />
+            </FadeContent>
           </aside>
         </div>
       </main>
@@ -215,11 +245,29 @@ function handleViewShoppingList() {
   box-shadow: var(--shadow-accent);
 }
 
+/* Dashboard greeting */
+.dashboard-greeting {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 2rem 0;
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  color: var(--text-primary);
+  min-height: 2.5em;
+  display: flex;
+  align-items: center;
+}
+
+:deep(.greeting-text) {
+  overflow: hidden;
+}
+
 /* Dashboard content */
 .dashboard-content {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem 2rem 2rem;
 }
 
 .dashboard-grid {

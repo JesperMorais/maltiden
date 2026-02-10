@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import RecipeListPanel from '@/components/recipes/RecipeListPanel.vue'
 import AddRecipePanel from '@/components/recipes/AddRecipePanel.vue'
+import FadeContent from '@/components/vue-bits/FadeContent.vue'
 
 const router = useRouter()
 
@@ -58,15 +59,18 @@ function switchToList() {
     <!-- Main content -->
     <main class="content">
       <div class="content-container">
-        <RecipeListPanel
-          v-show="activeTab === 'list'"
-          ref="recipeListRef"
-          @navigate-to-add="switchToAdd"
-        />
-        <AddRecipePanel
-          v-if="activeTab === 'add'"
-          @navigate-to-list="switchToList"
-        />
+        <FadeContent :duration="500" :blur="true">
+          <RecipeListPanel
+            v-show="activeTab === 'list'"
+            ref="recipeListRef"
+            @navigate-to-add="switchToAdd"
+          />
+        </FadeContent>
+        <FadeContent v-if="activeTab === 'add'" :duration="500" :blur="true">
+          <AddRecipePanel
+            @navigate-to-list="switchToList"
+          />
+        </FadeContent>
       </div>
     </main>
   </div>
