@@ -27,9 +27,6 @@ jobs:
       issues: write
       id-token: write
       actions: read
-    env:
-      CLAUDE_OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -39,7 +36,7 @@ jobs:
 
       - name: Authenticate gh CLI with Claude OAuth
         run: |
-          echo $CLAUDE_OAUTH | gh auth login --with-token
+          echo "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" | gh auth login --with-token
 
       - name: Run Claude Code
         id: claude
