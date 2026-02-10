@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 Phase: 7 of 7 (Architecture, Deployment & Polish)
-Plan: 0 of 3 (planned, not yet started)
-Status: Phase planned — 3 plans, 6 tasks
-Last activity: 2026-02-10 — Phase 7 planned (07-01 Architecture, 07-02 Deployment, 07-03 Polish)
+Plan: 1 of 3 (in progress)
+Status: Phase in progress — 3 plans, 6 tasks
+Last activity: 2026-02-10 — Completed 07-01-PLAN.md (Storage interfaces & DI)
 
-Progress: ███████████ 92% (6/7 phases complete, 12/15 plans)
+Progress: ████████████ 93% (6/7 phases complete, 13/15 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: 3.3 min
-- Total execution time: 0.73 hours
+- Total execution time: 0.80 hours
 
 **By Phase:**
 
@@ -33,6 +33,7 @@ Progress: ███████████ 92% (6/7 phases complete, 12/15 plan
 | 04-critical-security-data-integrity | 3/3 | 6min | 2min |
 | 05-error-handling-input-validation | 2/2 | 11min | 5.5min |
 | 06-performance-database | 2/2 | 7min | 3.5min |
+| 07-architecture-deployment-polish | 1/3 | 4min | 4min |
 
 ## Accumulated Context
 
@@ -84,6 +85,16 @@ See PROJECT.md Key Decisions table (6 decisions from v1.0, all marked Good).
 | Batch recipe fetching changes 5 queries → 1 query for 5-day menu | 06-02 | Performance - eliminates N+1 in shopping lists | Good |
 | Create context internally in storage methods | 06-02 | Architecture - handlers don't pass context yet | Good |
 
+**Phase 7 decisions:**
+
+| Decision | Phase-Plan | Impact | Status |
+|----------|------------|--------|--------|
+| Repository interfaces in domain package with minimal method sets | 07-01 | Testability - enables mock-based unit testing | Good |
+| Services accept interfaces instead of concrete storage types | 07-01 | Architecture - decouples from SQLite implementation | Good |
+| GetHouseholdID signature changed to accept *http.Request | 07-01 | Consistency - matches GetUserID API pattern | Good |
+| Extracted wireDependencies() function in router.go | 07-01 | Architecture - separates DI from route registration | Good |
+| ShoppingHandler accepts MenuRepository interface | 07-01 | Architecture - maintains IDOR checks with clean abstraction | Good |
+
 ### Deferred Issues
 
 - 93 backend findings being addressed in this milestone (see FIX-PLAN.md)
@@ -101,6 +112,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 7 planned (3 plans created)
+Stopped at: Completed 07-01-PLAN.md (Storage interfaces & DI)
 Resume file: None
-Next up: Execute 07-01-PLAN.md (Storage interfaces & DI)
+Next up: Execute 07-02-PLAN.md (Deployment & CI/CD) or 07-03-PLAN.md (Polish)
