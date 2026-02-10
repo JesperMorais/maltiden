@@ -3,12 +3,14 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"maltiden/internal/domain"
 	"net/http"
 	"net/url"
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode"
 )
@@ -42,16 +44,20 @@ type TjekService struct {
 	httpClient *http.Client
 	cache      map[string]cacheEntry
 	cacheMu    sync.Mutex
+	cacheHits  atomic.Int64
+	cacheMisses atomic.Int64
 }
 
 func NewTjekService() *TjekService {
-	return &TjekService{
+	s := &TjekService{
 		baseURL: "https://api.etilbudsavis.dk/v2",
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
 		cache: make(map[string]cacheEntry),
 	}
+	go s.logCacheStats()
+	return s
 }
 
 // getFromCache retrieves a cached entry if it exists and hasn't expired
@@ -61,16 +67,41 @@ func (s *TjekService) getFromCache(key string) (interface{}, bool) {
 
 	entry, exists := s.cache[key]
 	if !exists {
+		s.cacheMisses.Add(1)
 		return nil, false
 	}
 
 	// Check if expired
 	if time.Now().After(entry.expiresAt) {
 		delete(s.cache, key)
+		s.cacheMisses.Add(1)
 		return nil, false
 	}
 
+	s.cacheHits.Add(1)
 	return entry.data, true
+}
+
+// CacheStats returns current cache hit/miss counts
+func (s *TjekService) CacheStats() (hits, misses int64) {
+	return s.cacheHits.Load(), s.cacheMisses.Load()
+}
+
+// logCacheStats periodically logs cache statistics
+func (s *TjekService) logCacheStats() {
+	for {
+		time.Sleep(5 * time.Minute)
+		hits, misses := s.CacheStats()
+		total := hits + misses
+		if total == 0 {
+			continue
+		}
+		rate := float64(hits) / float64(total) * 100
+		s.cacheMu.Lock()
+		size := len(s.cache)
+		s.cacheMu.Unlock()
+		slog.Info("tjek cache stats", "hits", hits, "misses", misses, "hit_rate", fmt.Sprintf("%.1f%%", rate), "entries", size)
+	}
 }
 
 // setCache stores an entry in cache with TTL, evicting expired entries if cache is full
