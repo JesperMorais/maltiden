@@ -5,11 +5,15 @@ import type { RecipeSummary } from '@/api/recipes.api'
 import { getRecipes } from '@/api/recipes.api'
 import RecipeCard from '@/components/recipes/RecipeCard.vue'
 import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
+import SkeletonSwitch from '@/components/skeleton/SkeletonSwitch.vue'
+import RecipesSkeleton from '@/components/skeleton/layouts/RecipesSkeleton.vue'
+import { useSkeleton } from '@/composables/useSkeleton'
 
 const router = useRouter()
 
 const recipes = ref<RecipeSummary[]>([])
 const isLoading = ref(false)
+const { showSkeleton } = useSkeleton(isLoading, { minDuration: 300 })
 const error = ref('')
 const searchTerm = ref('')
 const selectedTags = ref<Set<string>>(new Set())
@@ -104,16 +108,8 @@ onMounted(fetchRecipes)
     <!-- Main content -->
     <main class="content">
       <div class="content-container">
-        <!-- Loading overlay -->
-        <div v-if="isLoading" class="loading-overlay">
-          <div class="loading-spinner">
-            <div class="spinner-emoji">📖</div>
-            <p class="loading-text">Laddar recept...</p>
-          </div>
-        </div>
-
         <!-- Error state -->
-        <div v-else-if="error" class="error-state">
+        <div v-if="error" class="error-state">
           <div class="error-icon">⚠️</div>
           <p class="error-message">{{ error }}</p>
           <button class="retry-button" @click="fetchRecipes">
@@ -121,8 +117,12 @@ onMounted(fetchRecipes)
           </button>
         </div>
 
-        <!-- Content when loaded -->
-        <template v-else>
+        <!-- Skeleton / Content switch -->
+        <SkeletonSwitch v-else :loading="showSkeleton">
+          <template #skeleton>
+            <RecipesSkeleton />
+          </template>
+
           <!-- Search & filters -->
           <div v-if="recipes.length" class="toolbar">
             <input
@@ -174,7 +174,7 @@ onMounted(fetchRecipes)
               Försök med andra sökord eller ta bort filter.
             </p>
           </div>
-        </template>
+        </SkeletonSwitch>
       </div>
     </main>
 
@@ -333,37 +333,6 @@ onMounted(fetchRecipes)
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1.5rem;
-}
-
-/* Loading overlay */
-.loading-overlay {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-}
-
-.loading-spinner {
-  text-align: center;
-}
-
-.spinner-emoji {
-  font-size: 4rem;
-  animation: spin 1.5s ease-in-out infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(180deg) scale(1.2); }
-  100% { transform: rotate(360deg) scale(1); }
-}
-
-.loading-text {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 1.25rem;
-  color: var(--text-primary);
-  margin: 1rem 0 0;
 }
 
 /* Error state */
