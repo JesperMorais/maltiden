@@ -52,9 +52,9 @@ func Open(path string) (*sql.DB, error) {
 		return nil, fmt.Errorf("set busy timeout: %w", err)
 	}
 
-	// Configure connection pool (conservative for SQLite)
-	db.SetMaxOpenConns(25)    // single writer, multiple readers with WAL
-	db.SetMaxIdleConns(5)     // keep a few warm connections
+	// Configure connection pool (conservative for SQLite single-writer)
+	db.SetMaxOpenConns(10)    // single writer, multiple readers with WAL
+	db.SetMaxIdleConns(5)     // keep warm connections close to max to avoid churn
 	db.SetConnMaxLifetime(5 * time.Minute) // recycle connections periodically
 
 	// Run Migrations

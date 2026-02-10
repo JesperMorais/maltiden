@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"maltiden/internal/domain"
 	"maltiden/pkg/utils"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -31,8 +32,8 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 	req.Email = strings.TrimSpace(req.Email)
 	req.Name = strings.TrimSpace(req.Name)
 
-	// Basic email format validation
-	if !strings.Contains(req.Email, "@") || !strings.Contains(req.Email, ".") {
+	// Email format validation using net/mail
+	if _, err := mail.ParseAddress(req.Email); err != nil {
 		return nil, domain.ErrInvalidEmail
 	}
 
