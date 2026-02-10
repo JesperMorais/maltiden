@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	"encoding/json"
+	"errors"
+	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
@@ -19,166 +20,163 @@ func NewHouseholdHandler(householdService *services.HouseholdService) *Household
 func (h *HouseholdHandler) GetMyHousehold(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	if userID == "" {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	household, err := h.householdService.GetMyHousehold(userID)
 	if err != nil {
-		http.Error(w, `{"error":"internal_server_error"}`, http.StatusInternalServerError)
+		log.Printf("ERROR [GetMyHousehold] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
 
 	if household == nil {
-		http.Error(w, `{"error":"household_not_found"}`, http.StatusNotFound)
+		WriteError(w, http.StatusNotFound, "household_not_found")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(household)
+	WriteJSON(w, http.StatusOK, household)
 }
 
 func (h *HouseholdHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if userID == "" || householdID == "" {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	// Verify the user is still an active member with permission to invite
 	role, err := h.householdService.GetMemberRole(householdID, userID)
 	if err != nil || role == "" || role == "guest" {
-		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+		WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 
 	resp, err := h.householdService.CreateInvite(householdID)
 	if err != nil {
-		http.Error(w, `{"error":"internal_server_error"}`, http.StatusInternalServerError)
+		log.Printf("ERROR [CreateInvite] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(resp)
+	WriteJSON(w, http.StatusCreated, resp)
 }
 
 func (h *HouseholdHandler) JoinHousehold(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	if userID == "" {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	var req domain.JoinHouseholdRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
 	resp, err := h.householdService.JoinHousehold(userID, req)
 	if err != nil {
-		switch err.Error() {
-		case "invalid_code":
-			http.Error(w, `{"error":"invalid_code"}`, http.StatusBadRequest)
-		case "already_member":
-			http.Error(w, `{"error":"already_member"}`, http.StatusConflict)
+		switch {
+		case errors.Is(err, domain.ErrCodeRequired):
+			WriteError(w, http.StatusBadRequest, "code_required")
+		case errors.Is(err, domain.ErrInvalidCode):
+			WriteError(w, http.StatusBadRequest, "invalid_code")
+		case errors.Is(err, domain.ErrAlreadyMember):
+			WriteError(w, http.StatusConflict, "already_member")
 		default:
-			http.Error(w, `{"error":"internal_server_error"}`, http.StatusInternalServerError)
+			log.Printf("ERROR [JoinHousehold] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *HouseholdHandler) GetMemberStatuses(w http.ResponseWriter, r *http.Request) {
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if householdID == "" {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	resp, err := h.householdService.GetMemberStatuses(householdID)
 	if err != nil {
-		http.Error(w, `{"error":"internal_server_error"}`, http.StatusInternalServerError)
+		log.Printf("ERROR [GetMemberStatuses] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *HouseholdHandler) UpdateMemberStatus(w http.ResponseWriter, r *http.Request) {
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if householdID == "" {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	memberID := r.PathValue("id")
-	if memberID == "" {
-		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+	if !ValidateID(w, memberID, "member_id") {
 		return
 	}
 
 	var req domain.UpdateMemberStatusRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
 	if req.IsEatingToday == nil && req.WantsLunchBox == nil {
-		http.Error(w, `{"error":"no_fields_to_update"}`, http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "no_fields_to_update")
 		return
 	}
 
 	err := h.householdService.UpdateMemberStatus(householdID, memberID, req)
 	if err != nil {
-		switch err.Error() {
-		case "not_found":
-			http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
+		switch {
+		case errors.Is(err, domain.ErrNotFound):
+			WriteError(w, http.StatusNotFound, "not_found")
 		default:
-			http.Error(w, `{"error":"internal_server_error"}`, http.StatusInternalServerError)
+			log.Printf("ERROR [UpdateMemberStatus] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+	WriteJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
 func (h *HouseholdHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if userID == "" || householdID == "" {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	targetID := r.PathValue("id")
-	if targetID == "" {
-		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+	if !ValidateID(w, targetID, "member_id") {
 		return
 	}
 
 	err := h.householdService.RemoveMember(householdID, userID, targetID)
 	if err != nil {
-		switch err.Error() {
-		case "cannot_remove":
-			http.Error(w, `{"error":"cannot_remove"}`, http.StatusForbidden)
-		case "forbidden":
-			http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
-		case "not_found":
-			http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
+		switch {
+		case errors.Is(err, domain.ErrCannotRemove):
+			WriteError(w, http.StatusForbidden, "cannot_remove")
+		case errors.Is(err, domain.ErrForbidden):
+			WriteError(w, http.StatusForbidden, "forbidden")
+		case errors.Is(err, domain.ErrNotFound):
+			WriteError(w, http.StatusNotFound, "not_found")
 		default:
-			http.Error(w, `{"error":"internal_server_error"}`, http.StatusInternalServerError)
+			log.Printf("ERROR [RemoveMember] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+	WriteJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }

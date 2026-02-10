@@ -1,8 +1,10 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 	"maltiden/internal/domain"
+	"time"
 )
 
 type UserStorage struct {
@@ -14,11 +16,27 @@ func NewUserStorage(db *sql.DB) *UserStorage {
 }
 
 func (s *UserStorage) Create(user *domain.User) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	query := `
 		INSERT INTO users (id, email, password_hash, name, household_id, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`
-	_, err := s.db.Exec(query,
+	_, err := s.db.ExecContext(ctx, query,
+		user.ID, user.Email, user.PasswordHash,
+		user.Name, user.HouseholdID, user.CreatedAt,
+	)
+	return err
+}
+
+// CreateTx inserts a user within a transaction.
+func (s *UserStorage) CreateTx(tx *sql.Tx, user *domain.User) error {
+	query := `
+		INSERT INTO users (id, email, password_hash, name, household_id, created_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`
+	_, err := tx.Exec(query,
 		user.ID, user.Email, user.PasswordHash,
 		user.Name, user.HouseholdID, user.CreatedAt,
 	)
@@ -26,11 +44,14 @@ func (s *UserStorage) Create(user *domain.User) error {
 }
 
 func (s *UserStorage) GetByEmail(email string) (*domain.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	query := `SELECT id, email, password_hash, name, household_id, created_at
 			  FROM users WHERE email = ?`
 
 	var user domain.User
-	err := s.db.QueryRow(query, email).Scan(
+	err := s.db.QueryRowContext(ctx, query, email).Scan(
 		&user.ID, &user.Email, &user.PasswordHash,
 		&user.Name, &user.HouseholdID, &user.CreatedAt,
 	)
@@ -46,11 +67,14 @@ func (s *UserStorage) GetByEmail(email string) (*domain.User, error) {
 }
 
 func (s *UserStorage) GetByID(id string) (*domain.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	query := `SELECT id, email, password_hash, name, household_id, created_at
 			  FROM users WHERE id = ?`
 
 	var user domain.User
-	err := s.db.QueryRow(query, id).Scan(
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID, &user.Email, &user.PasswordHash,
 		&user.Name, &user.HouseholdID, &user.CreatedAt,
 	)
