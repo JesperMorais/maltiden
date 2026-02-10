@@ -2,17 +2,16 @@ package services
 
 import (
 	"maltiden/internal/domain"
-	"maltiden/internal/storage/sqlite"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type RecipeService struct {
-	recipeStorage *sqlite.RecipeStorage
+	recipeStorage domain.RecipeRepository
 }
 
-func NewRecipeService(recipeStorage *sqlite.RecipeStorage) *RecipeService {
+func NewRecipeService(recipeStorage domain.RecipeRepository) *RecipeService {
 	return &RecipeService{recipeStorage: recipeStorage}
 }
 

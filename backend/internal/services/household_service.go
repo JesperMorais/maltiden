@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"maltiden/internal/domain"
-	"maltiden/internal/storage/sqlite"
 	"math/big"
 	"time"
 
@@ -12,11 +11,11 @@ import (
 )
 
 type HouseholdService struct {
-	householdStorage *sqlite.HouseholdStorage
-	userStorage      *sqlite.UserStorage
+	householdStorage domain.HouseholdRepository
+	userStorage      domain.UserRepository
 }
 
-func NewHouseholdService(householdStorage *sqlite.HouseholdStorage, userStorage *sqlite.UserStorage) *HouseholdService {
+func NewHouseholdService(householdStorage domain.HouseholdRepository, userStorage domain.UserRepository) *HouseholdService {
 	return &HouseholdService{
 		householdStorage: householdStorage,
 		userStorage:      userStorage,

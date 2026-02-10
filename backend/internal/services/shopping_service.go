@@ -4,21 +4,20 @@ import (
 	"crypto/md5"
 	"fmt"
 	"maltiden/internal/domain"
-	"maltiden/internal/storage/sqlite"
 	"sort"
 	"strings"
 )
 
 type ShoppingService struct {
-	menuStorage     *sqlite.MenuStorage
-	recipeStorage   *sqlite.RecipeStorage
-	shoppingStorage *sqlite.ShoppingStorage
+	menuStorage     domain.MenuRepository
+	recipeStorage   domain.RecipeRepository
+	shoppingStorage domain.ShoppingRepository
 }
 
 func NewShoppingService(
-	menuStorage *sqlite.MenuStorage,
-	recipeStorage *sqlite.RecipeStorage,
-	shoppingStorage *sqlite.ShoppingStorage,
+	menuStorage domain.MenuRepository,
+	recipeStorage domain.RecipeRepository,
+	shoppingStorage domain.ShoppingRepository,
 ) *ShoppingService {
 	return &ShoppingService{
 		menuStorage:     menuStorage,
