@@ -10,9 +10,14 @@ interface Props {
   confidence: number
   warnings: string[]
   isSaving: boolean
+  showConfidence?: boolean
+  backLabel?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  showConfidence: true,
+  backLabel: 'Tolka igen'
+})
 
 const emit = defineEmits<{
   (e: 'save'): void
@@ -70,14 +75,14 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
 <template>
   <div class="edit-form">
     <!-- Confidence badge -->
-    <div class="confidence-bar">
+    <div v-if="showConfidence" class="confidence-bar">
       <span class="confidence-badge" :class="confidenceLabel.class">
         {{ confidenceLabel.text }} säkerhet — {{ confidencePercent }}%
       </span>
     </div>
 
     <!-- Warnings -->
-    <div v-if="warnings.length" class="warnings">
+    <div v-if="showConfidence && warnings.length" class="warnings">
       <div v-for="(warning, i) in warnings" :key="i" class="warning-item">
         ⚠️ {{ warning }}
       </div>
@@ -188,7 +193,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
     <!-- Actions -->
     <div class="form-actions">
       <BaseButton variant="outline" size="md" @click="emit('back')">
-        Tolka igen
+        {{ backLabel }}
       </BaseButton>
       <BaseButton variant="primary" size="lg" :loading="isSaving" @click="emit('save')">
         Spara recept

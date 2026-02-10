@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Skeleton layout mirroring MyRecipesView.vue
+ * Skeleton layout mirroring the recipe list
  *
  * Matches the recipe grid with cards showing emoji circle,
  * title block, servings text, and tag chips.
