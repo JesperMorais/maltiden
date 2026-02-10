@@ -18,9 +18,10 @@ func main() {
 	// Set up structured logging
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
-	// Validate JWT secret before any other setup
+	// Create JWT service with validated secret
 	jwtSecret := os.Getenv("JWT_SECRET")
-	if err := utils.InitJWTSecret(jwtSecret); err != nil {
+	jwtService, err := utils.NewJWTService(jwtSecret)
+	if err != nil {
 		slog.Error("JWT_SECRET must be at least 32 characters")
 		os.Exit(1)
 	}
@@ -44,8 +45,8 @@ func main() {
 	}
 	defer db.Close()
 
-	// Create router (injects db)
-	router := api.NewRouter(db)
+	// Create router (injects db and jwtService)
+	router := api.NewRouter(db, jwtService)
 
 	// Configure HTTP server with graceful shutdown
 	srv := &http.Server{
