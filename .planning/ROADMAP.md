@@ -58,10 +58,11 @@ Plans:
 **Goal**: Storage interfaces for testability, DI improvements, deployment config fixes, observability, and remaining medium/low findings (FIX-PLAN Batches 7-9)
 **Depends on**: Phases 5-6 (error infrastructure and performance foundations)
 **Research**: Unlikely (Go interface patterns, fly.io configuration)
-**Plans**: TBD
 
 Plans:
-- [ ] 07-01: TBD (run /gsd:plan-phase 7 to break down)
+- [ ] 07-01: Architecture & Testability (ARCH-01, ARCH-02, ARCH-03, ARCH-04, ARCH-09, ARCH-13)
+- [ ] 07-02: Deployment & Observability (DEPLOY-01 through DEPLOY-10, AUTH-06)
+- [ ] 07-03: Code Quality & Polish (AUTH-11, PERF-16, DATA-10)
 
 ## Domain Expertise
 
@@ -77,4 +78,4 @@ None
 | 4. Critical Security & Data Integrity | v1.1 | 3/3 | ✅ Complete | 2026-02-09 |
 | 5. Error Handling & Input Validation | v1.1 | 2/2 | ✅ Complete | 2026-02-09 |
 | 6. Performance & Database | v1.1 | 2/2 | ✅ Complete | 2026-02-09 |
-| 7. Architecture, Deployment & Polish | v1.1 | 0/? | Not started | - |
+| 7. Architecture, Deployment & Polish | v1.1 | 0/3 | Planned | - |
