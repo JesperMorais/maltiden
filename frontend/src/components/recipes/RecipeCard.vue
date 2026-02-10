@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { RecipeSummary } from '@/api/recipes.api'
 import BaseCard from '@/components/common/BaseCard.vue'
+import SpotlightCard from '@/components/vue-bits/SpotlightCard.vue'
 
 interface Props {
   recipe: RecipeSummary
@@ -14,19 +15,28 @@ defineEmits<{
 </script>
 
 <template>
-  <BaseCard class="recipe-card" padding="md" @click="$emit('click')">
-    <div class="recipe-emoji">{{ recipe.emoji || '🍽️' }}</div>
-    <h3 class="recipe-name">{{ recipe.name }}</h3>
-    <p class="recipe-servings">{{ recipe.servings }} portioner</p>
-    <div v-if="recipe.tags.length" class="recipe-tags">
-      <span v-for="tag in recipe.tags" :key="tag" class="tag-chip">
-        {{ tag }}
-      </span>
-    </div>
-  </BaseCard>
+  <SpotlightCard
+    spotlight-color="rgba(255, 107, 91, 0.12)"
+    class-name="recipe-spotlight"
+  >
+    <BaseCard class="recipe-card" padding="md" @click="$emit('click')">
+      <div class="recipe-emoji">{{ recipe.emoji || '🍽️' }}</div>
+      <h3 class="recipe-name">{{ recipe.name }}</h3>
+      <p class="recipe-servings">{{ recipe.servings }} portioner</p>
+      <div v-if="recipe.tags.length" class="recipe-tags">
+        <span v-for="tag in recipe.tags" :key="tag" class="tag-chip">
+          {{ tag }}
+        </span>
+      </div>
+    </BaseCard>
+  </SpotlightCard>
 </template>
 
 <style scoped>
+:deep(.recipe-spotlight) {
+  border-radius: 20px;
+}
+
 .recipe-card {
   cursor: pointer;
   text-align: center;

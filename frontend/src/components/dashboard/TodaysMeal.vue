@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Meal } from '@/api/types/dashboard.types'
+import SpotlightCard from '@/components/vue-bits/SpotlightCard.vue'
 
 interface Props {
   meal: Meal | null
@@ -14,6 +15,10 @@ const emit = defineEmits<{
 </script>
 
 <template>
+  <SpotlightCard
+    spotlight-color="rgba(255, 107, 91, 0.12)"
+    class-name="todays-meal-spotlight"
+  >
   <article class="todays-meal" @click="emit('click')">
     <!-- Background decorations -->
     <div class="meal-bg">
@@ -69,6 +74,7 @@ const emit = defineEmits<{
       <span class="food food-3">🍅</span>
     </div>
   </article>
+  </SpotlightCard>
 </template>
 
 <style scoped>
@@ -338,6 +344,10 @@ const emit = defineEmits<{
 @keyframes float-food {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50% { transform: translateY(-10px) rotate(10deg); }
+}
+
+:deep(.todays-meal-spotlight) {
+  border-radius: 32px;
 }
 
 /* Responsive */

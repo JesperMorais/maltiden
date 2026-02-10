@@ -5,6 +5,8 @@ import type { ParseRecipeResponse, CreateRecipeRequest } from '@/api/recipes.api
 import RecipeParseInput from '@/components/recipe-parser/RecipeParseInput.vue'
 import RecipeEditForm from '@/components/recipe-parser/RecipeEditForm.vue'
 import RecipeParseSuccess from '@/components/recipe-parser/RecipeParseSuccess.vue'
+import ClickSpark from '@/components/vue-bits/ClickSpark.vue'
+import FadeContent from '@/components/vue-bits/FadeContent.vue'
 
 type EditableRecipe = CreateRecipeRequest & { emoji?: string }
 
@@ -120,24 +122,34 @@ function handleViewRecipes() {
   <div class="add-recipe-panel">
     <!-- Step: Choose method -->
     <div v-if="step === 'choose'" class="choose-step">
-      <p class="choose-subtitle">Hur vill du lägga till ditt recept?</p>
+      <FadeContent :duration="600" :blur="true">
+        <p class="choose-subtitle">Hur vill du lägga till ditt recept?</p>
+      </FadeContent>
 
       <div class="choose-cards">
-        <button class="choose-card" @click="chooseAI">
-          <span class="choose-card-icon">🤖</span>
-          <span class="choose-card-title">Tolka med AI</span>
-          <span class="choose-card-desc">
-            Klistra in en recepttext så tolkar vi det automatiskt
-          </span>
-        </button>
+        <FadeContent :duration="500" :delay="100">
+          <ClickSpark spark-color="#ff6b5b" :spark-radius="30" :spark-count="10" :duration="500">
+            <button class="choose-card" @click="chooseAI">
+              <span class="choose-card-icon">🤖</span>
+              <span class="choose-card-title">Tolka med AI</span>
+              <span class="choose-card-desc">
+                Klistra in en recepttext så tolkar vi det automatiskt
+              </span>
+            </button>
+          </ClickSpark>
+        </FadeContent>
 
-        <button class="choose-card" @click="chooseManual">
-          <span class="choose-card-icon">✏️</span>
-          <span class="choose-card-title">Fyll i själv</span>
-          <span class="choose-card-desc">
-            Skriv in receptet manuellt steg för steg
-          </span>
-        </button>
+        <FadeContent :duration="500" :delay="200">
+          <ClickSpark spark-color="#ff6b5b" :spark-radius="30" :spark-count="10" :duration="500">
+            <button class="choose-card" @click="chooseManual">
+              <span class="choose-card-icon">✏️</span>
+              <span class="choose-card-title">Fyll i själv</span>
+              <span class="choose-card-desc">
+                Skriv in receptet manuellt steg för steg
+              </span>
+            </button>
+          </ClickSpark>
+        </FadeContent>
       </div>
     </div>
 

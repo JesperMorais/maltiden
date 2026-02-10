@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useUserStore } from '@/stores/user'
 import LockedAction from '@/components/common/LockedAction.vue'
+import GlareHover from '@/components/vue-bits/GlareHover.vue'
+import ClickSpark from '@/components/vue-bits/ClickSpark.vue'
 
 const userStore = useUserStore()
 
@@ -43,31 +45,48 @@ function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-memb
 </script>
 
 <template>
-  <section class="quick-actions">
-    <h3 class="widget-title">Snabbåtgärder</h3>
+  <GlareHover
+    glare-color="#ff6b5b"
+    :glare-opacity="0.3"
+    class-name="quick-actions-glare"
+  >
+    <section class="quick-actions">
+      <h3 class="widget-title">Snabbåtgärder</h3>
 
-    <div class="actions-list">
-      <LockedAction
-        v-for="action in actions"
-        :key="action.id"
-        :requires-member="action.requiresMember"
-      >
-        <button
-          class="action-button"
-          @click="handleAction(action.event)"
+      <div class="actions-list">
+        <LockedAction
+          v-for="action in actions"
+          :key="action.id"
+          :requires-member="action.requiresMember"
         >
-          <span class="action-icon">{{ action.icon }}</span>
-          <div class="action-text">
-            <span class="action-label">{{ action.label }}</span>
-            <span class="action-desc">{{ action.description }}</span>
-          </div>
-        </button>
-      </LockedAction>
-    </div>
-  </section>
+          <ClickSpark
+            spark-color="#ff6b5b"
+            :spark-radius="25"
+            :spark-count="6"
+            :duration="500"
+          >
+            <button
+              class="action-button"
+              @click="handleAction(action.event)"
+            >
+              <span class="action-icon">{{ action.icon }}</span>
+              <div class="action-text">
+                <span class="action-label">{{ action.label }}</span>
+                <span class="action-desc">{{ action.description }}</span>
+              </div>
+            </button>
+          </ClickSpark>
+        </LockedAction>
+      </div>
+    </section>
+  </GlareHover>
 </template>
 
 <style scoped>
+:deep(.quick-actions-glare) {
+  border-radius: 20px;
+}
+
 .quick-actions {
   background: var(--bg-primary);
   border-radius: 20px;
