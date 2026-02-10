@@ -3,7 +3,6 @@ package services
 import (
 	"database/sql"
 	"maltiden/internal/domain"
-	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/utils"
 	"strings"
 	"time"
@@ -13,11 +12,11 @@ import (
 
 type AuthService struct {
 	db               *sql.DB
-	userStorage      *sqlite.UserStorage
-	householdStorage *sqlite.HouseholdStorage
+	userStorage      domain.UserRepository
+	householdStorage domain.HouseholdRepository
 }
 
-func NewAuthService(db *sql.DB, userStorage *sqlite.UserStorage, householdStorage *sqlite.HouseholdStorage) *AuthService {
+func NewAuthService(db *sql.DB, userStorage domain.UserRepository, householdStorage domain.HouseholdRepository) *AuthService {
 	return &AuthService{
 		db:               db,
 		userStorage:      userStorage,

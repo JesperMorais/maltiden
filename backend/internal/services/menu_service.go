@@ -2,7 +2,6 @@ package services
 
 import (
 	"maltiden/internal/domain"
-	"maltiden/internal/storage/sqlite"
 	"math/rand"
 	"time"
 
@@ -10,11 +9,11 @@ import (
 )
 
 type MenuService struct {
-	menuStorage   *sqlite.MenuStorage
-	recipeStorage *sqlite.RecipeStorage
+	menuStorage   domain.MenuRepository
+	recipeStorage domain.RecipeRepository
 }
 
-func NewMenuService(menuStorage *sqlite.MenuStorage, recipeStorage *sqlite.RecipeStorage) *MenuService {
+func NewMenuService(menuStorage domain.MenuRepository, recipeStorage domain.RecipeRepository) *MenuService {
 	return &MenuService{
 		menuStorage:   menuStorage,
 		recipeStorage: recipeStorage,
