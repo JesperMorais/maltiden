@@ -1,27 +1,68 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import type { MenuDay } from '@/api/types/dashboard.types'
+import { usePlanningPreferencesStore, type DayIndex } from '@/stores/planningPreferences'
+import { useClickOutside } from '@/composables/useClickOutside'
+import DayPickerPopover from './DayPickerPopover.vue'
 
 interface Props {
   weeklyMenu: MenuDay[]
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'day-click': [day: MenuDay]
 }>()
+
+const prefsStore = usePlanningPreferencesStore()
+
+const isPickerOpen = ref(false)
+const headerRef = ref<HTMLElement | null>(null)
+
+useClickOutside(headerRef, () => {
+  isPickerOpen.value = false
+})
+
+const filteredMenu = computed(() =>
+  props.weeklyMenu.filter((_, index) => prefsStore.isDayActive(index as DayIndex))
+)
+
+const gridColumns = computed(() => filteredMenu.value.length)
+
+const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
 </script>
 
 <template>
   <section class="weekly-menu">
     <header class="menu-header">
       <h3 class="menu-title">Veckans meny</h3>
-      <span class="menu-subtitle">7 dagar</span>
+      <div ref="headerRef" class="days-badge-wrapper">
+        <button
+          class="days-badge"
+          :class="{ open: isPickerOpen }"
+          @click="isPickerOpen = !isPickerOpen"
+        >
+          {{ badgeLabel }}
+          <svg class="badge-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <Transition name="dropdown">
+          <DayPickerPopover v-if="isPickerOpen" @close="isPickerOpen = false" />
+        </Transition>
+      </div>
     </header>
 
-    <div class="days-grid">
+    <TransitionGroup
+      name="day-list"
+      tag="div"
+      class="days-grid"
+      :style="{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }"
+    >
       <button
-        v-for="day in weeklyMenu"
+        v-for="day in filteredMenu"
         :key="day.date"
         class="day-card"
         :class="{
@@ -39,7 +80,7 @@ const emit = defineEmits<{
         </div>
         <div v-if="day.isToday" class="today-indicator"></div>
       </button>
-    </div>
+    </TransitionGroup>
   </section>
 </template>
 
@@ -67,20 +108,88 @@ const emit = defineEmits<{
   margin: 0;
 }
 
-.menu-subtitle {
+.days-badge-wrapper {
+  position: relative;
+}
+
+.days-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 0.8rem;
   color: var(--text-secondary);
   background: var(--bg-hover);
-  padding: 0.25rem 0.75rem;
+  padding: 0.25rem 0.6rem 0.25rem 0.75rem;
   border-radius: 100px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.days-badge:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.days-badge.open {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.badge-chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+
+.days-badge.open .badge-chevron {
+  transform: rotate(180deg);
+}
+
+/* Dropdown animation (matches DashboardHeader) */
+.dropdown-enter-active {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dropdown-leave-active {
+  transition: all 0.15s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.95);
 }
 
 .days-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
   gap: 0.5rem;
+}
+
+/* Day list TransitionGroup animations */
+.day-list-enter-active {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.day-list-leave-active {
+  transition: all 0.2s ease;
+  position: absolute;
+}
+
+.day-list-enter-from {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.day-list-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.day-list-move {
+  transition: transform 0.3s ease;
 }
 
 .day-card {

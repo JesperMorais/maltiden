@@ -3,6 +3,7 @@ import type { Meal } from '@/api/types/dashboard.types'
 
 interface Props {
   meal: Meal | null
+  isDayOff?: boolean
 }
 
 defineProps<Props>()
@@ -28,8 +29,17 @@ const emit = defineEmits<{
         <span>Idag</span>
       </div>
 
+      <!-- Day off state -->
+      <template v-if="isDayOff">
+        <div class="empty-state day-off-state">
+          <div class="day-off-icon">😌</div>
+          <h2 class="empty-title">Ledig dag</h2>
+          <p class="empty-text">Ingen matlagning planerad idag</p>
+        </div>
+      </template>
+
       <!-- Has meal -->
-      <template v-if="meal">
+      <template v-else-if="meal">
         <div class="meal-emoji">{{ meal.emoji || '🍽️' }}</div>
         <h2 class="meal-name">{{ meal.name }}</h2>
         <p class="meal-portions">{{ meal.portions }} portioner</p>
@@ -281,6 +291,14 @@ const emit = defineEmits<{
   font-size: 1rem;
   color: var(--text-secondary);
   margin: 0;
+}
+
+/* Day off state */
+.day-off-icon {
+  font-size: 4rem;
+  line-height: 1;
+  margin-bottom: 1rem;
+  animation: float 3s ease-in-out infinite;
 }
 
 /* Floating foods */

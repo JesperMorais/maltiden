@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useUserStore } from '@/stores/user'
+import { usePlanningPreferencesStore } from '@/stores/planningPreferences'
 import DashboardHeader from '@/components/dashboard/DashboardHeader.vue'
 import TodaysMeal from '@/components/dashboard/TodaysMeal.vue'
 import WeeklyMenuGrid from '@/components/dashboard/WeeklyMenuGrid.vue'
@@ -16,6 +17,7 @@ import type { MenuDay } from '@/api/types/dashboard.types'
 const router = useRouter()
 const dashboardStore = useDashboardStore()
 const userStore = useUserStore()
+const prefsStore = usePlanningPreferencesStore()
 
 // Settings modal state
 const showSettings = ref(false)
@@ -23,6 +25,7 @@ const showSettings = ref(false)
 onMounted(() => {
   dashboardStore.fetchDashboard()
   userStore.initFromToken()
+  prefsStore.initPreferences()
 })
 
 function handleDayClick(day: MenuDay) {
@@ -109,6 +112,7 @@ function handleViewShoppingList() {
           <div class="main-area">
             <TodaysMeal
               :meal="dashboardStore.todaysMeal"
+              :is-day-off="!prefsStore.isTodayActive"
               @click="handleMealClick"
             />
 
