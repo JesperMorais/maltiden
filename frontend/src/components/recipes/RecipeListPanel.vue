@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import type { RecipeSummary } from '@/api/recipes.api'
 import { getRecipes } from '@/api/recipes.api'
 import RecipeCard from '@/components/recipes/RecipeCard.vue'
@@ -9,7 +8,9 @@ import SkeletonSwitch from '@/components/skeleton/SkeletonSwitch.vue'
 import RecipesSkeleton from '@/components/skeleton/layouts/RecipesSkeleton.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
 
-const router = useRouter()
+const emit = defineEmits<{
+  (e: 'navigate-to-add'): void
+}>()
 
 const recipes = ref<RecipeSummary[]>([])
 const isLoading = ref(true)
@@ -82,101 +83,84 @@ function closeDetail() {
   selectedRecipeId.value = null
 }
 
-function goToParser() {
-  router.push({ name: 'parse-recipe' })
+function refresh() {
+  fetchRecipes()
 }
+
+defineExpose({ refresh })
 
 onMounted(fetchRecipes)
 </script>
 
 <template>
-  <div class="my-recipes-view">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-content">
-        <button class="back-link" @click="router.push({ name: 'dashboard' })">
-          <span class="back-arrow">&larr;</span>
-          <span>Dashboard</span>
-        </button>
-        <h1 class="title">Mina recept</h1>
-        <p class="description">
-          Alla dina sparade recept samlade på ett ställe.
-        </p>
-      </div>
-    </header>
+  <div class="recipe-list-panel">
+    <!-- Error state -->
+    <div v-if="error" class="error-state">
+      <div class="error-icon">⚠️</div>
+      <p class="error-message">{{ error }}</p>
+      <button class="retry-button" @click="fetchRecipes">
+        Försök igen
+      </button>
+    </div>
 
-    <!-- Main content -->
-    <main class="content">
-      <div class="content-container">
-        <!-- Error state -->
-        <div v-if="error" class="error-state">
-          <div class="error-icon">⚠️</div>
-          <p class="error-message">{{ error }}</p>
-          <button class="retry-button" @click="fetchRecipes">
-            Försök igen
+    <!-- Skeleton / Content switch -->
+    <SkeletonSwitch v-else :loading="showSkeleton">
+      <template #skeleton>
+        <RecipesSkeleton />
+      </template>
+
+      <!-- Search & filters -->
+      <div v-if="recipes.length" class="toolbar">
+        <input
+          v-model="searchTerm"
+          type="text"
+          placeholder="Sök recept..."
+          class="search-input"
+        />
+        <div v-if="allTags.length" class="tag-filters">
+          <button
+            v-for="tag in allTags"
+            :key="tag"
+            class="filter-chip"
+            :class="{ active: selectedTags.has(tag) }"
+            @click="toggleTag(tag)"
+          >
+            {{ tag }}
           </button>
         </div>
-
-        <!-- Skeleton / Content switch -->
-        <SkeletonSwitch v-else :loading="showSkeleton">
-          <template #skeleton>
-            <RecipesSkeleton />
-          </template>
-
-          <!-- Search & filters -->
-          <div v-if="recipes.length" class="toolbar">
-            <input
-              v-model="searchTerm"
-              type="text"
-              placeholder="Sök recept..."
-              class="search-input"
-            />
-            <div v-if="allTags.length" class="tag-filters">
-              <button
-                v-for="tag in allTags"
-                :key="tag"
-                class="filter-chip"
-                :class="{ active: selectedTags.has(tag) }"
-                @click="toggleTag(tag)"
-              >
-                {{ tag }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Recipe grid -->
-          <div v-if="filteredRecipes.length" class="recipe-grid">
-            <RecipeCard
-              v-for="recipe in filteredRecipes"
-              :key="recipe.id"
-              :recipe="recipe"
-              @click="openRecipe(recipe.id)"
-            />
-          </div>
-
-          <!-- Empty state: no recipes at all -->
-          <div v-else-if="!recipes.length" class="empty-state">
-            <div class="empty-emoji">📖</div>
-            <h2 class="empty-title">Inga recept ännu</h2>
-            <p class="empty-text">
-              Börja med att tolka ett recept från en webbsida eller bok.
-            </p>
-            <button class="cta-button" @click="goToParser">
-              Tolka ett recept
-            </button>
-          </div>
-
-          <!-- Empty state: no search results -->
-          <div v-else class="empty-state">
-            <div class="empty-emoji">🔍</div>
-            <h2 class="empty-title">Inga träffar</h2>
-            <p class="empty-text">
-              Försök med andra sökord eller ta bort filter.
-            </p>
-          </div>
-        </SkeletonSwitch>
       </div>
-    </main>
+
+      <!-- Recipe grid -->
+      <div v-if="filteredRecipes.length" class="recipe-grid">
+        <RecipeCard
+          v-for="recipe in filteredRecipes"
+          :key="recipe.id"
+          :recipe="recipe"
+          @click="openRecipe(recipe.id)"
+        />
+      </div>
+
+      <!-- Empty state: no recipes at all -->
+      <div v-else-if="!recipes.length" class="empty-state">
+        <div class="empty-emoji">📖</div>
+        <h2 class="empty-title">Inga recept ännu</h2>
+        <p class="empty-text">
+          Börja med att lägga till ditt första recept.
+        </p>
+        <button class="cta-button" @click="emit('navigate-to-add')">
+          Lägg till recept
+        </button>
+      </div>
+
+      <!-- Empty state: no search results -->
+      <div v-else class="empty-state">
+        <div class="empty-emoji">🔍</div>
+        <h2 class="empty-title">Inga träffar</h2>
+        <p class="empty-text">
+          Försök med andra sökord eller ta bort filter.
+        </p>
+      </div>
+    </SkeletonSwitch>
 
     <!-- Detail modal -->
     <RecipeDetailModal
@@ -187,81 +171,7 @@ onMounted(fetchRecipes)
 </template>
 
 <style scoped>
-.my-recipes-view {
-  min-height: 100vh;
-  background: var(--bg-primary);
-  display: flex;
-  flex-direction: column;
-}
-
-/* Header */
-.header {
-  padding: 2rem 2rem 2rem;
-  background: linear-gradient(
-    180deg,
-    var(--bg-card) 0%,
-    var(--bg-primary) 100%
-  );
-  border-bottom: 1px solid var(--border-color);
-}
-
-.header-content {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: none;
-  border: none;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0;
-  margin-bottom: 1rem;
-  transition: color 0.2s ease;
-}
-
-.back-link:hover {
-  color: var(--accent);
-}
-
-.back-arrow {
-  font-size: 1.1rem;
-}
-
-.title {
-  font-family: 'Fraunces', serif;
-  font-weight: 800;
-  font-size: 2.5rem;
-  color: var(--text-primary);
-  margin: 0 0 0.5rem;
-  line-height: 1.2;
-}
-
-.description {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  font-size: 1.1rem;
-  color: var(--text-secondary);
-  margin: 0;
-  line-height: 1.6;
-}
-
-/* Content */
-.content {
-  flex: 1;
-  padding: 2rem;
-  position: relative;
-}
-
-.content-container {
-  max-width: 1200px;
-  margin: 0 auto;
+.recipe-list-panel {
   position: relative;
 }
 
@@ -420,22 +330,6 @@ onMounted(fetchRecipes)
 
 /* Responsive */
 @media (max-width: 768px) {
-  .header {
-    padding: 1.5rem 1rem;
-  }
-
-  .content {
-    padding: 1.5rem 1rem;
-  }
-
-  .title {
-    font-size: 1.75rem;
-  }
-
-  .description {
-    font-size: 0.95rem;
-  }
-
   .recipe-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 1rem;

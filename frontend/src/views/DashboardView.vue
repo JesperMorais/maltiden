@@ -51,17 +51,8 @@ function handleGenerateMenu() {
   router.push({ name: 'generate-menu' })
 }
 
-function handleAddRecipe() {
-  console.log('Add recipe')
-  // TODO: Navigate to add recipe
-}
-
-function handleParseRecipe() {
-  router.push({ name: 'parse-recipe' })
-}
-
 function handleViewRecipes() {
-  router.push({ name: 'my-recipes' })
+  router.push({ name: 'recipes' })
 }
 
 function handleInviteMember() {
@@ -131,10 +122,8 @@ function handleViewShoppingList() {
           <aside class="sidebar">
             <QuickActions
               @generate-menu="handleGenerateMenu"
-              @add-recipe="handleAddRecipe"
-              @invite-member="handleInviteMember"
-              @parse-recipe="handleParseRecipe"
               @view-recipes="handleViewRecipes"
+              @invite-member="handleInviteMember"
             />
 
             <HouseholdWidget
