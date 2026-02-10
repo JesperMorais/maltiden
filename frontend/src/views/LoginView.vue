@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { useUserStore } from '@/stores/user'
+import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -37,7 +38,19 @@ async function handleLogin() {
 
 <template>
   <main class="login-page">
-    <!-- Background decorations -->
+    <!-- Animated wave background -->
+    <WavesBackground
+      line-color="rgba(255, 107, 91, 0.12)"
+      background-color="transparent"
+      :wave-speed-x="0.01"
+      :wave-speed-y="0.004"
+      :wave-amp-x="40"
+      :wave-amp-y="20"
+      :x-gap="12"
+      :y-gap="36"
+    />
+
+    <!-- Background decorations (kept for blobs + grain texture) -->
     <div class="bg-decorations">
       <div class="blob blob-1"></div>
       <div class="blob blob-2"></div>
