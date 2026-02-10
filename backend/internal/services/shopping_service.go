@@ -1,8 +1,8 @@
 package services
 
 import (
-	"crypto/md5"
 	"fmt"
+	"hash/fnv"
 	"maltiden/internal/domain"
 	"sort"
 	"strings"
@@ -181,6 +181,7 @@ func categorizeIngredient(name string) string {
 }
 
 func generateItemID(menuID, name, unit string) string {
-	hash := md5.Sum([]byte(menuID + "_" + strings.ToLower(name) + "_" + unit))
-	return fmt.Sprintf("item_%x", hash[:8])
+	h := fnv.New64a()
+	h.Write([]byte(menuID + "_" + strings.ToLower(name) + "_" + unit))
+	return fmt.Sprintf("item_%x", h.Sum64())
 }
