@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	"encoding/json"
+	"errors"
+	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
@@ -18,53 +19,58 @@ func NewMenuHandler(menuService *services.MenuService) *MenuHandler {
 
 func (h *MenuHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	// Get household ID from auth context
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if householdID == "" {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	var req domain.GenerateMenuRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
 	menu, err := h.menuService.Generate(householdID, req)
 	if err != nil {
-		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		switch {
+		case errors.Is(err, domain.ErrInvalidDays):
+			WriteError(w, http.StatusBadRequest, "invalid_days")
+		case errors.Is(err, domain.ErrInvalidServings):
+			WriteError(w, http.StatusBadRequest, "invalid_servings")
+		default:
+			log.Printf("ERROR [GenerateMenu] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
 		return
 	}
 
 	if menu == nil {
-		http.Error(w, `{"error":"no_recipes_available"}`, http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "no_recipes_available")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(menu)
+	WriteJSON(w, http.StatusCreated, menu)
 }
 
 func (h *MenuHandler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 	// Get household ID from auth context
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if householdID == "" {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	menu, err := h.menuService.GetCurrent(householdID)
 	if err != nil {
-		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		log.Printf("ERROR [GetCurrentMenu] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
 
 	if menu == nil {
-		http.Error(w, `{"error":"no_active_menu"}`, http.StatusNotFound)
+		WriteError(w, http.StatusNotFound, "no_active_menu")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(menu)
+	WriteJSON(w, http.StatusOK, menu)
 }

@@ -1,24 +1,23 @@
 package services
 
 import (
-	"crypto/md5"
 	"fmt"
+	"hash/fnv"
 	"maltiden/internal/domain"
-	"maltiden/internal/storage/sqlite"
 	"sort"
 	"strings"
 )
 
 type ShoppingService struct {
-	menuStorage     *sqlite.MenuStorage
-	recipeStorage   *sqlite.RecipeStorage
-	shoppingStorage *sqlite.ShoppingStorage
+	menuStorage     domain.MenuRepository
+	recipeStorage   domain.RecipeRepository
+	shoppingStorage domain.ShoppingRepository
 }
 
 func NewShoppingService(
-	menuStorage *sqlite.MenuStorage,
-	recipeStorage *sqlite.RecipeStorage,
-	shoppingStorage *sqlite.ShoppingStorage,
+	menuStorage domain.MenuRepository,
+	recipeStorage domain.RecipeRepository,
+	shoppingStorage domain.ShoppingRepository,
 ) *ShoppingService {
 	return &ShoppingService{
 		menuStorage:     menuStorage,
@@ -86,6 +85,24 @@ func (s *ShoppingService) GetShoppingList(menuID string) (*domain.ShoppingList, 
 		return nil, err
 	}
 
+	// Collect all unique recipe IDs from non-skip days
+	recipeIDs := make([]string, 0, len(menu.Days))
+	recipeIDSet := make(map[string]bool)
+	for _, day := range menu.Days {
+		if !day.Skip && day.RecipeID != "" {
+			if !recipeIDSet[day.RecipeID] {
+				recipeIDs = append(recipeIDs, day.RecipeID)
+				recipeIDSet[day.RecipeID] = true
+			}
+		}
+	}
+
+	// Batch fetch all recipes (eliminates N+1 query problem)
+	recipes, err := s.recipeStorage.GetByIDs(recipeIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	// Aggregate ingredients from all recipes
 	aggregated := make(map[string]*domain.ShoppingItem)
 
@@ -94,8 +111,8 @@ func (s *ShoppingService) GetShoppingList(menuID string) (*domain.ShoppingList, 
 			continue
 		}
 
-		recipe, err := s.recipeStorage.GetByID(day.RecipeID)
-		if err != nil || recipe == nil {
+		recipe, ok := recipes[day.RecipeID]
+		if !ok {
 			continue
 		}
 
@@ -164,6 +181,7 @@ func categorizeIngredient(name string) string {
 }
 
 func generateItemID(menuID, name, unit string) string {
-	hash := md5.Sum([]byte(menuID + "_" + strings.ToLower(name) + "_" + unit))
-	return fmt.Sprintf("item_%x", hash[:8])
+	h := fnv.New64a()
+	h.Write([]byte(menuID + "_" + strings.ToLower(name) + "_" + unit))
+	return fmt.Sprintf("item_%x", h.Sum64())
 }

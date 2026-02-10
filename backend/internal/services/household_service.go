@@ -2,10 +2,8 @@ package services
 
 import (
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"maltiden/internal/domain"
-	"maltiden/internal/storage/sqlite"
 	"math/big"
 	"time"
 
@@ -13,11 +11,11 @@ import (
 )
 
 type HouseholdService struct {
-	householdStorage *sqlite.HouseholdStorage
-	userStorage      *sqlite.UserStorage
+	householdStorage domain.HouseholdRepository
+	userStorage      domain.UserRepository
 }
 
-func NewHouseholdService(householdStorage *sqlite.HouseholdStorage, userStorage *sqlite.UserStorage) *HouseholdService {
+func NewHouseholdService(householdStorage domain.HouseholdRepository, userStorage domain.UserRepository) *HouseholdService {
 	return &HouseholdService{
 		householdStorage: householdStorage,
 		userStorage:      userStorage,
@@ -63,7 +61,7 @@ func (s *HouseholdService) CreateInvite(householdID string) (*domain.CreateInvit
 // Users can only belong to one household — joining a new one removes them from the old one.
 func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHouseholdRequest) (*domain.JoinHouseholdResponse, error) {
 	if req.Code == "" {
-		return nil, errors.New("code is required")
+		return nil, domain.ErrCodeRequired
 	}
 
 	// Validate invite code before starting the transaction
@@ -72,13 +70,13 @@ func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHousehold
 		return nil, err
 	}
 	if invite == nil {
-		return nil, errors.New("invalid_code")
+		return nil, domain.ErrInvalidCode
 	}
 	if time.Now().After(invite.ExpiresAt) {
-		return nil, errors.New("invalid_code")
+		return nil, domain.ErrInvalidCode
 	}
 	if invite.UsedBy != nil {
-		return nil, errors.New("invalid_code")
+		return nil, domain.ErrInvalidCode
 	}
 
 	// Begin transaction for the mutating operations
@@ -94,7 +92,7 @@ func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHousehold
 		return nil, err
 	}
 	if isMember {
-		return nil, errors.New("already_member")
+		return nil, domain.ErrAlreadyMember
 	}
 
 	// Remove user from their current household (single-household enforcement)
@@ -163,7 +161,7 @@ func (s *HouseholdService) UpdateMemberStatus(householdID, memberID string, req 
 		return err
 	}
 	if !isMember {
-		return errors.New("not_found")
+		return domain.ErrNotFound
 	}
 
 	return s.householdStorage.UpdateMemberStatus(householdID, memberID, req.IsEatingToday, req.WantsLunchBox)
@@ -174,7 +172,7 @@ func (s *HouseholdService) UpdateMemberStatus(householdID, memberID string, req 
 func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUserID string) error {
 	// Can't remove yourself
 	if requestingUserID == targetUserID {
-		return errors.New("cannot_remove")
+		return domain.ErrCannotRemove
 	}
 
 	// Check requesting user's role
@@ -183,7 +181,7 @@ func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUse
 		return err
 	}
 	if requestingRole == "" || requestingRole == "guest" {
-		return errors.New("forbidden")
+		return domain.ErrForbidden
 	}
 
 	// Check target's role — can't remove the owner
@@ -192,10 +190,10 @@ func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUse
 		return err
 	}
 	if targetRole == "" {
-		return errors.New("not_found")
+		return domain.ErrNotFound
 	}
 	if targetRole == "owner" {
-		return errors.New("cannot_remove")
+		return domain.ErrCannotRemove
 	}
 
 	return s.householdStorage.RemoveMember(householdID, targetUserID)
