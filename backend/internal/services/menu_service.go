@@ -2,7 +2,7 @@ package services
 
 import (
 	"maltiden/internal/domain"
-	"math/rand"
+	"math/rand/v2"
 	"time"
 
 	"github.com/google/uuid"
@@ -55,9 +55,17 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		skipDays[d] = true
 	}
 
+	// Shuffle recipes for variety, cycle if fewer recipes than days
+	shuffled := make([]domain.RecipeSummary, len(recipes))
+	copy(shuffled, recipes)
+	rand.Shuffle(len(shuffled), func(i, j int) {
+		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+	})
+
 	// Generate menu days
 	menuDays := make([]domain.MenuDay, 0, days)
 	today := time.Now()
+	recipeIdx := 0
 
 	for i := 0; i < days; i++ {
 		date := today.AddDate(0, 0, i).Format("2006-01-02")
@@ -71,9 +79,9 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		if skipDays[date] {
 			day.Skip = true
 		} else {
-			// Pick a random recipe
-			recipe := recipes[rand.Intn(len(recipes))]
-			day.RecipeID = recipe.ID
+			// Pick recipe from shuffled list, cycling through if needed
+			day.RecipeID = shuffled[recipeIdx%len(shuffled)].ID
+			recipeIdx++
 
 			// Check for extra portions
 			if extra, ok := req.ExtraPortions[date]; ok {
