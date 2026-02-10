@@ -7,13 +7,13 @@
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
     class="spotlight-card"
-    :class="className"
+    :class="props.className"
   >
     <div
       class="spotlight-overlay"
       :style="{
         opacity,
-        background: `radial-gradient(circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 80%)`,
+        background: `radial-gradient(circle at ${position.x}px ${position.y}px, ${props.spotlightColor}, transparent 80%)`,
       }"
     />
 
@@ -29,8 +29,10 @@ interface SpotlightCardProps {
   spotlightColor?: string
 }
 
-const { className = '', spotlightColor = 'rgba(255, 107, 91, 0.15)' } =
-  defineProps<SpotlightCardProps>()
+const props = withDefaults(defineProps<SpotlightCardProps>(), {
+  className: '',
+  spotlightColor: 'rgba(255, 107, 91, 0.15)',
+})
 
 const divRef = useTemplateRef<HTMLDivElement>('divRef')
 const isFocused = ref(false)
