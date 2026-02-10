@@ -10,6 +10,7 @@ const GenerateMenuView = () => import('@/views/GenerateMenuView.vue')
 const AboutView = () => import('@/views/AboutView.vue')
 const OffersView = () => import('@/views/OffersView.vue')
 const ParseRecipeView = () => import('@/views/ParseRecipeView.vue')
+const MyRecipesView = () => import('@/views/MyRecipesView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -49,6 +50,12 @@ const router = createRouter({
       name: 'about',
       component: AboutView,
       meta: { transition: 'page-fade' }
+    },
+    {
+      path: '/recipes',
+      name: 'my-recipes',
+      component: MyRecipesView,
+      meta: { transition: 'page-slide', requiresAuth: true, requiresMember: true }
     },
     {
       path: '/recipes/parse',
