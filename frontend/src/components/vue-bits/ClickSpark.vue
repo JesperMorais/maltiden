@@ -6,7 +6,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, useTemplateRef } from 'vue'
+import { ref, onMounted, onUnmounted, computed, useTemplateRef } from 'vue'
 
 interface Spark {
   x: number
@@ -38,8 +38,7 @@ const props = withDefaults(defineProps<Props>(), {
 const containerRef = useTemplateRef<HTMLDivElement>('containerRef')
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvasRef')
 const sparks = ref<Spark[]>([])
-const startTimeRef = ref<number | null>(null)
-const animationId = ref<number | null>(null)
+let animationId: number | null = null
 
 const easeFunc = computed(() => {
   return (t: number) => {
@@ -72,16 +71,20 @@ const handleClick = (e: MouseEvent) => {
   }))
 
   sparks.value.push(...newSparks)
+
+  // Start animation loop if not already running
+  if (animationId === null) {
+    animationId = requestAnimationFrame(draw)
+  }
 }
 
 const draw = (timestamp: number) => {
-  if (!startTimeRef.value) {
-    startTimeRef.value = timestamp
-  }
-
   const canvas = canvasRef.value
   const ctx = canvas?.getContext('2d')
-  if (!ctx || !canvas) return
+  if (!ctx || !canvas) {
+    animationId = null
+    return
+  }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height)
 
@@ -112,7 +115,12 @@ const draw = (timestamp: number) => {
     return true
   })
 
-  animationId.value = requestAnimationFrame(draw)
+  // Only continue loop if there are active sparks
+  if (sparks.value.length > 0) {
+    animationId = requestAnimationFrame(draw)
+  } else {
+    animationId = null
+  }
 }
 
 const resizeCanvas = () => {
@@ -149,8 +157,6 @@ onMounted(() => {
   resizeObserver.observe(parent)
 
   resizeCanvas()
-
-  animationId.value = requestAnimationFrame(draw)
 })
 
 onUnmounted(() => {
@@ -159,28 +165,11 @@ onUnmounted(() => {
   }
   clearTimeout(resizeTimeout)
 
-  if (animationId.value) {
-    cancelAnimationFrame(animationId.value)
+  if (animationId !== null) {
+    cancelAnimationFrame(animationId)
+    animationId = null
   }
 })
-
-watch(
-  [
-    () => props.sparkColor,
-    () => props.sparkSize,
-    () => props.sparkRadius,
-    () => props.sparkCount,
-    () => props.duration,
-    easeFunc,
-    () => props.extraScale,
-  ],
-  () => {
-    if (animationId.value) {
-      cancelAnimationFrame(animationId.value)
-    }
-    animationId.value = requestAnimationFrame(draw)
-  },
-)
 </script>
 
 <style scoped>

@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type { ShoppingListSummary } from '@/api/types/dashboard.types'
 import CountUp from '@/components/vue-bits/CountUp.vue'
-import GlareHover from '@/components/vue-bits/GlareHover.vue'
+import SpotlightCard from '@/components/vue-bits/SpotlightCard.vue'
 
 interface Props {
   shoppingList: ShoppingListSummary | null
@@ -20,7 +20,7 @@ const remainingItems = computed(() =>
 </script>
 
 <template>
-  <GlareHover glare-color="#68d391" :glare-opacity="0.25" class-name="shopping-glare">
+  <SpotlightCard spotlight-color="rgba(104, 211, 145, 0.15)" class-name="shopping-spotlight">
     <section class="shopping-widget" @click="emit('view-list')">
       <div class="widget-content">
         <div class="shopping-icon">🛒</div>
@@ -55,11 +55,11 @@ const remainingItems = computed(() =>
         <div class="view-arrow">→</div>
       </div>
     </section>
-  </GlareHover>
+  </SpotlightCard>
 </template>
 
 <style scoped>
-:deep(.shopping-glare) {
+:deep(.shopping-spotlight) {
   border-radius: 20px;
 }
 

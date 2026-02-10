@@ -138,9 +138,9 @@ const getDigitPosition = (place: number, digit: number): number => {
   }
 
   if (positionCache.size > 200) {
-    const firstKey = positionCache.keys().next().value
-    if (typeof firstKey === 'string') {
-      positionCache.delete(firstKey)
+    const keysToDelete = [...positionCache.keys()].slice(0, positionCache.size - 100)
+    for (const key of keysToDelete) {
+      positionCache.delete(key)
     }
   }
 

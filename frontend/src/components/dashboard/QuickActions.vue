@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useUserStore } from '@/stores/user'
 import LockedAction from '@/components/common/LockedAction.vue'
-import GlareHover from '@/components/vue-bits/GlareHover.vue'
+import SpotlightCard from '@/components/vue-bits/SpotlightCard.vue'
 import ClickSpark from '@/components/vue-bits/ClickSpark.vue'
 
 const userStore = useUserStore()
@@ -45,10 +45,9 @@ function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-memb
 </script>
 
 <template>
-  <GlareHover
-    glare-color="#ff6b5b"
-    :glare-opacity="0.3"
-    class-name="quick-actions-glare"
+  <SpotlightCard
+    spotlight-color="rgba(255, 107, 91, 0.12)"
+    class-name="quick-actions-spotlight"
   >
     <section class="quick-actions">
       <h3 class="widget-title">Snabbåtgärder</h3>
@@ -79,11 +78,11 @@ function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-memb
         </LockedAction>
       </div>
     </section>
-  </GlareHover>
+  </SpotlightCard>
 </template>
 
 <style scoped>
-:deep(.quick-actions-glare) {
+:deep(.quick-actions-spotlight) {
   border-radius: 20px;
 }
 
