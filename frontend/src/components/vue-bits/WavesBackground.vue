@@ -194,11 +194,12 @@ const setLines = () => {
 }
 
 const movePoints = (time: number) => {
-  if (!noise) return
+  const n = noise
+  if (!n) return
   const { waveSpeedX, waveSpeedY, waveAmpX, waveAmpY, friction, tension, maxCursorMove } = config
   lines.forEach((pts) => {
     pts.forEach((p) => {
-      const move = noise!.perlin2((p.x + time * waveSpeedX) * 0.002, (p.y + time * waveSpeedY) * 0.0015) * 12
+      const move = n.perlin2((p.x + time * waveSpeedX) * 0.002, (p.y + time * waveSpeedY) * 0.0015) * 12
       p.wave.x = Math.cos(move) * waveAmpX
       p.wave.y = Math.sin(move) * waveAmpY
       const dx = p.x - mouse.sx, dy = p.y - mouse.sy
