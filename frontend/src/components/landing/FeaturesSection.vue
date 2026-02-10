@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Feature } from '@/api/types/landing.types'
 import FeatureCard from './FeatureCard.vue'
+import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
 
 interface Props {
   sectionTitle: string
@@ -12,6 +13,18 @@ defineProps<Props>()
 
 <template>
   <section class="features-section">
+    <WavesBackground
+      line-color="rgba(255, 140, 100, 0.06)"
+      background-color="transparent"
+      :wave-speed-x="0.005"
+      :wave-speed-y="0.002"
+      :wave-amp-x="20"
+      :wave-amp-y="10"
+      :x-gap="18"
+      :y-gap="48"
+      :friction="0.94"
+      :tension="0.003"
+    />
     <div class="features-bg">
       <div class="dot-pattern"></div>
     </div>

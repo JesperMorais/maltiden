@@ -59,10 +59,6 @@ const remainingItems = computed(() =>
 </template>
 
 <style scoped>
-:deep(.shopping-spotlight) {
-  border-radius: 20px;
-}
-
 .shopping-widget {
   background: var(--bg-primary);
   border-radius: 20px;

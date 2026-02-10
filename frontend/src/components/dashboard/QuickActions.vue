@@ -82,10 +82,6 @@ function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-memb
 </template>
 
 <style scoped>
-:deep(.quick-actions-spotlight) {
-  border-radius: 20px;
-}
-
 .quick-actions {
   background: var(--bg-primary);
   border-radius: 20px;
