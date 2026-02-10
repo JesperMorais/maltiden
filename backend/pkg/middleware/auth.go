@@ -61,7 +61,7 @@ func GetUserID(r *http.Request) string {
 }
 
 // Helper to get householdID from context
-func GetHouseholdID(ctx context.Context) string {
-	householdID, _ := ctx.Value(HouseholdIDKey).(string)
+func GetHouseholdID(r *http.Request) string {
+	householdID, _ := r.Context().Value(HouseholdIDKey).(string)
 	return householdID
 }

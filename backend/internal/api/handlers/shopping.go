@@ -4,17 +4,16 @@ import (
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
-	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/middleware"
 	"net/http"
 )
 
 type ShoppingHandler struct {
 	shoppingService *services.ShoppingService
-	menuStorage     *sqlite.MenuStorage
+	menuStorage     domain.MenuRepository
 }
 
-func NewShoppingHandler(shoppingService *services.ShoppingService, menuStorage *sqlite.MenuStorage) *ShoppingHandler {
+func NewShoppingHandler(shoppingService *services.ShoppingService, menuStorage domain.MenuRepository) *ShoppingHandler {
 	return &ShoppingHandler{
 		shoppingService: shoppingService,
 		menuStorage:     menuStorage,
@@ -23,7 +22,7 @@ func NewShoppingHandler(shoppingService *services.ShoppingService, menuStorage *
 
 func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request) {
 	// Verify authenticated user has householdID
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if householdID == "" {
 		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -67,7 +66,7 @@ func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request
 
 func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	// Verify authenticated user has householdID
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if householdID == "" {
 		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return

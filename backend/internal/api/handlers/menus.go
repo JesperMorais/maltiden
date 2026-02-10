@@ -19,7 +19,7 @@ func NewMenuHandler(menuService *services.MenuService) *MenuHandler {
 
 func (h *MenuHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	// Get household ID from auth context
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if householdID == "" {
 		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -54,7 +54,7 @@ func (h *MenuHandler) Generate(w http.ResponseWriter, r *http.Request) {
 
 func (h *MenuHandler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 	// Get household ID from auth context
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if householdID == "" {
 		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return

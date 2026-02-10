@@ -41,7 +41,7 @@ func (h *HouseholdHandler) GetMyHousehold(w http.ResponseWriter, r *http.Request
 
 func (h *HouseholdHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if userID == "" || householdID == "" {
 		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -96,7 +96,7 @@ func (h *HouseholdHandler) JoinHousehold(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *HouseholdHandler) GetMemberStatuses(w http.ResponseWriter, r *http.Request) {
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if householdID == "" {
 		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -113,7 +113,7 @@ func (h *HouseholdHandler) GetMemberStatuses(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *HouseholdHandler) UpdateMemberStatus(w http.ResponseWriter, r *http.Request) {
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if householdID == "" {
 		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -151,7 +151,7 @@ func (h *HouseholdHandler) UpdateMemberStatus(w http.ResponseWriter, r *http.Req
 
 func (h *HouseholdHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
-	householdID := middleware.GetHouseholdID(r.Context())
+	householdID := middleware.GetHouseholdID(r)
 	if userID == "" || householdID == "" {
 		WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
