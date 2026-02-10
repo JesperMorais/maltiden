@@ -1,0 +1,475 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import type { RecipeSummary } from '@/api/recipes.api'
+import { getRecipes } from '@/api/recipes.api'
+import RecipeCard from '@/components/recipes/RecipeCard.vue'
+import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
+
+const router = useRouter()
+
+const recipes = ref<RecipeSummary[]>([])
+const isLoading = ref(false)
+const error = ref('')
+const searchTerm = ref('')
+const selectedTags = ref<Set<string>>(new Set())
+const selectedRecipeId = ref<string | null>(null)
+
+// All unique tags across recipes
+const allTags = computed(() => {
+  const tags = new Set<string>()
+  for (const r of recipes.value) {
+    for (const t of r.tags) {
+      tags.add(t)
+    }
+  }
+  return Array.from(tags).sort()
+})
+
+// Filtered recipes based on search + tag filters
+const filteredRecipes = computed(() => {
+  let result = recipes.value
+
+  const term = searchTerm.value.toLowerCase().trim()
+  if (term) {
+    result = result.filter(r =>
+      r.name.toLowerCase().includes(term) ||
+      r.tags.some(t => t.toLowerCase().includes(term))
+    )
+  }
+
+  if (selectedTags.value.size > 0) {
+    result = result.filter(r =>
+      r.tags.some(t => selectedTags.value.has(t))
+    )
+  }
+
+  return result
+})
+
+function toggleTag(tag: string) {
+  const next = new Set(selectedTags.value)
+  if (next.has(tag)) {
+    next.delete(tag)
+  } else {
+    next.add(tag)
+  }
+  selectedTags.value = next
+}
+
+async function fetchRecipes() {
+  isLoading.value = true
+  error.value = ''
+  try {
+    const data = await getRecipes()
+    recipes.value = data.recipes
+  } catch {
+    error.value = 'Kunde inte ladda recept. Försök igen.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+function openRecipe(id: string) {
+  selectedRecipeId.value = id
+}
+
+function closeDetail() {
+  selectedRecipeId.value = null
+}
+
+function goToParser() {
+  router.push({ name: 'parse-recipe' })
+}
+
+onMounted(fetchRecipes)
+</script>
+
+<template>
+  <div class="my-recipes-view">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <button class="back-link" @click="router.push({ name: 'dashboard' })">
+          <span class="back-arrow">&larr;</span>
+          <span>Dashboard</span>
+        </button>
+        <h1 class="title">Mina recept</h1>
+        <p class="description">
+          Alla dina sparade recept samlade på ett ställe.
+        </p>
+      </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="content">
+      <div class="content-container">
+        <!-- Loading overlay -->
+        <div v-if="isLoading" class="loading-overlay">
+          <div class="loading-spinner">
+            <div class="spinner-emoji">📖</div>
+            <p class="loading-text">Laddar recept...</p>
+          </div>
+        </div>
+
+        <!-- Error state -->
+        <div v-else-if="error" class="error-state">
+          <div class="error-icon">⚠️</div>
+          <p class="error-message">{{ error }}</p>
+          <button class="retry-button" @click="fetchRecipes">
+            Försök igen
+          </button>
+        </div>
+
+        <!-- Content when loaded -->
+        <template v-else>
+          <!-- Search & filters -->
+          <div v-if="recipes.length" class="toolbar">
+            <input
+              v-model="searchTerm"
+              type="text"
+              placeholder="Sök recept..."
+              class="search-input"
+            />
+            <div v-if="allTags.length" class="tag-filters">
+              <button
+                v-for="tag in allTags"
+                :key="tag"
+                class="filter-chip"
+                :class="{ active: selectedTags.has(tag) }"
+                @click="toggleTag(tag)"
+              >
+                {{ tag }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Recipe grid -->
+          <div v-if="filteredRecipes.length" class="recipe-grid">
+            <RecipeCard
+              v-for="recipe in filteredRecipes"
+              :key="recipe.id"
+              :recipe="recipe"
+              @click="openRecipe(recipe.id)"
+            />
+          </div>
+
+          <!-- Empty state: no recipes at all -->
+          <div v-else-if="!recipes.length" class="empty-state">
+            <div class="empty-emoji">📖</div>
+            <h2 class="empty-title">Inga recept ännu</h2>
+            <p class="empty-text">
+              Börja med att tolka ett recept från en webbsida eller bok.
+            </p>
+            <button class="cta-button" @click="goToParser">
+              Tolka ett recept
+            </button>
+          </div>
+
+          <!-- Empty state: no search results -->
+          <div v-else class="empty-state">
+            <div class="empty-emoji">🔍</div>
+            <h2 class="empty-title">Inga träffar</h2>
+            <p class="empty-text">
+              Försök med andra sökord eller ta bort filter.
+            </p>
+          </div>
+        </template>
+      </div>
+    </main>
+
+    <!-- Detail modal -->
+    <RecipeDetailModal
+      :recipe-id="selectedRecipeId"
+      @close="closeDetail"
+    />
+  </div>
+</template>
+
+<style scoped>
+.my-recipes-view {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.header {
+  padding: 2rem 2rem 2rem;
+  background: linear-gradient(
+    180deg,
+    var(--bg-card) 0%,
+    var(--bg-primary) 100%
+  );
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1rem;
+  transition: color 0.2s ease;
+}
+
+.back-link:hover {
+  color: var(--accent);
+}
+
+.back-arrow {
+  font-size: 1.1rem;
+}
+
+.title {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 2.5rem;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem;
+  line-height: 1.2;
+}
+
+.description {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Content */
+.content {
+  flex: 1;
+  padding: 2rem;
+  position: relative;
+}
+
+.content-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* Toolbar */
+.toolbar {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.9rem 1.25rem;
+  border: 2px solid var(--border-color);
+  border-radius: 14px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(255, 107, 91, 0.1);
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.tag-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.filter-chip {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 100px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.filter-chip.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* Recipe grid */
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+}
+
+.loading-spinner {
+  text-align: center;
+}
+
+.spinner-emoji {
+  font-size: 4rem;
+  animation: spin 1.5s ease-in-out infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.2); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.loading-text {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  margin: 1rem 0 0;
+}
+
+/* Error state */
+.error-state {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.error-message {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin: 0 0 1.5rem;
+}
+
+.retry-button {
+  padding: 0.875rem 2rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 100px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.retry-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 107, 91, 0.4);
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.empty-emoji {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.empty-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 1.75rem;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem;
+}
+
+.empty-text {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  margin: 0 0 1.5rem;
+  line-height: 1.6;
+}
+
+.cta-button {
+  padding: 0.875rem 2rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 100px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 107, 91, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header {
+    padding: 1.5rem 1rem;
+  }
+
+  .content {
+    padding: 1.5rem 1rem;
+  }
+
+  .title {
+    font-size: 1.75rem;
+  }
+
+  .description {
+    font-size: 0.95rem;
+  }
+
+  .recipe-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+  }
+}
+</style>
