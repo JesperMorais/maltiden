@@ -5,7 +5,7 @@ import LockedAction from '@/components/common/LockedAction.vue'
 const userStore = useUserStore()
 
 const emit = defineEmits<{
-  (e: 'generate-menu' | 'add-recipe' | 'invite-member' | 'parse-recipe'): void
+  (e: 'generate-menu' | 'add-recipe' | 'invite-member' | 'parse-recipe' | 'view-recipes'): void
 }>()
 
 const actions = [
@@ -40,10 +40,18 @@ const actions = [
     description: 'Klistra in & tolka',
     event: 'parse-recipe' as const,
     requiresMember: true
+  },
+  {
+    id: 'recipes',
+    icon: '📖',
+    label: 'Mina recept',
+    description: 'Visa sparade recept',
+    event: 'view-recipes' as const,
+    requiresMember: true
   }
 ]
 
-function handleAction(eventName: 'generate-menu' | 'add-recipe' | 'invite-member' | 'parse-recipe') {
+function handleAction(eventName: 'generate-menu' | 'add-recipe' | 'invite-member' | 'parse-recipe' | 'view-recipes') {
   if (userStore.isMember) {
     emit(eventName)
   }
