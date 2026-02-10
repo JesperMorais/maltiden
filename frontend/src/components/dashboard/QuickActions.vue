@@ -5,7 +5,7 @@ import LockedAction from '@/components/common/LockedAction.vue'
 const userStore = useUserStore()
 
 const emit = defineEmits<{
-  (e: 'generate-menu' | 'add-recipe' | 'invite-member' | 'parse-recipe' | 'view-recipes'): void
+  (e: 'generate-menu' | 'view-recipes' | 'invite-member'): void
 }>()
 
 const actions = [
@@ -18,11 +18,11 @@ const actions = [
     requiresMember: true
   },
   {
-    id: 'add',
-    icon: '➕',
-    label: 'Lägg till recept',
-    description: 'Spara nytt recept',
-    event: 'add-recipe' as const,
+    id: 'recipes',
+    icon: '📖',
+    label: 'Recept',
+    description: 'Hantera dina recept',
+    event: 'view-recipes' as const,
     requiresMember: true
   },
   {
@@ -32,26 +32,10 @@ const actions = [
     description: 'Dela med familjen',
     event: 'invite-member' as const,
     requiresMember: true
-  },
-  {
-    id: 'parse',
-    icon: '📝',
-    label: 'Tolka recept',
-    description: 'Klistra in & tolka',
-    event: 'parse-recipe' as const,
-    requiresMember: true
-  },
-  {
-    id: 'recipes',
-    icon: '📖',
-    label: 'Mina recept',
-    description: 'Visa sparade recept',
-    event: 'view-recipes' as const,
-    requiresMember: true
   }
 ]
 
-function handleAction(eventName: 'generate-menu' | 'add-recipe' | 'invite-member' | 'parse-recipe' | 'view-recipes') {
+function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-member') {
   if (userStore.isMember) {
     emit(eventName)
   }
