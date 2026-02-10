@@ -4,9 +4,14 @@ import BaseButton from '@/components/common/BaseButton.vue'
 interface Props {
   recipeName: string
   emoji: string
+  primaryActionLabel?: string
+  secondaryActionLabel?: string
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), {
+  primaryActionLabel: 'Tolka nytt recept',
+  secondaryActionLabel: 'Till dashboard'
+})
 
 const emit = defineEmits<{
   (e: 'parse-another'): void
@@ -22,10 +27,10 @@ const emit = defineEmits<{
 
     <div class="success-actions">
       <BaseButton variant="primary" size="lg" @click="emit('parse-another')">
-        Tolka nytt recept
+        {{ primaryActionLabel }}
       </BaseButton>
       <BaseButton variant="outline" size="md" @click="emit('go-dashboard')">
-        Till dashboard
+        {{ secondaryActionLabel }}
       </BaseButton>
     </div>
   </div>
