@@ -35,6 +35,8 @@ type cacheEntry struct {
 	expiresAt time.Time
 }
 
+const maxCacheEntries = 500
+
 type TjekService struct {
 	baseURL    string
 	httpClient *http.Client
@@ -71,10 +73,32 @@ func (s *TjekService) getFromCache(key string) (interface{}, bool) {
 	return entry.data, true
 }
 
-// setCache stores an entry in cache with TTL
+// setCache stores an entry in cache with TTL, evicting expired entries if cache is full
 func (s *TjekService) setCache(key string, data interface{}, ttl time.Duration) {
 	s.cacheMu.Lock()
 	defer s.cacheMu.Unlock()
+
+	// Evict expired entries if at capacity
+	if len(s.cache) >= maxCacheEntries {
+		now := time.Now()
+		for k, v := range s.cache {
+			if now.After(v.expiresAt) {
+				delete(s.cache, k)
+			}
+		}
+		// If still at capacity after evicting expired, drop oldest entry
+		if len(s.cache) >= maxCacheEntries {
+			var oldestKey string
+			var oldestTime time.Time
+			for k, v := range s.cache {
+				if oldestKey == "" || v.expiresAt.Before(oldestTime) {
+					oldestKey = k
+					oldestTime = v.expiresAt
+				}
+			}
+			delete(s.cache, oldestKey)
+		}
+	}
 
 	s.cache[key] = cacheEntry{
 		data:      data,

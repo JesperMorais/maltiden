@@ -18,7 +18,7 @@ const HouseholdIDKey contextKey = "household_id"
 func writeError(w http.ResponseWriter, status int, code string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]string{"error": code})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": code})
 }
 
 // TokenValidator defines the interface for validating JWT tokens.

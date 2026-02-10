@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 )
@@ -37,7 +38,8 @@ func DecodeJSON(w http.ResponseWriter, r *http.Request, maxBytes int64, dst inte
 	// Limit body size (VALID-02)
 	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
-		if err.Error() == "http: request body too large" {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
 			WriteError(w, http.StatusRequestEntityTooLarge, "request_too_large")
 		} else {
 			WriteError(w, http.StatusBadRequest, "invalid_request")
