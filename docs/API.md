@@ -20,6 +20,22 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 - Mock implementations available for development
 - Integrated into new `RecipesView` component with tabs
 
+## Health
+
+### GET /health
+Check API health and database connectivity.
+```json
+// Response 200
+{
+  "status": "ok",
+  "db": "connected"
+}
+
+// No authentication required
+```
+
+---
+
 ## Auth
 
 ### POST /auth/register
@@ -42,8 +58,8 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
   }
 }
 
-// Error 400
-{ "error": "email_taken" }
+// Error 409
+{ "error": "email_already_exists" }
 ```
 
 ### POST /auth/login
@@ -259,8 +275,7 @@ Parse recipe text and immediately save it to the database.
     "emoji": "🍝"
   },
   "confidence": 0.95,
-  "warnings": [],
-  "rawText": "Köttfärssås för 4 personer\n\n..."
+  "warnings": []
 }
 
 // Timeout: 60 seconds
@@ -333,6 +348,9 @@ Parse recipe text and immediately save it to the database.
 
 ### PATCH /shopping-list/items/:id
 ```json
+// Query parameters:
+// ?menuId=menu_001  - Menu ID (required)
+
 // Request
 { "checked": true }
 
@@ -343,8 +361,6 @@ Parse recipe text and immediately save it to the database.
 ---
 
 ## Offers (Grocery Deals)
-
-**Auth required:** `Authorization: Bearer <token>`
 
 ### GET /offers/search
 Search for grocery offers near a location (defaults to Haninge).
@@ -430,7 +446,7 @@ Alla errors följer samma struktur:
 |-----|------|-----------|
 | `invalid_credentials` | 401 | Fel email/lösenord |
 | `unauthorized` | 401 | Token saknas/ogiltig |
-| `email_taken` | 400 | Email redan registrerad |
+| `email_already_exists` | 409 | Email redan registrerad |
 | `invalid_code` | 400 | Inbjudningskod ogiltig/utgången |
 | `not_found` | 404 | Resursen finns inte |
 
@@ -448,7 +464,7 @@ The frontend uses Vue Router with the following routes:
 | `/dashboard` | DashboardView | Yes | No | Main dashboard (guests can view) |
 | `/menu/generate` | GenerateMenuView | Yes | Yes | Menu generator (members only) |
 | `/recipes` | RecipesView | Yes | Yes | Unified recipes page with tabs |
-| `/recipes/parse` | *(redirect to /recipes)* | Yes | Yes | Legacy route, redirects to recipes |
+| `/recipes/parse` | ParseRecipeView | Yes | Yes | Recipe parser interface |
 | `/about` | AboutView | No | No | About page |
 | `/offers-poc` | OffersView | No | No | Offers POC page |
 
