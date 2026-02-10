@@ -7,7 +7,7 @@ Systematic improvement of the Maltiden backend — from code review through impl
 ## Milestones
 
 - ✅ **v1.0 Pre-Fix** — Phases 1-3 (shipped 2026-02-09)
-- 🚧 **v1.1 Fix** — Phases 4-7 (in progress)
+- ✅ **v1.1 Fix** — Phases 4-7 (shipped 2026-02-10)
 
 ## Phases
 
@@ -22,7 +22,7 @@ See [milestone archive](milestones/v1.0-pre-fix-ROADMAP.md) for full details.
 
 </details>
 
-### 🚧 v1.1 Fix (In Progress)
+### ✅ v1.1 Fix (Shipped 2026-02-10)
 
 **Milestone Goal:** Implement all critical, high, and medium-severity fixes from the backend code review (93 findings across 9 FIX-PLAN batches)
 
@@ -54,15 +54,15 @@ Plans:
 - [x] 06-01: Tjek API Optimization (PERF-02, PERF-03, PERF-08, PERF-09, PERF-10)
 - [x] 06-02: Database Configuration & Query Optimization (PERF-01, PERF-04, PERF-05, PERF-06, PERF-12)
 
-#### Phase 7: Architecture, Deployment & Polish
+#### Phase 7: Architecture, Deployment & Polish ✅
 **Goal**: Storage interfaces for testability, DI improvements, deployment config fixes, observability, and remaining medium/low findings (FIX-PLAN Batches 7-9)
 **Depends on**: Phases 5-6 (error infrastructure and performance foundations)
-**Research**: Unlikely (Go interface patterns, fly.io configuration)
+**Verified**: 17/17 must-haves passed
 
 Plans:
-- [ ] 07-01: Architecture & Testability (ARCH-01, ARCH-02, ARCH-03, ARCH-04, ARCH-09, ARCH-13)
-- [ ] 07-02: Deployment & Observability (DEPLOY-01 through DEPLOY-10, AUTH-06)
-- [ ] 07-03: Code Quality & Polish (AUTH-11, PERF-16, DATA-10)
+- [x] 07-01: Architecture & Testability (ARCH-01, ARCH-02, ARCH-03, ARCH-04, ARCH-09, ARCH-13)
+- [x] 07-02: Deployment & Observability (DEPLOY-01 through DEPLOY-10, AUTH-06)
+- [x] 07-03: Code Quality & Polish (AUTH-11, PERF-16, DATA-10)
 
 ## Domain Expertise
 
@@ -78,4 +78,4 @@ None
 | 4. Critical Security & Data Integrity | v1.1 | 3/3 | ✅ Complete | 2026-02-09 |
 | 5. Error Handling & Input Validation | v1.1 | 2/2 | ✅ Complete | 2026-02-09 |
 | 6. Performance & Database | v1.1 | 2/2 | ✅ Complete | 2026-02-09 |
-| 7. Architecture, Deployment & Polish | v1.1 | 0/3 | Planned | - |
+| 7. Architecture, Deployment & Polish | v1.1 | 3/3 | ✅ Complete | 2026-02-10 |
