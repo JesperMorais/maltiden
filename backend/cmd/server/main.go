@@ -1,9 +1,13 @@
 package main
 
 import (
-	"log"
+	"context"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"maltiden/internal/api"
 	"maltiden/internal/storage/sqlite"
@@ -11,10 +15,14 @@ import (
 )
 
 func main() {
+	// Set up structured logging
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
 	// Validate JWT secret before any other setup
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if err := utils.InitJWTSecret(jwtSecret); err != nil {
-		log.Fatal("JWT_SECRET must be at least 32 characters")
+		slog.Error("JWT_SECRET must be at least 32 characters")
+		os.Exit(1)
 	}
 
 	// Get config from env variables
@@ -31,13 +39,44 @@ func main() {
 	// Open db (runs migrations)
 	db, err := sqlite.Open(dbPath)
 	if err != nil {
-		log.Fatal("Database error:", err)
+		slog.Error("database error", "error", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	// Create router (injects db)
 	router := api.NewRouter(db)
 
-	log.Printf("Måltiden startar på :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	// Configure HTTP server with graceful shutdown
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: router,
+	}
+
+	// Start server in a goroutine
+	go func() {
+		slog.Info("server starting", "port", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shut down the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	slog.Info("server shutting down")
+
+	// Graceful shutdown with 10-second timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("server forced to shutdown", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("server stopped")
 }

@@ -2,12 +2,14 @@ package sqlite
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"maltiden/migrations"
 )
 
 func Open(path string) (*sql.DB, error) {
@@ -56,14 +58,14 @@ func Open(path string) (*sql.DB, error) {
 	db.SetConnMaxLifetime(5 * time.Minute) // recycle connections periodically
 
 	// Run Migrations
-	if err := runMigrations(db); err != nil {
+	if err := runMigrations(db, migrations.FS); err != nil {
 		return nil, err
 	}
 
 	return db, nil
 }
 
-func runMigrations(db *sql.DB) error {
+func runMigrations(db *sql.DB, fs embed.FS) error {
 	// Create migrations tracking table
 	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -75,35 +77,45 @@ func runMigrations(db *sql.DB) error {
 		return err
 	}
 
+	// Fetch all applied versions in a single query
+	rows, err := db.Query("SELECT version FROM schema_migrations")
+	if err != nil {
+		return err
+	}
+	applied := make(map[int]bool)
+	for rows.Next() {
+		var v int
+		if err := rows.Scan(&v); err != nil {
+			rows.Close()
+			return err
+		}
+		applied[v] = true
+	}
+	rows.Close()
+
 	// Run all migrations in order
-	migrations := []struct {
+	migrationFiles := []struct {
 		version int
 		file    string
 	}{
-		{1, "migrations/001_create_users.sql"},
-		{2, "migrations/002_create_households.sql"},
-		{3, "migrations/003_create_recipes.sql"},
-		{4, "migrations/004_seed_recipes.sql"},
-		{5, "migrations/005_create_menus.sql"},
-		{6, "migrations/006_household_invites_and_member_status.sql"},
-		{7, "migrations/007_add_menu_date_index.sql"},
+		{1, "001_create_users.sql"},
+		{2, "002_create_households.sql"},
+		{3, "003_create_recipes.sql"},
+		{4, "004_seed_recipes.sql"},
+		{5, "005_create_menus.sql"},
+		{6, "006_household_invites_and_member_status.sql"},
+		{7, "007_add_menu_date_index.sql"},
 	}
 
-	for _, m := range migrations {
+	for _, m := range migrationFiles {
 		// Check if migration already applied
-		var exists int
-		err = db.QueryRow("SELECT COUNT(*) FROM schema_migrations WHERE version = ?", m.version).Scan(&exists)
-		if err != nil {
-			return err
-		}
-
-		if exists > 0 {
+		if applied[m.version] {
 			// Migration already applied, skip
 			continue
 		}
 
-		// Read and execute migration file
-		sqlBytes, err := os.ReadFile(m.file)
+		// Read and execute migration file from embedded FS
+		sqlBytes, err := fs.ReadFile(m.file)
 		if err != nil {
 			return err
 		}
