@@ -12,7 +12,7 @@ import { useSkeleton } from '@/composables/useSkeleton'
 const router = useRouter()
 
 const recipes = ref<RecipeSummary[]>([])
-const isLoading = ref(false)
+const isLoading = ref(true)
 const { showSkeleton } = useSkeleton(isLoading, { minDuration: 300 })
 const error = ref('')
 const searchTerm = ref('')
