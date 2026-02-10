@@ -1,31 +1,44 @@
 package services
 
 import (
-	"errors"
+	"database/sql"
 	"maltiden/internal/domain"
-	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/utils"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type AuthService struct {
-	userStorage      *sqlite.UserStorage
-	householdStorage *sqlite.HouseholdStorage
+	db               *sql.DB
+	userStorage      domain.UserRepository
+	householdStorage domain.HouseholdRepository
+	jwtService       *utils.JWTService
 }
 
-func NewAuthService(userStorage *sqlite.UserStorage, householdStorage *sqlite.HouseholdStorage) *AuthService {
+func NewAuthService(db *sql.DB, userStorage domain.UserRepository, householdStorage domain.HouseholdRepository, jwtService *utils.JWTService) *AuthService {
 	return &AuthService{
+		db:               db,
 		userStorage:      userStorage,
 		householdStorage: householdStorage,
+		jwtService:       jwtService,
 	}
 }
 
 func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse, error) {
+	// Trim whitespace from inputs (VALID-15)
+	req.Email = strings.TrimSpace(req.Email)
+	req.Name = strings.TrimSpace(req.Name)
+
+	// Basic email format validation
+	if !strings.Contains(req.Email, "@") || !strings.Contains(req.Email, ".") {
+		return nil, domain.ErrInvalidEmail
+	}
+
 	// Validate input
 	if len(req.Password) < 8 {
-		return nil, errors.New("password must be at least 8 characters")
+		return nil, domain.ErrWeakPassword
 	}
 
 	// Check if email already exists
@@ -34,7 +47,7 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 		return nil, err
 	}
 	if existing != nil {
-		return nil, errors.New("email already exists")
+		return nil, domain.ErrDuplicateEmail
 	}
 
 	hash, err := utils.HashPassword(req.Password)
@@ -47,13 +60,20 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 	householdID := "hh_" + uuid.New().String()
 	now := time.Now()
 
+	// Begin transaction for atomic registration
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	// Create household
 	household := &domain.Household{
 		ID:        householdID,
 		Name:      req.Name + "'s household",
 		CreatedAt: now,
 	}
-	if err := s.householdStorage.Create(household); err != nil {
+	if err := s.householdStorage.CreateTx(tx, household); err != nil {
 		return nil, err
 	}
 
@@ -66,7 +86,7 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 		HouseholdID:  householdID,
 		CreatedAt:    now,
 	}
-	if err := s.userStorage.Create(user); err != nil {
+	if err := s.userStorage.CreateTx(tx, user); err != nil {
 		return nil, err
 	}
 
@@ -78,12 +98,17 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 		Role:        "owner",
 		JoinedAt:    now,
 	}
-	if err := s.householdStorage.AddMember(member); err != nil {
+	if err := s.householdStorage.AddMemberTx(tx, member); err != nil {
+		return nil, err
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
 	// Generate JWT
-	token, err := utils.GenerateToken(user.ID, user.HouseholdID)
+	token, err := s.jwtService.GenerateToken(user.ID, user.HouseholdID)
 	if err != nil {
 		return nil, err
 	}
@@ -95,22 +120,25 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 }
 
 func (s *AuthService) Login(req domain.LoginRequest) (*domain.AuthResponse, error) {
+	// Trim whitespace from email (VALID-15)
+	req.Email = strings.TrimSpace(req.Email)
+
 	// Get user from DB
 	user, err := s.userStorage.GetByEmail(req.Email)
 	if err != nil {
 		return nil, err
 	}
 	if user == nil {
-		return nil, errors.New("invalid credentials")
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	// Validate password
 	if !utils.CheckPassword(req.Password, user.PasswordHash) {
-		return nil, errors.New("invalid credentials")
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	// Generate JWT
-	token, err := utils.GenerateToken(user.ID, user.HouseholdID)
+	token, err := s.jwtService.GenerateToken(user.ID, user.HouseholdID)
 	if err != nil {
 		return nil, err
 	}

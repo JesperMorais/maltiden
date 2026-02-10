@@ -2,19 +2,18 @@ package services
 
 import (
 	"maltiden/internal/domain"
-	"maltiden/internal/storage/sqlite"
-	"math/rand"
+	"math/rand/v2"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type MenuService struct {
-	menuStorage   *sqlite.MenuStorage
-	recipeStorage *sqlite.RecipeStorage
+	menuStorage   domain.MenuRepository
+	recipeStorage domain.RecipeRepository
 }
 
-func NewMenuService(menuStorage *sqlite.MenuStorage, recipeStorage *sqlite.RecipeStorage) *MenuService {
+func NewMenuService(menuStorage domain.MenuRepository, recipeStorage domain.RecipeRepository) *MenuService {
 	return &MenuService{
 		menuStorage:   menuStorage,
 		recipeStorage: recipeStorage,
@@ -22,6 +21,24 @@ func NewMenuService(menuStorage *sqlite.MenuStorage, recipeStorage *sqlite.Recip
 }
 
 func (s *MenuService) Generate(householdID string, req domain.GenerateMenuRequest) (*domain.MenuResponse, error) {
+	// Validate and default days (VALID-13)
+	days := req.Days
+	if days == 0 {
+		days = 5 // backwards-compatible default
+	}
+	if days < 1 || days > 31 {
+		return nil, domain.ErrInvalidDays
+	}
+
+	// Validate and default servings (VALID-14)
+	servings := req.Servings
+	if servings == 0 {
+		servings = 4 // backwards-compatible default
+	}
+	if servings < 1 || servings > 100 {
+		return nil, domain.ErrInvalidServings
+	}
+
 	// Get all recipes
 	recipes, err := s.recipeStorage.GetAll(nil)
 	if err != nil {
@@ -32,25 +49,23 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		return nil, nil
 	}
 
-	// Default values
-	days := req.Days
-	if days <= 0 {
-		days = 5
-	}
-	servings := req.Servings
-	if servings <= 0 {
-		servings = 4
-	}
-
 	// Build skip days map
 	skipDays := make(map[string]bool)
 	for _, d := range req.SkipDays {
 		skipDays[d] = true
 	}
 
+	// Shuffle recipes for variety, cycle if fewer recipes than days
+	shuffled := make([]domain.RecipeSummary, len(recipes))
+	copy(shuffled, recipes)
+	rand.Shuffle(len(shuffled), func(i, j int) {
+		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+	})
+
 	// Generate menu days
 	menuDays := make([]domain.MenuDay, 0, days)
 	today := time.Now()
+	recipeIdx := 0
 
 	for i := 0; i < days; i++ {
 		date := today.AddDate(0, 0, i).Format("2006-01-02")
@@ -64,9 +79,9 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		if skipDays[date] {
 			day.Skip = true
 		} else {
-			// Pick a random recipe
-			recipe := recipes[rand.Intn(len(recipes))]
-			day.RecipeID = recipe.ID
+			// Pick recipe from shuffled list, cycling through if needed
+			day.RecipeID = shuffled[recipeIdx%len(shuffled)].ID
+			recipeIdx++
 
 			// Check for extra portions
 			if extra, ok := req.ExtraPortions[date]; ok {
