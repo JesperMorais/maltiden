@@ -67,6 +67,10 @@ function handleViewRecipes() {
   router.push({ name: 'recipes' })
 }
 
+function handleParseRecipe() {
+  router.push({ name: 'parse-recipe' })
+}
+
 function handleInviteMember() {
   console.log('Invite member')
   // TODO: Show invite modal
@@ -153,6 +157,7 @@ function handleViewShoppingList() {
                 @generate-menu="handleGenerateMenu"
                 @view-recipes="handleViewRecipes"
                 @invite-member="handleInviteMember"
+                @parse-recipe="handleParseRecipe"
               />
             </FadeContent>
 

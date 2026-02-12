@@ -10,6 +10,7 @@ const GenerateMenuView = () => import('@/views/GenerateMenuView.vue')
 const AboutView = () => import('@/views/AboutView.vue')
 const OffersView = () => import('@/views/OffersView.vue')
 const RecipesView = () => import('@/views/RecipesView.vue')
+const ParseRecipeView = () => import('@/views/ParseRecipeView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -58,7 +59,9 @@ const router = createRouter({
     },
     {
       path: '/recipes/parse',
-      redirect: '/recipes'
+      name: 'parse-recipe',
+      component: ParseRecipeView,
+      meta: { transition: 'page-slide', requiresAuth: true, requiresMember: true }
     },
     {
       path: '/offers-poc',
