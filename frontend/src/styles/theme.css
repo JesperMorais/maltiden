@@ -26,6 +26,7 @@
 
   /* Effects */
   --shimmer-color: rgba(255, 255, 255, 0.4);
+  --skeleton-base: rgba(61, 44, 41, 0.06);
 
   /* Border and overlay */
   --border-color: rgba(61, 44, 41, 0.08);
@@ -73,6 +74,7 @@
 
   /* Effects */
   --shimmer-color: rgba(255, 255, 255, 0.08);
+  --skeleton-base: rgba(255, 255, 255, 0.06);
 
   /* Border and overlay */
   --border-color: rgba(255, 255, 255, 0.1);
