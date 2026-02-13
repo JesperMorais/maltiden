@@ -40,8 +40,10 @@ function toggleEating(member: HouseholdMember) {
   const newValue = !member.isEatingToday
   dashboardStore.updateMemberLocally(member.id, { isEatingToday: newValue })
 
-  updateMemberStatus(member.id, { isEatingToday: newValue }).catch(() => {
+  updateMemberStatus(member.id, { isEatingToday: newValue }).catch((error: unknown) => {
     dashboardStore.updateMemberLocally(member.id, { isEatingToday: !newValue })
+    // TODO: Show toast notification when toast system is added
+    console.error('Failed to update eating status:', error)
   })
 }
 
@@ -53,8 +55,10 @@ function toggleLunchBox(member: HouseholdMember, event: Event) {
   const newValue = !member.wantsLunchBox
   dashboardStore.updateMemberLocally(member.id, { wantsLunchBox: newValue })
 
-  updateMemberStatus(member.id, { wantsLunchBox: newValue }).catch(() => {
+  updateMemberStatus(member.id, { wantsLunchBox: newValue }).catch((error: unknown) => {
     dashboardStore.updateMemberLocally(member.id, { wantsLunchBox: !newValue })
+    // TODO: Show toast notification when toast system is added
+    console.error('Failed to update lunchbox status:', error)
   })
 }
 
@@ -146,7 +150,12 @@ function cancelRemove() {
         :key="member.id"
         class="member-item"
         :class="{ 'not-eating': !member.isEatingToday, tappable: userStore.isMember }"
+        :role="userStore.isMember ? 'button' : undefined"
+        :tabindex="userStore.isMember ? 0 : undefined"
+        :aria-label="userStore.isMember ? `${member.name}: ${member.isEatingToday ? 'äter idag' : 'äter inte idag'}. Klicka för att ändra.` : undefined"
         @click="userStore.isMember ? toggleEating(member) : undefined"
+        @keydown.enter="userStore.isMember ? toggleEating(member) : undefined"
+        @keydown.space.prevent="userStore.isMember ? toggleEating(member) : undefined"
       >
         <div class="member-avatar" :class="member.role">
           {{ member.name.charAt(0).toUpperCase() }}

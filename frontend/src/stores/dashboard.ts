@@ -98,11 +98,16 @@ export const useDashboardStore = defineStore('dashboard', () => {
     update: Partial<{ isEatingToday: boolean; wantsLunchBox: boolean }>,
   ) {
     const members = dashboardData.value?.household.members
-    if (!members) return
-    const member = members.find((m) => m.id === memberId)
-    if (member) {
-      Object.assign(member, update)
+    if (!members) {
+      console.warn('updateMemberLocally: no household data loaded')
+      return
     }
+    const member = members.find((m) => m.id === memberId)
+    if (!member) {
+      console.warn(`updateMemberLocally: member ${memberId} not found`)
+      return
+    }
+    Object.assign(member, update)
   }
 
   function clearError() {
