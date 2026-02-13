@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue'
 import type { HouseholdMember } from '@/api/types/dashboard.types'
 import { useUserStore } from '@/stores/user'
+import { useDashboardStore } from '@/stores/dashboard'
+import { updateMemberStatus } from '@/api/household.api'
 
 interface Props {
   members: HouseholdMember[]
@@ -16,6 +18,7 @@ const emit = defineEmits<{
 }>()
 
 const userStore = useUserStore()
+const dashboardStore = useDashboardStore()
 
 const showSettings = ref(false)
 const confirmRemove = ref<HouseholdMember | null>(null)
@@ -27,6 +30,32 @@ const lunchBoxCount = computed(() =>
 
 function toggleSettings() {
   showSettings.value = !showSettings.value
+}
+
+/**
+ * Optimistically toggle a member's eating status.
+ * Updates local state immediately, calls API in background, reverts on error.
+ */
+function toggleEating(member: HouseholdMember) {
+  const newValue = !member.isEatingToday
+  dashboardStore.updateMemberLocally(member.id, { isEatingToday: newValue })
+
+  updateMemberStatus(member.id, { isEatingToday: newValue }).catch(() => {
+    dashboardStore.updateMemberLocally(member.id, { isEatingToday: !newValue })
+  })
+}
+
+/**
+ * Optimistically toggle a member's lunch box preference.
+ */
+function toggleLunchBox(member: HouseholdMember, event: Event) {
+  event.stopPropagation()
+  const newValue = !member.wantsLunchBox
+  dashboardStore.updateMemberLocally(member.id, { wantsLunchBox: newValue })
+
+  updateMemberStatus(member.id, { wantsLunchBox: newValue }).catch(() => {
+    dashboardStore.updateMemberLocally(member.id, { wantsLunchBox: !newValue })
+  })
 }
 
 function handleRemoveClick(member: HouseholdMember) {
@@ -116,7 +145,8 @@ function cancelRemove() {
         v-for="member in members"
         :key="member.id"
         class="member-item"
-        :class="{ 'not-eating': !member.isEatingToday }"
+        :class="{ 'not-eating': !member.isEatingToday, tappable: userStore.isMember }"
+        @click="userStore.isMember ? toggleEating(member) : undefined"
       >
         <div class="member-avatar" :class="member.role">
           {{ member.name.charAt(0).toUpperCase() }}
@@ -127,7 +157,6 @@ function cancelRemove() {
             <template v-if="member.isEatingToday">
               <span class="status-dot eating"></span>
               Äter idag
-              <span v-if="member.wantsLunchBox" class="lunchbox-badge" title="Vill ha matlåda">🍱</span>
             </template>
             <template v-else>
               <span class="status-dot"></span>
@@ -135,6 +164,15 @@ function cancelRemove() {
             </template>
           </span>
         </div>
+        <button
+          v-if="member.isEatingToday && userStore.isMember"
+          class="lunchbox-toggle"
+          :class="{ active: member.wantsLunchBox }"
+          :title="member.wantsLunchBox ? 'Ta bort matlåda' : 'Lägg till matlåda'"
+          @click="toggleLunchBox(member, $event)"
+        >
+          🍱
+        </button>
         <span v-if="member.role === 'owner'" class="owner-badge">Ägare</span>
         <span v-else-if="member.role === 'guest'" class="guest-badge">Gäst</span>
       </div>
@@ -328,6 +366,19 @@ function cancelRemove() {
   opacity: 0.6;
 }
 
+.member-item.tappable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.member-item.tappable:hover {
+  background: var(--bg-hover);
+}
+
+.member-item.tappable:active {
+  transform: scale(0.98);
+}
+
 .member-avatar {
   width: 36px;
   height: 36px;
@@ -392,9 +443,31 @@ function cancelRemove() {
   opacity: 1;
 }
 
-.lunchbox-badge {
-  font-size: 0.75rem;
-  margin-left: 0.15rem;
+.lunchbox-toggle {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.lunchbox-toggle:hover {
+  opacity: 0.7;
+  border-color: var(--border-color-hover);
+}
+
+.lunchbox-toggle.active {
+  opacity: 1;
+  background: rgba(237, 197, 63, 0.12);
+  border-color: #edc53f;
 }
 
 .owner-badge {
