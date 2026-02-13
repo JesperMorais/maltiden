@@ -6,6 +6,9 @@
 app = 'maltiden'
 primary_region = 'arn'
 
+[env]
+  DATABASE_PATH = '/app/data/maltiden.db'
+
 [build]
 
 [http_service]
