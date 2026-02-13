@@ -89,6 +89,27 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
+  /**
+   * Update a member's status locally (for optimistic UI).
+   * Mutates dashboardData in place so computed refs react.
+   */
+  function updateMemberLocally(
+    memberId: string,
+    update: Partial<{ isEatingToday: boolean; wantsLunchBox: boolean }>,
+  ) {
+    const members = dashboardData.value?.household.members
+    if (!members) {
+      console.warn('updateMemberLocally: no household data loaded')
+      return
+    }
+    const member = members.find((m) => m.id === memberId)
+    if (!member) {
+      console.warn(`updateMemberLocally: member ${memberId} not found`)
+      return
+    }
+    Object.assign(member, update)
+  }
+
   function clearError() {
     error.value = null
   }
@@ -120,6 +141,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
     // Actions
     fetchDashboard,
+    updateMemberLocally,
     clearError
   }
 })

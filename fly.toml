@@ -6,6 +6,9 @@
 app = 'maltiden'
 primary_region = 'arn'
 
+[env]
+  DATABASE_PATH = '/app/data/maltiden.db'
+
 [build]
 
 [http_service]
@@ -15,6 +18,10 @@ primary_region = 'arn'
   auto_start_machines = true
   min_machines_running = 0
   processes = ['app']
+
+[mounts]
+  source = 'maltiden_data'
+  destination = '/app/data'
 
 [[vm]]
   cpu_kind = 'shared'
