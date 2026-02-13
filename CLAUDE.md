@@ -102,7 +102,7 @@ cd backend
 go build ./...                    # Build
 go test ./... -v -race            # Test with race detector
 go vet ./...                      # Static analysis
-JWT_SECRET=dev-secret go run cmd/server/main.go   # Run locally
+JWT_SECRET=dev-secret-for-local-development go run cmd/server/main.go   # Run locally
 ```
 
 ### Frontend

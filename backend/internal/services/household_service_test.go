@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"maltiden/internal/domain"
 	"maltiden/internal/storage/sqlite"
+	"maltiden/pkg/utils"
 	"os"
 	"testing"
 	"time"
@@ -45,11 +46,21 @@ func getBackendRoot(t *testing.T) string {
 	return dir + "/../.."
 }
 
+func setupTestJWTService(t *testing.T) *utils.JWTService {
+	t.Helper()
+	// Use a valid 32+ character secret for tests
+	jwtService, err := utils.NewJWTService("test-secret-key-for-jwt-testing-1234567890")
+	if err != nil {
+		t.Fatalf("failed to create test JWT service: %v", err)
+	}
+	return jwtService
+}
+
 func createTestUser(t *testing.T, authService *AuthService, email, name string) *domain.AuthResponse {
 	t.Helper()
 	resp, err := authService.Register(domain.RegisterRequest{
 		Email:    email,
-		Password: "testpassword123",
+		Password: "Testpassword123",
 		Name:     name,
 	})
 	if err != nil {
@@ -62,7 +73,8 @@ func TestCreateInvite(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	// Create a user (which creates a household)
@@ -92,7 +104,8 @@ func TestJoinHousehold(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	// Create owner
@@ -144,7 +157,8 @@ func TestJoinHousehold_InvalidCode(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	user := createTestUser(t, authService, "anna@test.com", "Anna")
@@ -164,7 +178,8 @@ func TestJoinHousehold_ExpiredCode(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	owner := createTestUser(t, authService, "anna@test.com", "Anna")
@@ -198,7 +213,8 @@ func TestJoinHousehold_AlreadyMember(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	owner := createTestUser(t, authService, "anna@test.com", "Anna")
@@ -220,7 +236,8 @@ func TestGetMemberStatuses(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	owner := createTestUser(t, authService, "anna@test.com", "Anna")
@@ -247,7 +264,8 @@ func TestUpdateMemberStatus(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	owner := createTestUser(t, authService, "anna@test.com", "Anna")
@@ -277,7 +295,8 @@ func TestUpdateMemberStatus_PartialUpdate(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	owner := createTestUser(t, authService, "anna@test.com", "Anna")
@@ -305,7 +324,8 @@ func TestUpdateMemberStatus_NotMember(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	owner := createTestUser(t, authService, "anna@test.com", "Anna")
@@ -326,7 +346,8 @@ func TestRemoveMember(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	// Create owner and a member
@@ -352,7 +373,8 @@ func TestRemoveMember_CannotRemoveSelf(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	owner := createTestUser(t, authService, "anna@test.com", "Anna")
@@ -370,7 +392,8 @@ func TestRemoveMember_CannotRemoveOwner(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	owner := createTestUser(t, authService, "anna@test.com", "Anna")
@@ -392,7 +415,8 @@ func TestRemoveMember_GuestCannotRemove(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	owner := createTestUser(t, authService, "anna@test.com", "Anna")
@@ -423,7 +447,8 @@ func TestFullFlow_InviteJoinAndManage(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
-	authService := NewAuthService(userStorage, householdStorage)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := NewHouseholdService(householdStorage, userStorage)
 
 	// 1. Anna registers (creates household)

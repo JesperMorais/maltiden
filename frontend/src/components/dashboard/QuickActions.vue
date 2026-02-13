@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useUserStore } from '@/stores/user'
 import LockedAction from '@/components/common/LockedAction.vue'
+import SpotlightCard from '@/components/vue-bits/SpotlightCard.vue'
+import ClickSpark from '@/components/vue-bits/ClickSpark.vue'
 
 const userStore = useUserStore()
 
 const emit = defineEmits<{
-  (e: 'generate-menu' | 'add-recipe' | 'invite-member' | 'parse-recipe'): void
+  (e: 'generate-menu' | 'view-recipes' | 'invite-member' | 'parse-recipe'): void
 }>()
 
 const actions = [
@@ -18,11 +20,11 @@ const actions = [
     requiresMember: true
   },
   {
-    id: 'add',
-    icon: '➕',
-    label: 'Lägg till recept',
-    description: 'Spara nytt recept',
-    event: 'add-recipe' as const,
+    id: 'recipes',
+    icon: '📖',
+    label: 'Recept',
+    description: 'Hantera dina recept',
+    event: 'view-recipes' as const,
     requiresMember: true
   },
   {
@@ -43,7 +45,7 @@ const actions = [
   }
 ]
 
-function handleAction(eventName: 'generate-menu' | 'add-recipe' | 'invite-member' | 'parse-recipe') {
+function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-member' | 'parse-recipe') {
   if (userStore.isMember) {
     emit(eventName)
   }
@@ -51,28 +53,40 @@ function handleAction(eventName: 'generate-menu' | 'add-recipe' | 'invite-member
 </script>
 
 <template>
-  <section class="quick-actions">
-    <h3 class="widget-title">Snabbåtgärder</h3>
+  <SpotlightCard
+    spotlight-color="rgba(255, 107, 91, 0.12)"
+    class-name="quick-actions-spotlight"
+  >
+    <section class="quick-actions">
+      <h3 class="widget-title">Snabbåtgärder</h3>
 
-    <div class="actions-list">
-      <LockedAction
-        v-for="action in actions"
-        :key="action.id"
-        :requires-member="action.requiresMember"
-      >
-        <button
-          class="action-button"
-          @click="handleAction(action.event)"
+      <div class="actions-list">
+        <LockedAction
+          v-for="action in actions"
+          :key="action.id"
+          :requires-member="action.requiresMember"
         >
-          <span class="action-icon">{{ action.icon }}</span>
-          <div class="action-text">
-            <span class="action-label">{{ action.label }}</span>
-            <span class="action-desc">{{ action.description }}</span>
-          </div>
-        </button>
-      </LockedAction>
-    </div>
-  </section>
+          <ClickSpark
+            spark-color="#ff6b5b"
+            :spark-radius="25"
+            :spark-count="6"
+            :duration="500"
+          >
+            <button
+              class="action-button"
+              @click="handleAction(action.event)"
+            >
+              <span class="action-icon">{{ action.icon }}</span>
+              <div class="action-text">
+                <span class="action-label">{{ action.label }}</span>
+                <span class="action-desc">{{ action.description }}</span>
+              </div>
+            </button>
+          </ClickSpark>
+        </LockedAction>
+      </div>
+    </section>
+  </SpotlightCard>
 </template>
 
 <style scoped>

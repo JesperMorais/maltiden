@@ -2,35 +2,42 @@ package middleware
 
 import "net/http"
 
-// CORS middleware for development
-// Allows requests from frontend dev server
-func CORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Allow frontend origins (development)
-		origin := r.Header.Get("Origin")
-		if origin == "http://localhost:5173" || origin == "http://localhost:4173" || origin == "http://127.0.0.1:5173" {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-		}
+// CORS middleware with configurable allowed origins
+func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
+	// Build map for O(1) lookup
+	originMap := make(map[string]bool)
+	for _, origin := range allowedOrigins {
+		originMap[origin] = true
+	}
 
-		// Allow required methods
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Check if origin is allowed
+			origin := r.Header.Get("Origin")
+			if originMap[origin] {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			}
 
-		// Allow required headers (Content-Type for JSON, Authorization for JWT)
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			// Allow required methods
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 
-		// Allow credentials (cookies, auth headers)
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
+			// Allow required headers (Content-Type for JSON, Authorization for JWT)
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
-		// Cache preflight response for 24 hours
-		w.Header().Set("Access-Control-Max-Age", "86400")
+			// Allow credentials (cookies, auth headers)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
 
-		// Handle preflight OPTIONS request
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+			// Cache preflight response for 24 hours
+			w.Header().Set("Access-Control-Max-Age", "86400")
 
-		// Continue to next handler
-		next.ServeHTTP(w, r)
-	})
+			// Handle preflight OPTIONS request
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			// Continue to next handler
+			next.ServeHTTP(w, r)
+		})
+	}
 }

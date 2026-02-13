@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useUserStore } from '@/stores/user'
+import { usePlanningPreferencesStore } from '@/stores/planningPreferences'
 import DashboardHeader from '@/components/dashboard/DashboardHeader.vue'
 import TodaysMeal from '@/components/dashboard/TodaysMeal.vue'
 import WeeklyMenuGrid from '@/components/dashboard/WeeklyMenuGrid.vue'
@@ -10,11 +11,22 @@ import QuickActions from '@/components/dashboard/QuickActions.vue'
 import HouseholdWidget from '@/components/dashboard/HouseholdWidget.vue'
 import ShoppingListWidget from '@/components/dashboard/ShoppingListWidget.vue'
 import SettingsModal from '@/components/dashboard/SettingsModal.vue'
+import DashboardSkeleton from '@/components/skeleton/layouts/DashboardSkeleton.vue'
+import FadeContent from '@/components/vue-bits/FadeContent.vue'
+import RotatingText from '@/components/vue-bits/RotatingText.vue'
 import type { MenuDay } from '@/api/types/dashboard.types'
+
+const greetingTexts = [
+  'Vad blir det till middag?',
+  'Planera veckans mat',
+  'Dags att laga gott!',
+  'Inspireras av nya recept',
+]
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
 const userStore = useUserStore()
+const prefsStore = usePlanningPreferencesStore()
 
 // Settings modal state
 const showSettings = ref(false)
@@ -22,6 +34,7 @@ const showSettings = ref(false)
 onMounted(() => {
   dashboardStore.fetchDashboard()
   userStore.initFromToken()
+  prefsStore.initPreferences()
 })
 
 function handleDayClick(day: MenuDay) {
@@ -50,13 +63,12 @@ function handleGenerateMenu() {
   router.push({ name: 'generate-menu' })
 }
 
-function handleAddRecipe() {
-  console.log('Add recipe')
-  // TODO: Navigate to add recipe
+function handleViewRecipes() {
+  router.push({ name: 'recipes' })
 }
 
 function handleParseRecipe() {
-  router.push({ name: 'parse-recipe' })
+  router.push('/recipes/parse')
 }
 
 function handleInviteMember() {
@@ -82,13 +94,8 @@ function handleViewShoppingList() {
 
 <template>
   <div class="dashboard-page">
-    <!-- Loading state -->
-    <div v-if="dashboardStore.isLoading" class="loading-state">
-      <div class="loader">
-        <span class="loader-icon">🍳</span>
-        <p class="loader-text">Laddar din dashboard...</p>
-      </div>
-    </div>
+    <!-- Skeleton loading state -->
+    <DashboardSkeleton v-if="dashboardStore.isLoading" />
 
     <!-- Error state -->
     <div v-else-if="dashboardStore.error" class="error-state">
@@ -113,40 +120,62 @@ function handleViewShoppingList() {
       />
 
       <main class="dashboard-content">
+        <!-- Rotating greeting -->
+        <div class="dashboard-greeting">
+          <RotatingText
+            :texts="greetingTexts"
+            :rotation-interval="4500"
+            split-by="words"
+            :stagger-duration="0.03"
+            main-class-name="greeting-text"
+          />
+        </div>
+
         <div class="dashboard-grid">
           <!-- Main content area -->
           <div class="main-area">
-            <TodaysMeal
-              :meal="dashboardStore.todaysMeal"
-              @click="handleMealClick"
-            />
+            <FadeContent :duration="800" :blur="true">
+              <TodaysMeal
+                :meal="dashboardStore.todaysMeal"
+                :is-day-off="!prefsStore.isTodayActive"
+                @click="handleMealClick"
+              />
+            </FadeContent>
 
-            <WeeklyMenuGrid
-              :weekly-menu="dashboardStore.weeklyMenu"
-              @day-click="handleDayClick"
-            />
+            <FadeContent :duration="800" :delay="150" :blur="true">
+              <WeeklyMenuGrid
+                :weekly-menu="dashboardStore.weeklyMenu"
+                @day-click="handleDayClick"
+              />
+            </FadeContent>
           </div>
 
           <!-- Sidebar -->
           <aside class="sidebar">
-            <QuickActions
-              @generate-menu="handleGenerateMenu"
-              @add-recipe="handleAddRecipe"
-              @invite-member="handleInviteMember"
-              @parse-recipe="handleParseRecipe"
-            />
+            <FadeContent :duration="600" :delay="200">
+              <QuickActions
+                @generate-menu="handleGenerateMenu"
+                @view-recipes="handleViewRecipes"
+                @invite-member="handleInviteMember"
+                @parse-recipe="handleParseRecipe"
+              />
+            </FadeContent>
 
-            <HouseholdWidget
-              :members="dashboardStore.householdMembers"
-              :invite-code="dashboardStore.inviteCode"
-              @show-invite="handleShowInvite"
-              @remove-member="handleRemoveMember"
-            />
+            <FadeContent :duration="600" :delay="300">
+              <HouseholdWidget
+                :members="dashboardStore.householdMembers"
+                :invite-code="dashboardStore.inviteCode"
+                @show-invite="handleShowInvite"
+                @remove-member="handleRemoveMember"
+              />
+            </FadeContent>
 
-            <ShoppingListWidget
-              :shopping-list="dashboardStore.shoppingList"
-              @view-list="handleViewShoppingList"
-            />
+            <FadeContent :duration="600" :delay="400">
+              <ShoppingListWidget
+                :shopping-list="dashboardStore.shoppingList"
+                @view-list="handleViewShoppingList"
+              />
+            </FadeContent>
           </aside>
         </div>
       </main>
@@ -166,33 +195,6 @@ function handleViewShoppingList() {
 .dashboard-page {
   min-height: 100vh;
   background: var(--bg-secondary);
-}
-
-/* Loading state */
-.loading-state {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-primary);
-}
-
-.loader {
-  text-align: center;
-}
-
-.loader-icon {
-  font-size: 4rem;
-  display: block;
-  animation: bounce 1s ease-in-out infinite;
-}
-
-.loader-text {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  font-size: 1.1rem;
-  color: var(--text-secondary);
-  margin-top: 1rem;
 }
 
 /* Error state */
@@ -248,11 +250,29 @@ function handleViewShoppingList() {
   box-shadow: var(--shadow-accent);
 }
 
+/* Dashboard greeting */
+.dashboard-greeting {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 2rem 0;
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  color: var(--text-primary);
+  min-height: 2.5em;
+  display: flex;
+  align-items: center;
+}
+
+:deep(.greeting-text) {
+  overflow: hidden;
+}
+
 /* Dashboard content */
 .dashboard-content {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem 2rem 2rem;
 }
 
 .dashboard-grid {
@@ -274,12 +294,6 @@ function handleViewShoppingList() {
   gap: 1rem;
   position: sticky;
   top: calc(70px + 2rem); /* Header height + padding */
-}
-
-/* Animations */
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
 }
 
 /* Responsive */

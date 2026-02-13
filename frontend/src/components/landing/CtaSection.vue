@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
+import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
 
 interface Props {
   title: string
@@ -20,6 +21,20 @@ defineProps<Props>()
 
 <template>
   <section class="cta-section">
+    <!-- Interactive wave background -->
+    <WavesBackground
+      line-color="rgba(255, 180, 130, 0.1)"
+      background-color="transparent"
+      :wave-speed-x="0.006"
+      :wave-speed-y="0.003"
+      :wave-amp-x="25"
+      :wave-amp-y="12"
+      :x-gap="16"
+      :y-gap="44"
+      :friction="0.93"
+      :tension="0.004"
+    />
+
     <!-- Background elements -->
     <div class="cta-bg">
       <div class="gradient-orb orb-1"></div>

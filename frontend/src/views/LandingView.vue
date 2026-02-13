@@ -4,7 +4,6 @@ import { useLandingStore } from '@/stores/landing'
 import HeroSection from '@/components/landing/HeroSection.vue'
 import FeaturesSection from '@/components/landing/FeaturesSection.vue'
 import CtaSection from '@/components/landing/CtaSection.vue'
-
 const landingStore = useLandingStore()
 
 onMounted(() => {

@@ -1,52 +1,61 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { ShoppingListSummary } from '@/api/types/dashboard.types'
+import CountUp from '@/components/vue-bits/CountUp.vue'
+import SpotlightCard from '@/components/vue-bits/SpotlightCard.vue'
 
 interface Props {
   shoppingList: ShoppingListSummary | null
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'view-list': []
 }>()
+
+const remainingItems = computed(() =>
+  props.shoppingList ? props.shoppingList.totalItems - props.shoppingList.checkedItems : 0,
+)
 </script>
 
 <template>
-  <section class="shopping-widget" @click="emit('view-list')">
-    <div class="widget-content">
-      <div class="shopping-icon">🛒</div>
+  <SpotlightCard spotlight-color="rgba(104, 211, 145, 0.15)" class-name="shopping-spotlight">
+    <section class="shopping-widget" @click="emit('view-list')">
+      <div class="widget-content">
+        <div class="shopping-icon">🛒</div>
 
-      <div class="shopping-info" v-if="shoppingList">
-        <h3 class="widget-title">Inköpslista</h3>
-        <div class="shopping-stats">
-          <span class="items-remaining">
-            {{ shoppingList.totalItems - shoppingList.checkedItems }} varor kvar
-          </span>
-          <span class="items-total">
-            av {{ shoppingList.totalItems }}
-          </span>
+        <div class="shopping-info" v-if="shoppingList">
+          <h3 class="widget-title">Inköpslista</h3>
+          <div class="shopping-stats">
+            <span class="items-remaining">
+              <CountUp :to="remainingItems" :duration="1.5" /> varor kvar
+            </span>
+            <span class="items-total">
+              av <CountUp :to="shoppingList.totalItems" :duration="1.5" :delay="0.2" />
+            </span>
+          </div>
+
+          <!-- Progress bar -->
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              :style="{
+                width: `${(shoppingList.checkedItems / shoppingList.totalItems) * 100}%`,
+              }"
+            ></div>
+          </div>
         </div>
 
-        <!-- Progress bar -->
-        <div class="progress-bar">
-          <div
-            class="progress-fill"
-            :style="{
-              width: `${(shoppingList.checkedItems / shoppingList.totalItems) * 100}%`
-            }"
-          ></div>
+        <div class="shopping-info" v-else>
+          <h3 class="widget-title">Inköpslista</h3>
+          <span class="empty-text">Ingen lista ännu</span>
         </div>
-      </div>
 
-      <div class="shopping-info" v-else>
-        <h3 class="widget-title">Inköpslista</h3>
-        <span class="empty-text">Ingen lista ännu</span>
+        <div class="view-arrow">→</div>
       </div>
-
-      <div class="view-arrow">→</div>
-    </div>
-  </section>
+    </section>
+  </SpotlightCard>
 </template>
 
 <style scoped>
