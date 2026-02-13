@@ -87,8 +87,7 @@ function handleRemoveMember(memberId: string) {
 }
 
 function handleViewShoppingList() {
-  console.log('View shopping list')
-  // TODO: Navigate to shopping list
+  router.push({ name: 'shopping-list' })
 }
 </script>
 
