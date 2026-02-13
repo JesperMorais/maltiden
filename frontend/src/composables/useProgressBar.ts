@@ -34,10 +34,12 @@ export function useProgressBar(options: UseProgressBarOptions = {}) {
   let startTime = 0
   let finishTimeout: ReturnType<typeof setTimeout> | null = null
 
+  // Higher = faster initial progress, sharper approach to asymptote
+  const EASING_STEEPNESS = 3
+
   function easeProgress(elapsed: number): number {
-    // Asymptotic curve: fast start, approaches 90% but never reaches it
     const t = elapsed / duration
-    return 90 * (1 - Math.exp(-3 * t))
+    return 90 * (1 - Math.exp(-EASING_STEEPNESS * t))
   }
 
   function tick() {
