@@ -7,8 +7,14 @@ import RecipeEditForm from '@/components/recipe-parser/RecipeEditForm.vue'
 import RecipeParseSuccess from '@/components/recipe-parser/RecipeParseSuccess.vue'
 import ClickSpark from '@/components/vue-bits/ClickSpark.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
+import ProgressBar from '@/components/common/ProgressBar.vue'
+import { useProgressBar } from '@/composables/useProgressBar'
 
 type EditableRecipe = CreateRecipeRequest & { emoji?: string }
+
+// Progress bar for AI parsing (Claude API can take up to 60s)
+const { progress: parseProgress, isActive: parseActive, start: parseStart, finish: parseFinish } =
+  useProgressBar({ duration: 20000 })
 
 const emit = defineEmits<{
   (e: 'navigate-to-list'): void
@@ -62,6 +68,7 @@ async function handleParse() {
 
   isParsing.value = true
   parseError.value = ''
+  parseStart()
 
   try {
     const result: ParseRecipeResponse = await parseRecipe({ rawText: rawText.value })
@@ -74,6 +81,7 @@ async function handleParse() {
     const e = err as { response?: { data?: { error?: string } } }
     parseError.value = e?.response?.data?.error || 'Kunde inte tolka receptet. Försök igen.'
   } finally {
+    parseFinish()
     isParsing.value = false
   }
 }
@@ -211,6 +219,7 @@ function handleViewRecipes() {
       <div class="loading-spinner">
         <div class="spinner-emoji">🧑‍🍳</div>
         <p class="loading-text">Claude tolkar ditt recept...</p>
+        <ProgressBar :progress="parseProgress" :active="parseActive" />
       </div>
     </div>
   </div>
@@ -327,6 +336,7 @@ function handleViewRecipes() {
 
 .loading-spinner {
   text-align: center;
+  width: 280px;
 }
 
 .spinner-emoji {
