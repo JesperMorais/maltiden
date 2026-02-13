@@ -7,7 +7,7 @@ import ClickSpark from '@/components/vue-bits/ClickSpark.vue'
 const userStore = useUserStore()
 
 const emit = defineEmits<{
-  (e: 'generate-menu' | 'view-recipes' | 'invite-member'): void
+  (e: 'generate-menu' | 'view-recipes' | 'invite-member' | 'parse-recipe'): void
 }>()
 
 const actions = [
@@ -45,7 +45,7 @@ const actions = [
   }
 ]
 
-function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-member') {
+function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-member' | 'parse-recipe') {
   if (userStore.isMember) {
     emit(eventName)
   }
