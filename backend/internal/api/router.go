@@ -73,16 +73,6 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 		parserHandler = handlers.NewRecipeParserHandler(parserService, recipeService)
 	}
 
-	// Recipe parser (Claude API) - optional, degrades gracefully if ANTHROPIC_API_KEY not set
-	var parserHandler *handlers.RecipeParserHandler
-	claudeClient, err := claude.NewClient()
-	if err != nil {
-		log.Printf("Warning: Recipe parser disabled: %v", err)
-	} else {
-		parserService := services.NewRecipeParserService(claudeClient)
-		parserHandler = handlers.NewRecipeParserHandler(parserService, recipeService)
-	}
-
 	// Public routes
 	mux.HandleFunc("GET /health", deps.health.Check)
 	mux.Handle("POST /auth/register", authLimiter.Limit(http.HandlerFunc(deps.auth.Register)))

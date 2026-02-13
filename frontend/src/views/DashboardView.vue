@@ -68,7 +68,7 @@ function handleViewRecipes() {
 }
 
 function handleParseRecipe() {
-  router.push({ name: 'parse-recipe' })
+  router.push('/recipes/parse')
 }
 
 function handleInviteMember() {
@@ -157,6 +157,7 @@ function handleViewShoppingList() {
                 @generate-menu="handleGenerateMenu"
                 @view-recipes="handleViewRecipes"
                 @invite-member="handleInviteMember"
+                @parse-recipe="handleParseRecipe"
               />
             </FadeContent>
 
