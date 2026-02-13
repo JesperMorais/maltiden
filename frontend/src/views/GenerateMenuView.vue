@@ -5,9 +5,15 @@ import { useMenuGeneratorStore } from '@/stores/menuGenerator'
 import MenuDayCard from '@/components/menu/MenuDayCard.vue'
 import GenerateMenuEmptyState from '@/components/menu/GenerateMenuEmptyState.vue'
 import MenuGeneratorActions from '@/components/menu/MenuGeneratorActions.vue'
+import ProgressBar from '@/components/common/ProgressBar.vue'
+import { useProgressBar } from '@/composables/useProgressBar'
 
 const router = useRouter()
 const store = useMenuGeneratorStore()
+
+// Progress bar for generation
+const { progress: genProgress, isActive: genActive, start: genStart, finish: genFinish } =
+  useProgressBar({ duration: 8000 })
 
 // Local state
 const showUnsavedWarning = ref(false)
@@ -26,10 +32,13 @@ const isLoading = computed(() => store.isLoading)
  * Handle initial menu generation
  */
 async function handleInitialGenerate() {
+  genStart()
   try {
     await store.generateInitialMenu()
   } catch (error) {
     console.error('Generation failed:', error)
+  } finally {
+    genFinish()
   }
 }
 
@@ -37,10 +46,13 @@ async function handleInitialGenerate() {
  * Handle regenerating unlocked days
  */
 async function handleRegenerate() {
+  genStart()
   try {
     await store.regenerateUnlockedDays()
   } catch (error) {
     console.error('Regeneration failed:', error)
+  } finally {
+    genFinish()
   }
 }
 
@@ -156,6 +168,7 @@ onBeforeRouteLeave((to, from, next) => {
           <div class="loading-spinner">
             <div class="spinner-emoji">✨</div>
             <p class="loading-text">Genererar meny...</p>
+            <ProgressBar :progress="genProgress" :active="genActive" />
           </div>
         </div>
 
@@ -294,6 +307,7 @@ onBeforeRouteLeave((to, from, next) => {
 
 .loading-spinner {
   text-align: center;
+  width: 280px;
 }
 
 .spinner-emoji {
