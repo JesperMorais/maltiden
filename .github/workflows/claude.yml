@@ -33,11 +33,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
-          persist-credentials: false
-
-      - name: Authenticate gh CLI with Claude OAuth
-        run: |
-          gh auth login --with-token <<< "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}"
 
       - name: Run Claude Code
         id: claude
