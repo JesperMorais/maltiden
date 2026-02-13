@@ -34,6 +34,14 @@ const actions = [
     description: 'Dela med familjen',
     event: 'invite-member' as const,
     requiresMember: true
+  },
+  {
+    id: 'parse',
+    icon: '📝',
+    label: 'Tolka recept',
+    description: 'Klistra in & tolka',
+    event: 'parse-recipe' as const,
+    requiresMember: true
   }
 ]
 
