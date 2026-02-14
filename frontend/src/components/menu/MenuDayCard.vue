@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import { AnimatePresence, Motion } from 'motion-v'
 import type { DraftMenuDay } from '@/stores/menuGenerator'
+import type { DisplayRecipe } from '@/composables/useSlotMachine'
 
 interface Props {
   day: DraftMenuDay
   isLocked: boolean
   isLoading?: boolean
+  isRolling?: boolean
+  hasLanded?: boolean
+  displayRecipe?: DisplayRecipe
 }
 
 defineProps<Props>()
@@ -17,7 +22,13 @@ const emit = defineEmits<{
 <template>
   <article
     class="menu-day-card"
-    :class="{ locked: isLocked, loading: isLoading, empty: !day.recipeId }"
+    :class="{
+      locked: isLocked,
+      loading: isLoading,
+      empty: !day.recipeId && !isRolling,
+      rolling: isRolling,
+      'just-landed': hasLanded,
+    }"
   >
     <!-- Loading shimmer overlay -->
     <div v-if="isLoading" class="shimmer-overlay"></div>
@@ -29,18 +40,56 @@ const emit = defineEmits<{
 
     <!-- Recipe content -->
     <div class="recipe-content">
-      <template v-if="day.recipeId">
+      <!-- SLOT ROLLING STATE -->
+      <template v-if="isRolling && displayRecipe">
+        <div class="slot-reel" aria-hidden="true">
+          <AnimatePresence mode="wait">
+            <Motion
+              :key="displayRecipe.emoji"
+              tag="div"
+              class="slot-reel-emoji"
+              :initial="{ y: 24, opacity: 0 }"
+              :animate="{ y: 0, opacity: 1 }"
+              :exit="{ y: -24, opacity: 0 }"
+              :transition="{ duration: 0.06 }"
+            >
+              {{ displayRecipe.emoji }}
+            </Motion>
+          </AnimatePresence>
+          <AnimatePresence mode="wait">
+            <Motion
+              :key="displayRecipe.recipeName"
+              tag="div"
+              class="slot-reel-name"
+              :initial="{ y: 14, opacity: 0 }"
+              :animate="{ y: 0, opacity: 0.5 }"
+              :exit="{ y: -14, opacity: 0 }"
+              :transition="{ duration: 0.06 }"
+            >
+              {{ displayRecipe.recipeName }}
+            </Motion>
+          </AnimatePresence>
+        </div>
+        <span class="sr-only">Genererar recept...</span>
+      </template>
+
+      <!-- LANDED / FILLED STATE -->
+      <template v-else-if="day.recipeId">
         <!-- Recipe emoji -->
-        <div class="recipe-emoji">{{ day.emoji || '🍽️' }}</div>
+        <div class="recipe-emoji" :class="{ 'landing-bounce': hasLanded }">
+          {{ day.emoji || '🍽️' }}
+        </div>
 
         <!-- Recipe name -->
-        <h4 class="recipe-name">{{ day.recipeName }}</h4>
+        <h4 class="recipe-name" :class="{ 'landing-bounce': hasLanded }">
+          {{ day.recipeName }}
+        </h4>
 
         <!-- Servings -->
         <p class="recipe-servings">{{ day.servings }} portioner</p>
       </template>
 
-      <!-- Empty state -->
+      <!-- EMPTY STATE -->
       <template v-else>
         <div class="empty-recipe">
           <div class="plus-icon">+</div>
@@ -51,7 +100,7 @@ const emit = defineEmits<{
 
     <!-- Lock button -->
     <button
-      v-if="day.recipeId"
+      v-if="day.recipeId && !isRolling"
       class="lock-button"
       :class="{ locked: isLocked }"
       :aria-label="isLocked ? `Lås upp ${day.dayName}` : `Lås ${day.dayName}`"
@@ -127,6 +176,98 @@ const emit = defineEmits<{
   }
   100% {
     transform: translateX(100%);
+  }
+}
+
+/* ========================================
+   SLOT MACHINE ROLLING STATE
+   ======================================== */
+
+.menu-day-card.rolling {
+  border-color: var(--accent);
+  border-style: solid;
+  box-shadow: 0 0 0 1px rgba(255, 107, 91, 0.15),
+    var(--shadow-sm);
+}
+
+.menu-day-card.rolling:hover {
+  transform: none;
+}
+
+.slot-reel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 100%;
+  min-height: 140px;
+}
+
+.slot-reel-emoji {
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
+.slot-reel-name {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ========================================
+   LANDING ANIMATIONS
+   ======================================== */
+
+.menu-day-card.just-landed {
+  animation: card-land 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.landing-bounce {
+  animation: land-bounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes land-bounce {
+  0% {
+    transform: translateY(-10px);
+    opacity: 0.7;
+  }
+  60% {
+    transform: translateY(3px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes card-land {
+  0% {
+    transform: translateY(-4px) scale(1.02);
+  }
+  60% {
+    transform: translateY(1px) scale(0.99);
+  }
+  100% {
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -260,6 +401,33 @@ const emit = defineEmits<{
   filter: brightness(0) invert(1);
 }
 
+/* ========================================
+   REDUCED MOTION
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-day-card.rolling {
+    animation: none;
+  }
+
+  .menu-day-card.just-landed {
+    animation: none;
+  }
+
+  .landing-bounce {
+    animation: none;
+  }
+
+  .recipe-emoji {
+    animation: none;
+  }
+
+  .slot-reel-emoji,
+  .slot-reel-name {
+    animation: none;
+  }
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .menu-day-card {
@@ -268,6 +436,10 @@ const emit = defineEmits<{
   }
 
   .recipe-emoji {
+    font-size: 3rem;
+  }
+
+  .slot-reel-emoji {
     font-size: 3rem;
   }
 
@@ -283,6 +455,10 @@ const emit = defineEmits<{
   }
 
   .recipe-emoji {
+    font-size: 2.5rem;
+  }
+
+  .slot-reel-emoji {
     font-size: 2.5rem;
   }
 
