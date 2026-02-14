@@ -2,18 +2,14 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useMenuGeneratorStore } from '@/stores/menuGenerator'
+import { useSlotMachine, type DisplayRecipe } from '@/composables/useSlotMachine'
 import MenuDayCard from '@/components/menu/MenuDayCard.vue'
 import GenerateMenuEmptyState from '@/components/menu/GenerateMenuEmptyState.vue'
 import MenuGeneratorActions from '@/components/menu/MenuGeneratorActions.vue'
-import ProgressBar from '@/components/common/ProgressBar.vue'
-import { useProgressBar } from '@/composables/useProgressBar'
 
 const router = useRouter()
 const store = useMenuGeneratorStore()
-
-// Progress bar for generation
-const { progress: genProgress, isActive: genActive, start: genStart, finish: genFinish } =
-  useProgressBar({ duration: 8000 })
+const slotMachine = useSlotMachine()
 
 // Local state
 const showUnsavedWarning = ref(false)
@@ -24,35 +20,87 @@ const days = computed(() => store.orderedDays)
 const hasMenu = computed(() => store.hasMenu)
 const isLoading = computed(() => store.isLoading)
 
+// Show grid during slot animation even before recipes arrive
+const showGrid = computed(() => {
+  return hasMenu.value || slotMachine.animationPhase.value !== 'idle'
+})
+
 // ============================================
 // HANDLERS
 // ============================================
 
 /**
- * Handle initial menu generation
+ * Handle initial menu generation with slot machine animation
  */
 async function handleInitialGenerate() {
-  genStart()
+  // Initialize week so we have dates to work with
+  store.initializeWeek()
+  store.isSlotAnimating = true
+
+  // Get dates for all days
+  const dates = store.orderedDays.map((d) => d.date)
+
+  // Start rolling animation on all 5 cards
+  slotMachine.startRolling(dates, store.lockedDays)
+
   try {
+    // API call runs concurrently with rolling animation
     await store.generateInitialMenu()
+
+    // Build final recipes map from store data
+    const finalRecipes = new Map<string, DisplayRecipe>()
+    store.orderedDays.forEach((day) => {
+      if (day.recipeName && day.emoji) {
+        finalRecipes.set(day.date, {
+          recipeName: day.recipeName,
+          emoji: day.emoji,
+        })
+      }
+    })
+
+    // Land sequentially left-to-right
+    await slotMachine.landSequentially(finalRecipes, store.lockedDays)
+    store.onSlotAnimationComplete()
   } catch (error) {
     console.error('Generation failed:', error)
-  } finally {
-    genFinish()
+    slotMachine.reset()
+    store.onSlotAnimationComplete()
   }
 }
 
 /**
- * Handle regenerating unlocked days
+ * Handle regenerating unlocked days with slot machine animation
  */
 async function handleRegenerate() {
-  genStart()
+  store.isSlotAnimating = true
+
+  // Start rolling only unlocked days
+  const unlockedDates = store.orderedDays
+    .filter((d) => !store.isDayLocked(d.date))
+    .map((d) => d.date)
+
+  slotMachine.startRolling(unlockedDates, store.lockedDays)
+
   try {
     await store.regenerateUnlockedDays()
+
+    // Build final recipes map for unlocked days
+    const finalRecipes = new Map<string, DisplayRecipe>()
+    store.orderedDays.forEach((day) => {
+      if (!store.isDayLocked(day.date) && day.recipeName && day.emoji) {
+        finalRecipes.set(day.date, {
+          recipeName: day.recipeName,
+          emoji: day.emoji,
+        })
+      }
+    })
+
+    await slotMachine.landSequentially(finalRecipes, store.lockedDays)
+    store.onSlotAnimationComplete()
   } catch (error) {
     console.error('Regeneration failed:', error)
-  } finally {
-    genFinish()
+    slotMachine.reset()
+    store.onSlotAnimationComplete()
   }
 }
 
@@ -60,6 +108,8 @@ async function handleRegenerate() {
  * Handle lock toggle for a day
  */
 function handleLockToggle(date: string) {
+  // Don't allow toggling during animation
+  if (slotMachine.isAnimating.value) return
   store.toggleDayLock(date)
 }
 
@@ -96,6 +146,7 @@ function handleCancel() {
 function confirmLeave() {
   showUnsavedWarning.value = false
   store.clearDraft()
+  slotMachine.reset()
   router.push({ name: 'dashboard' })
 }
 
@@ -116,9 +167,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  // Optionally clear draft when leaving
-  // Commented out to preserve state if user navigates back
-  // store.clearDraft()
+  slotMachine.reset()
 })
 
 // Route guard for unsaved changes
@@ -149,7 +198,7 @@ onBeforeRouteLeave((to, from, next) => {
     <main class="content">
       <div class="content-container">
         <!-- Empty state -->
-        <GenerateMenuEmptyState v-if="!hasMenu" @generate="handleInitialGenerate" />
+        <GenerateMenuEmptyState v-if="!showGrid" @generate="handleInitialGenerate" />
 
         <!-- Menu grid -->
         <div v-else class="menu-grid">
@@ -158,18 +207,12 @@ onBeforeRouteLeave((to, from, next) => {
             :key="day.date"
             :day="day"
             :is-locked="store.isDayLocked(day.date)"
-            :is-loading="store.isRegenerating && !store.isDayLocked(day.date)"
+            :is-loading="store.isRegenerating && !store.isDayLocked(day.date) && !slotMachine.isAnimating.value"
+            :is-rolling="slotMachine.isSlotRolling(day.date)"
+            :has-landed="slotMachine.hasSlotLanded(day.date)"
+            :display-recipe="slotMachine.getDisplayRecipe(day.date)"
             @toggle-lock="handleLockToggle(day.date)"
           />
-        </div>
-
-        <!-- Loading overlay (initial generation) -->
-        <div v-if="store.isGenerating" class="loading-overlay">
-          <div class="loading-spinner">
-            <div class="spinner-emoji">✨</div>
-            <p class="loading-text">Genererar meny...</p>
-            <ProgressBar :progress="genProgress" :active="genActive" />
-          </div>
         </div>
 
         <!-- Error state -->
@@ -185,9 +228,9 @@ onBeforeRouteLeave((to, from, next) => {
 
     <!-- Actions bar -->
     <MenuGeneratorActions
-      v-if="hasMenu || store.isGenerating"
+      v-if="hasMenu || store.isGenerating || slotMachine.isAnimating.value"
       :has-menu="hasMenu"
-      :is-loading="isLoading"
+      :is-loading="isLoading || slotMachine.isAnimating.value"
       :locked-count="store.lockedDaysCount"
       @regenerate="handleRegenerate"
       @save="handleSave"
@@ -291,48 +334,6 @@ onBeforeRouteLeave((to, from, next) => {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 1.5rem;
-}
-
-/* Loading overlay */
-.loading-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 252, 247, 0.9);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.loading-spinner {
-  text-align: center;
-  width: 280px;
-}
-
-.spinner-emoji {
-  font-size: 4rem;
-  animation: spin 1.5s ease-in-out infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg) scale(1);
-  }
-  50% {
-    transform: rotate(180deg) scale(1.2);
-  }
-  100% {
-    transform: rotate(360deg) scale(1);
-  }
-}
-
-.loading-text {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 1.25rem;
-  color: var(--text-primary);
-  margin: 1rem 0 0 0;
 }
 
 /* Error state */

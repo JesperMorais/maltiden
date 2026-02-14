@@ -68,12 +68,11 @@ const emit = defineEmits<{
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
   padding: 1.5rem;
   z-index: 10;
   backdrop-filter: blur(10px);
-  background: rgba(255, 252, 247, 0.95);
+  background: color-mix(in srgb, var(--bg-primary) 95%, transparent);
 }
 
 .actions-container {

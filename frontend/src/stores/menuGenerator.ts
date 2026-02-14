@@ -104,6 +104,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   const isGenerating = ref(false)
   const isRegenerating = ref(false)
   const isSaving = ref(false)
+  const isSlotAnimating = ref(false)
   const error = ref<string | null>(null)
 
   const weekStart = ref<string>('') // Monday ISO date
@@ -376,6 +377,13 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     error.value = null
   }
 
+  /**
+   * Called by view when slot animation fully completes
+   */
+  function onSlotAnimationComplete(): void {
+    isSlotAnimating.value = false
+  }
+
   // ============================================
   // RETURN
   // ============================================
@@ -387,6 +395,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     isGenerating,
     isRegenerating,
     isSaving,
+    isSlotAnimating,
     isLoading,
     error,
     weekStart,
@@ -410,6 +419,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     saveMenu,
     clearDraft,
     setError,
-    clearError
+    clearError,
+    onSlotAnimationComplete
   }
 })
