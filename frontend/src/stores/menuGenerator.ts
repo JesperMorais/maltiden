@@ -378,6 +378,13 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   }
 
   /**
+   * Mark slot animation as started
+   */
+  function startSlotAnimation(): void {
+    isSlotAnimating.value = true
+  }
+
+  /**
    * Called by view when slot animation fully completes
    */
   function onSlotAnimationComplete(): void {
@@ -420,6 +427,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     clearDraft,
     setError,
     clearError,
+    startSlotAnimation,
     onSlotAnimationComplete
   }
 })
