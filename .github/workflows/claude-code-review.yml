@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Run Claude Code Review
         uses: anthropics/claude-code-action@v1
@@ -25,16 +25,43 @@ jobs:
           allowed_bots: "claude[bot],claude,dependabot[bot]"
           track_progress: true
           prompt: |
-            REPO: ${{ github.repository }}
-            PR NUMBER: ${{ github.event.pull_request.number }}
+            You are reviewing PR #${{ github.event.pull_request.number }} in ${{ github.repository }}.
 
-            Please review this pull request with a focus on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Security implications
-            - Performance considerations
+            ## Setup
 
-            Provide detailed feedback using inline comments for specific issues.
+            1. Read CLAUDE.md at the repo root first — it contains all project conventions,
+               architecture rules, and code patterns. Your review MUST respect these conventions.
+            2. Read the full diff with `gh pr diff`.
+            3. Use the Read tool to check surrounding code context BEFORE flagging anything.
+
+            ## Review rules
+
+            **Only flag issues you have verified.** Do not speculate.
+
+            - DO flag: actual bugs, logic errors, security vulnerabilities, missing error handling
+              that causes silent failures, real memory leaks (verified by reading the code).
+            - DO flag: violations of conventions documented in CLAUDE.md.
+            - DO NOT flag: speculative "what if" scenarios that can't actually happen.
+            - DO NOT flag: non-null assertions (`!`) on provably safe access patterns
+              (constant arrays with bounded index, loop variables bounded by `.length`).
+              These are documented as intentional in CLAUDE.md.
+            - DO NOT flag: design choices as bugs (e.g., animation timing, intentional
+              state management patterns) unless they produce incorrect behavior.
+            - DO NOT flag: performance concerns without evidence of an actual problem.
+            - DO NOT suggest adding error handling, validation, or fallbacks for internal
+              code paths that cannot fail.
+            - DO NOT add comments, docstrings, or type annotations that weren't changed.
+
+            ## Comment format
+
+            For each issue, use an inline comment with:
+            - A one-line summary of the actual problem
+            - Why it's a problem (concrete scenario, not hypothetical)
+            - A suggested fix (code snippet if helpful)
+
+            Keep it concise. Aim for quality over quantity — 2 real bugs beat 9 speculative notes.
+
+            If the PR looks good, say so briefly. Don't manufacture issues to fill a review.
 
           claude_args: |
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --allowedTools "Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
