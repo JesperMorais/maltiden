@@ -15,7 +15,9 @@ Full-stack monorepo: **Go backend + Vue 3 frontend**, deployed on Fly.io.
 | HTTP client | Axios | 1.13.x |
 | Build | Vite | 7.3.x |
 | Lint/Format | ESLint + Prettier | semi: false, singleQuote: true, printWidth: 100 |
-| Node | >=22.12.0 | LTS |
+| Animation | motion-v | 1.10.x |
+| Testing | Vitest + @vue/test-utils + happy-dom | 4.0.x |
+| Node | ^20.19.0 \|\| >=22.12.0 | LTS |
 | AI | Claude API (Anthropic) | Recipe parsing |
 | Hosting | Fly.io | Region: arn |
 
@@ -33,15 +35,26 @@ maltiden/
 │   │   └── storage/sqlite/             # Database access layer
 │   ├── pkg/
 │   │   ├── claude/client.go            # Claude API HTTP client
-│   │   ├── middleware/{auth,cors}.go   # JWT auth + CORS
+│   │   ├── middleware/{auth,cors,requestid,ratelimit}.go
 │   │   └── utils/{jwt,password}.go     # Token + bcrypt helpers
-│   └── migrations/                     # SQL migrations (001–006)
+│   └── migrations/                     # SQL migrations (001–007)
 ├── frontend/
 │   └── src/
 │       ├── api/                        # Axios client + typed API services
-│       ├── components/{common,dashboard,menu,...}/
-│       ├── composables/                # Vue composables (usePrefetch, etc.)
+│       ├── components/
+│       │   ├── common/                 # BaseButton, BaseCard, ProgressBar, etc.
+│       │   ├── dashboard/              # HouseholdWidget, WeeklyMenuGrid, etc.
+│       │   ├── landing/                # Hero, Features, CTA sections
+│       │   ├── menu/                   # MenuDayCard, GenerateMenuEmptyState
+│       │   ├── poc/                    # Proof-of-concept components (OfferSearch)
+│       │   ├── recipe-parser/          # RecipeParseInput, RecipeEditForm, etc.
+│       │   ├── recipes/                # RecipeCard, RecipeListPanel, AddRecipePanel
+│       │   ├── skeleton/               # Skeleton loading components + layouts
+│       │   └── vue-bits/               # Reusable animations (RotatingText, SpotlightCard, etc.)
+│       ├── composables/                # Vue composables (useOptimistic, useProgressBar, useShoppingList, etc.)
+│       ├── directives/                 # Custom Vue directives (vPrefetch)
 │       ├── stores/                     # Pinia stores (user, dashboard, menu)
+│       ├── utils/                      # Utility functions (token management)
 │       ├── views/                      # Page-level components
 │       ├── router/                     # Vue Router with auth guards
 │       ├── mocks/                      # Mock data for offline dev
@@ -115,6 +128,7 @@ npm run type-check                # TypeScript type checking (vue-tsc)
 npm run lint                      # ESLint with auto-fix
 npm run format                    # Prettier formatting
 npm run build                     # Production build (type-check + vite build)
+npm run test                      # Run tests (vitest)
 ```
 
 ### CI Pipeline (must pass before merge)
@@ -130,6 +144,7 @@ npm run build                     # Production build (type-check + vite build)
 | `DATABASE_PATH` | No | `./data/maltiden.db` | SQLite file path |
 | `JWT_SECRET` | **Yes** | — | JWT signing key |
 | `ANTHROPIC_API_KEY` | No | — | Claude API key (parser degrades gracefully without it) |
+| `CORS_ORIGINS` | No | `http://localhost:5173,...` | Comma-separated allowed origins |
 
 ### Frontend
 | Variable | Description |
@@ -173,14 +188,15 @@ npm run build                     # Production build (type-check + vite build)
 ## Database
 
 - **Engine:** SQLite with `go-sqlite3` (requires CGO)
-- **Migrations:** Sequential SQL files in `backend/migrations/` (001–006), auto-applied on startup
-- **Tables:** `users`, `households`, `household_members`, `household_invites`, `recipes`, `ingredients`, `instructions`, `menus`, `menu_days`, `shopping_items`
+- **Migrations:** Sequential SQL files in `backend/migrations/` (001–007), auto-applied on startup
+- **Tables:** `users`, `households`, `household_members`, `invite_codes`, `recipes`, `menus`, `menu_days`, `shopping_items`
+- **Note:** Ingredients and instructions are stored as JSON columns in the `recipes` table, not separate tables
 - **No ORM:** Direct `database/sql` with `QueryRow`, `Query`, `Exec`, manual `Scan`
 - **Indexes:** On `email`, `household_id`, and other frequently queried columns
 
 ## API Routes
 
-**Public:** `GET /health`, `POST /auth/register`, `POST /auth/login`, `GET /recipes`, `GET /recipes/{id}`, `GET /offers/*`
+**Public:** `GET /health`, `POST /auth/register`, `POST /auth/login`, `GET /recipes`, `GET /recipes/{id}`, `GET /offers/search`, `GET /offers/discounts`, `GET /offers/stores`
 
 **Protected (JWT required):** `GET /households/me`, `POST /households/invite`, `POST /households/join`, `*/households/members/*`, `POST /recipes`, `POST /recipes/parse`, `POST /recipes/parse-and-save`, `POST /menus/generate`, `GET /menus/current`, `GET /shopping-list`, `PATCH /shopping-list/items/{id}`
 

@@ -344,7 +344,7 @@ Parse recipe text and immediately save it to the database.
 
 ## Offers (Grocery Deals)
 
-**Auth required:** `Authorization: Bearer <token>`
+**No auth required** — these are public endpoints.
 
 ### GET /offers/search
 Search for grocery offers near a location (defaults to Haninge).
@@ -464,23 +464,23 @@ The frontend uses Vue Router with the following routes:
 | Endpoint | Backend | Frontend |
 |----------|---------|----------|
 | GET /health | ✅ | ⬜ |
-| POST /auth/register | ⬜ | ⬜ |
-| POST /auth/login | ⬜ | ⬜ |
-| GET /households/me | ⬜ | ⬜ |
-| POST /households/invite | ⬜ | ⬜ |
-| POST /households/join | ⬜ | ⬜ |
-| GET /households/members/status | ⬜ | ⬜ |
-| PATCH /households/members/:id/status | ⬜ | ⬜ |
-| DELETE /households/members/:id | ⬜ | ⬜ |
-| GET /recipes | ⬜ | ⬜ |
-| GET /recipes/:id | ⬜ | ⬜ |
-| POST /recipes | ⬜ | ⬜ |
-| POST /recipes/parse | ⬜ | ✅ |
-| POST /recipes/parse-and-save | ⬜ | ✅ |
-| POST /menus/generate | ⬜ | ⬜ |
-| GET /menus/current | ⬜ | ⬜ |
-| GET /shopping-list | ⬜ | ⬜ |
-| PATCH /shopping-list/items/:id | ⬜ | ⬜ |
-| GET /offers/search | ⬜ | ✅ |
-| GET /offers/discounts | ⬜ | ✅ |
-| GET /offers/stores | ⬜ | ✅ |
+| POST /auth/register | ✅ | ✅ |
+| POST /auth/login | ✅ | ✅ |
+| GET /households/me | ✅ | ✅ |
+| POST /households/invite | ✅ | ✅ |
+| POST /households/join | ✅ | ✅ |
+| GET /households/members/status | ✅ | ✅ |
+| PATCH /households/members/:id/status | ✅ | ✅ |
+| DELETE /households/members/:id | ✅ | ✅ |
+| GET /recipes | ✅ | ✅ |
+| GET /recipes/:id | ✅ | ✅ |
+| POST /recipes | ✅ | ✅ |
+| POST /recipes/parse | ✅ | ✅ |
+| POST /recipes/parse-and-save | ✅ | ✅ |
+| POST /menus/generate | ✅ | ✅ |
+| GET /menus/current | ✅ | ✅ |
+| GET /shopping-list | ✅ | ✅ |
+| PATCH /shopping-list/items/:id | ✅ | ✅ |
+| GET /offers/search | ✅ | ✅ |
+| GET /offers/discounts | ✅ | ✅ |
+| GET /offers/stores | ✅ | ✅ |
