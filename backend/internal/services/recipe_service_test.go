@@ -1,0 +1,201 @@
+package services
+
+import (
+	"maltiden/internal/domain"
+	"maltiden/internal/storage/sqlite"
+	"strings"
+	"testing"
+)
+
+func newTestRecipeService(t *testing.T) *RecipeService {
+	t.Helper()
+	db := setupTestDB(t)
+	recipeStorage := sqlite.NewRecipeStorage(db)
+	return NewRecipeService(recipeStorage)
+}
+
+func validCreateRecipeReq() domain.CreateRecipeRequest {
+	return domain.CreateRecipeRequest{
+		Name:     "Pasta Carbonara",
+		Servings: 4,
+		Ingredients: []domain.Ingredient{
+			{Name: "Spaghetti", Amount: 400, Unit: "g"},
+			{Name: "Bacon", Amount: 200, Unit: "g"},
+		},
+		Instructions: []string{"Koka pastan", "Stek baconet"},
+		Tags:         []string{"pasta", "snabb"},
+	}
+}
+
+func TestRecipeCreate_EmptyName(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Name = ""
+
+	_, err := svc.Create(req)
+	if err != domain.ErrNameRequired {
+		t.Errorf("expected ErrNameRequired, got %v", err)
+	}
+}
+
+func TestRecipeCreate_NameTooLong(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Name = strings.Repeat("a", 201)
+
+	_, err := svc.Create(req)
+	if err != domain.ErrNameTooLong {
+		t.Errorf("expected ErrNameTooLong, got %v", err)
+	}
+}
+
+func TestRecipeCreate_ServingsZero(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Servings = 0
+
+	_, err := svc.Create(req)
+	if err != domain.ErrInvalidServings {
+		t.Errorf("expected ErrInvalidServings, got %v", err)
+	}
+}
+
+func TestRecipeCreate_ServingsNegative(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Servings = -1
+
+	_, err := svc.Create(req)
+	if err != domain.ErrInvalidServings {
+		t.Errorf("expected ErrInvalidServings, got %v", err)
+	}
+}
+
+func TestRecipeCreate_ServingsTooHigh(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Servings = 101
+
+	_, err := svc.Create(req)
+	if err != domain.ErrInvalidServings {
+		t.Errorf("expected ErrInvalidServings, got %v", err)
+	}
+}
+
+func TestRecipeCreate_EmptyIngredients(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Ingredients = nil
+
+	_, err := svc.Create(req)
+	if err != domain.ErrIngredientsRequired {
+		t.Errorf("expected ErrIngredientsRequired, got %v", err)
+	}
+}
+
+func TestRecipeCreate_TooManyIngredients(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Ingredients = make([]domain.Ingredient, 51)
+	for i := range req.Ingredients {
+		req.Ingredients[i] = domain.Ingredient{Name: "Ingredient", Amount: 1, Unit: "st"}
+	}
+
+	_, err := svc.Create(req)
+	if err != domain.ErrTooManyIngredients {
+		t.Errorf("expected ErrTooManyIngredients, got %v", err)
+	}
+}
+
+func TestRecipeCreate_EmptyInstructions(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Instructions = nil
+
+	_, err := svc.Create(req)
+	if err != domain.ErrInstructionsRequired {
+		t.Errorf("expected ErrInstructionsRequired, got %v", err)
+	}
+}
+
+func TestRecipeCreate_NilTagsDefaultsToEmptySlice(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Tags = nil
+
+	resp, err := svc.Create(req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	recipe, err := svc.GetByID(resp.ID)
+	if err != nil {
+		t.Fatalf("failed to get recipe: %v", err)
+	}
+	if recipe.Tags == nil {
+		t.Error("expected tags to be non-nil empty slice, got nil")
+	}
+	if len(recipe.Tags) != 0 {
+		t.Errorf("expected 0 tags, got %d", len(recipe.Tags))
+	}
+}
+
+func TestRecipeCreate_Success(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+
+	resp, err := svc.Create(req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.HasPrefix(resp.ID, "rec_") {
+		t.Errorf("expected ID with rec_ prefix, got %q", resp.ID)
+	}
+
+	// Verify persistence
+	recipe, err := svc.GetByID(resp.ID)
+	if err != nil {
+		t.Fatalf("failed to get recipe: %v", err)
+	}
+	if recipe.Name != req.Name {
+		t.Errorf("expected name %q, got %q", req.Name, recipe.Name)
+	}
+	if recipe.Servings != req.Servings {
+		t.Errorf("expected servings %d, got %d", req.Servings, recipe.Servings)
+	}
+	if len(recipe.Ingredients) != len(req.Ingredients) {
+		t.Errorf("expected %d ingredients, got %d", len(req.Ingredients), len(recipe.Ingredients))
+	}
+	if len(recipe.Instructions) != len(req.Instructions) {
+		t.Errorf("expected %d instructions, got %d", len(req.Instructions), len(recipe.Instructions))
+	}
+}
+
+func TestRecipeCreate_MaxBoundaryServings(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Servings = 100
+
+	resp, err := svc.Create(req)
+	if err != nil {
+		t.Fatalf("servings=100 should succeed, got %v", err)
+	}
+	if !strings.HasPrefix(resp.ID, "rec_") {
+		t.Errorf("expected rec_ prefix, got %q", resp.ID)
+	}
+}
+
+func TestRecipeCreate_MaxBoundaryIngredients(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Ingredients = make([]domain.Ingredient, 50)
+	for i := range req.Ingredients {
+		req.Ingredients[i] = domain.Ingredient{Name: "Ingredient", Amount: 1, Unit: "st"}
+	}
+
+	_, err := svc.Create(req)
+	if err != nil {
+		t.Fatalf("50 ingredients should succeed, got %v", err)
+	}
+}
