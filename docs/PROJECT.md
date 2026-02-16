@@ -10,7 +10,7 @@ Svensk receptapp för veckoplanering och smarta inköpslistor.
 ## Tech Stack & Versioner
 
 - **Backend:** Go 1.24 (monolith, lager-separation)
-- **Frontend:** Vue 3, Vite, TypeScript strict, Node >=22.12.0
+- **Frontend:** Vue 3, Vite, TypeScript strict, Node ^20.19.0 || >=22.12.0
 - **Databas:** SQLite
 - **Hosting:** Fly.io (prod), lokal utveckling
 - **Auth:** Google OAuth, Apple Sign In, Email/lösenord
@@ -43,7 +43,7 @@ jq '.engines' frontend/package.json                 # Vad projektet kräver
 | `actions/setup-node` | v6 | v6 |
 | `anthropics/claude-code-action` | v1 | v1 |
 | Go | 1.25.6 (1.24.12 stöds) | 1.24 (go.mod) |
-| Node | v22.22.0 LTS | >=22.12.0 (package.json) |
+| Node | v22.22.0 LTS | ^20.19.0 \|\| >=22.12.0 (package.json) |
 
 ## Arkitektur
 
