@@ -29,6 +29,13 @@ jobs:
       actions: read
 
     steps:
+      - name: Debug event context
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Trigger ref: ${{ github.ref }}"
+          echo "Repository: ${{ github.repository }}"
+
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
