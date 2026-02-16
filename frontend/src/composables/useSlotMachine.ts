@@ -1,4 +1,4 @@
-import { ref, computed, type Ref } from 'vue'
+import { ref, computed } from 'vue'
 
 // ============================================
 // RECIPE DISPLAY POOL
@@ -58,12 +58,16 @@ export function useSlotMachine() {
 
   // Check reduced motion preference
   const prefersReducedMotion = ref(false)
+  let mediaQueryCleanup: (() => void) | undefined
+
   if (typeof window !== 'undefined') {
     const mql = window.matchMedia('(prefers-reduced-motion: reduce)')
     prefersReducedMotion.value = mql.matches
-    mql.addEventListener('change', (e) => {
+    const handler = (e: MediaQueryListEvent) => {
       prefersReducedMotion.value = e.matches
-    })
+    }
+    mql.addEventListener('change', handler)
+    mediaQueryCleanup = () => mql.removeEventListener('change', handler)
   }
 
   // ============================================
@@ -111,6 +115,8 @@ export function useSlotMachine() {
           if (s && s.isRolling) {
             const newRecipe = getRandomRecipe(s.currentDisplayRecipe.emoji)
             s.currentDisplayRecipe = { ...newRecipe }
+            // Trigger Vue reactivity — Map mutations aren't tracked by ref()
+            slotStates.value = new Map(slotStates.value)
           }
         }, CYCLE_INTERVAL)
         cycleIntervals.set(date, interval)
@@ -159,6 +165,7 @@ export function useSlotMachine() {
         state.currentDisplayRecipe = { ...final }
         state.isRolling = false
         state.hasLanded = true
+        slotStates.value = new Map(slotStates.value)
       }
 
       // Wait stagger delay before landing next card
@@ -211,12 +218,21 @@ export function useSlotMachine() {
     return animationPhase.value === 'rolling' || animationPhase.value === 'landing'
   })
 
+  /**
+   * Full cleanup including media query listener. Call in onBeforeUnmount.
+   */
+  function destroy(): void {
+    reset()
+    mediaQueryCleanup?.()
+  }
+
   return {
     animationPhase,
     isAnimating,
     startRolling,
     landSequentially,
     reset,
+    destroy,
     isSlotRolling,
     hasSlotLanded,
     getDisplayRecipe,

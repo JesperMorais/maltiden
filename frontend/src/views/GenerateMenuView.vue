@@ -35,7 +35,7 @@ const showGrid = computed(() => {
 async function handleInitialGenerate() {
   // Initialize week so we have dates to work with
   store.initializeWeek()
-  store.isSlotAnimating = true
+  store.startSlotAnimation()
 
   // Get dates for all days
   const dates = store.orderedDays.map((d) => d.date)
@@ -63,6 +63,7 @@ async function handleInitialGenerate() {
     store.onSlotAnimationComplete()
   } catch (error) {
     console.error('Generation failed:', error)
+    store.setError('Kunde inte generera meny. Försök igen.')
     slotMachine.reset()
     store.onSlotAnimationComplete()
   }
@@ -72,7 +73,7 @@ async function handleInitialGenerate() {
  * Handle regenerating unlocked days with slot machine animation
  */
 async function handleRegenerate() {
-  store.isSlotAnimating = true
+  store.startSlotAnimation()
 
   // Start rolling only unlocked days
   const unlockedDates = store.orderedDays
@@ -99,6 +100,7 @@ async function handleRegenerate() {
     store.onSlotAnimationComplete()
   } catch (error) {
     console.error('Regeneration failed:', error)
+    store.setError('Kunde inte generera nya recept. Försök igen.')
     slotMachine.reset()
     store.onSlotAnimationComplete()
   }
@@ -167,7 +169,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  slotMachine.reset()
+  slotMachine.destroy()
 })
 
 // Route guard for unsaved changes
