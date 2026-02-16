@@ -111,6 +111,10 @@ migrations/                 # SQL-migreringar
 | 2025-01 | Lager-arkitektur (handler→service→storage) | Balans mellan enkelhet och separation. Undviker överengineering men håller logik testbar. |
 | 2025-01 | Egen auth (email först, Google senare) | Full kontroll, lärande, ingen vendor lock-in. Apple Sign In väntar tills iOS-app. |
 | 2025-01 | Rolluppdelning David/Jesper | David lead backend, Jesper lead frontend. Parallell utveckling mot gemensamt API-kontrakt. |
+| 2025-02 | Fly.io för hela stacken | En plattform, en deploy — Go serverar SPA. Undviker split-hosting och CORS-krångel i prod. |
+| 2025-02 | Claude API för receptparsning | Fritext → strukturerad JSON. Graceful degradation — appen fungerar utan API-nyckel. |
+| 2025-02 | Tjek API för erbjudanden | Gratis, ingen auth krävs. Svensk täckning via etilbudsavis.dk. |
+| 2026-02 | Claude Code CI (auto-review + @claude) | Automatisk kodgranskning på PR:ar, interaktiv hjälp via kommentarer. |
 
 ## Kommunikation
 - Svenska i all kommunikation
