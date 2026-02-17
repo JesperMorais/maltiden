@@ -47,6 +47,9 @@ jobs:
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
@@ -60,7 +63,7 @@ jobs:
               gh pr comment $PR_NUMBER --body "your response"
             or for issues:
               gh issue comment $ISSUE_NUMBER --body "your response"
-            The PR/issue number is available in the context. If you don't post a comment, the user will never see your response.
+            These environment variables are set for you. If you don't post a comment, the user will never see your response.
 
           show_full_output: true
           claude_args: |
