@@ -53,6 +53,12 @@ jobs:
             Keep responses concise, precise, and actionable.
             When referencing code, include file and line numbers using: path/to/file.ts:line_number
 
+            IMPORTANT: You MUST post your response as a comment on the PR/issue using:
+              gh pr comment $PR_NUMBER --body "your response"
+            or for issues:
+              gh issue comment $ISSUE_NUMBER --body "your response"
+            The PR/issue number is available in the context. If you don't post a comment, the user will never see your response.
+
           show_full_output: true
           claude_args: |
             --allowedTools "Read,Write,Edit,Bash(git:*),Bash(gh:*),Bash(bun:*),Bash(go:*)"
