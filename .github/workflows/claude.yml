@@ -32,9 +32,12 @@ jobs:
       - name: Debug event context
         run: |
           echo "Event: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
           echo "Actor: ${{ github.actor }}"
           echo "Trigger ref: ${{ github.ref }}"
+          echo "Commit SHA: ${{ github.sha }}"
           echo "Repository: ${{ github.repository }}"
+          echo "PR number: ${{ github.event.pull_request.number || github.event.issue.number || 'N/A' }}"
 
       - name: Checkout repository
         uses: actions/checkout@v6
