@@ -20,7 +20,7 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
-    "axios": "^1.13.2",
+    "axios": "^1.13.5",
     "motion-v": "^1.10.3",
     "pinia": "^3.0.4",
     "vue": "^3.5.26",
