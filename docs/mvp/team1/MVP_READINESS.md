@@ -17,7 +17,8 @@ Maltiden is feature-complete across all core workflows. What remains is UX polis
 |------|--------|------------|
 | Auth (register/login/JWT) | Done | Yes |
 | Household management | Done | Yes |
-| Recipe browsing & CRUD | Done | Yes |
+| Recipe browsing & add | Done | Yes |
+| Recipe edit/delete | Missing | No |
 | AI recipe parsing (Claude) | Done | Yes |
 | Weekly menu generation | Done | Yes |
 | Shopping list | Done | Yes |

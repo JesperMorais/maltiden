@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-**Overall readiness: ~65-70%** — The core architecture is solid and well-structured, but several features are incomplete and there are zero automated tests. The app has a working deployment on Fly.io with most core flows functional end-to-end, but the shopping list (a critical MVP feature) is still WIP, and there's no recipe editing capability.
+**Overall readiness: ~65-70%** — The core architecture is solid and well-structured, but several features are incomplete and test coverage is limited. The app has a working deployment on Fly.io with most core flows functional end-to-end, but the shopping list (a critical MVP feature) is still WIP, and there's no recipe editing capability.
 
 ---
 
@@ -53,12 +53,12 @@
 - **Impact**: Users accumulate bad/test recipes with no way to remove them
 - **Effort**: Low
 
-### 2.4 Zero Automated Tests (HIGH)
+### 2.4 Limited Test Coverage (MEDIUM)
 
-- **Backend**: No Go test files found in the entire codebase
-- **Frontend**: Vitest + vue/test-utils configured but no test files exist
-- **Impact**: No safety net for regressions when pushing fixes during beta. Any change could break existing flows
-- **Effort**: High for comprehensive coverage, but even basic happy-path tests would help
+- **Backend**: 7 test files exist in `backend/internal/services/` covering auth, household, recipe, menu, shopping helpers, cache, and tjek helpers (36+ tests)
+- **Frontend**: Vitest + vue/test-utils configured but minimal test files exist (~2% coverage)
+- **Impact**: Backend has a reasonable safety net for service logic, but frontend regressions are unguarded. Expanding coverage would increase confidence during beta
+- **Effort**: Medium — backend foundation exists, frontend needs test files added for critical flows
 
 ---
 
@@ -89,11 +89,10 @@
 - For 2-5 families: acceptable risk with manual backups, but needs monitoring
 - Fly.io volumes have built-in snapshots, but they should be explicitly enabled/verified
 
-### 3.5 No Graceful Shutdown
+### 3.5 ~~No Graceful Shutdown~~ — Already Implemented
 
-- `main.go` does not handle OS signals for graceful shutdown
-- Could lose in-flight requests during deploys
-- Low probability issue for small beta but worth fixing
+- `main.go` already handles OS signals via `signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)` with graceful `server.Shutdown(ctx)`
+- No action needed
 
 ### 3.6 Error Handling in Frontend
 
@@ -148,7 +147,7 @@
 | Type safety | **Good** | TypeScript strict mode, Go types |
 | Code organization | **Excellent** | Clear file naming, consistent patterns |
 | Documentation | **Very Good** | Comprehensive CLAUDE.md, API.md, architecture docs |
-| Test coverage | **Critical gap** | 0% — no tests at all |
+| Test coverage | **Partial** | Backend has 36+ service tests; frontend ~2% |
 | Security | **Good** | Proper auth, input handling, CORS |
 
 ---
@@ -173,14 +172,14 @@ These files suggest the shopping list feature was actively being developed. The 
 1. **Complete shopping list feature** — Commit and connect WIP files to backend API
 2. **Add recipe edit endpoint** — `PUT /recipes/{id}` backend + frontend edit form
 3. **Add recipe delete** — Backend endpoint + frontend confirm-delete button
-4. **Add basic happy-path tests** — At least test auth, recipe CRUD, menu generation
+4. **Expand test coverage** — Backend has service tests; add frontend tests for critical flows
 
 ### Phase 2: Beta-Ready Polish (Week 2)
 
 5. **User profile/settings page** — Change password, view account info, logout
 6. **Error handling audit** — Ensure all API errors show user-friendly Swedish messages
 7. **Database backup** — Set up Fly.io volume snapshots or automated backup script
-8. **Graceful shutdown** — Handle SIGTERM in main.go
+8. ~~**Graceful shutdown**~~ — Already implemented
 9. **Menu single-day swap** — Allow replacing one day's recipe without full regeneration
 
 ### Phase 3: Beta Launch Prep (Week 3)
