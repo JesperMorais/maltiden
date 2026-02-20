@@ -29,6 +29,16 @@ jobs:
       actions: read
 
     steps:
+      - name: Debug event context
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Trigger ref: ${{ github.ref }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "PR number: ${{ github.event.pull_request.number || github.event.issue.number || 'N/A' }}"
+
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
@@ -37,6 +47,9 @@ jobs:
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
@@ -45,6 +58,12 @@ jobs:
             If no specific instructions are given, provide a brief summary of the PR changes.
             Keep responses concise, precise, and actionable.
             When referencing code, include file and line numbers using: path/to/file.ts:line_number
+
+            IMPORTANT: You MUST post your response as a comment on the PR/issue using:
+              gh pr comment $PR_NUMBER --body "your response"
+            or for issues:
+              gh issue comment $ISSUE_NUMBER --body "your response"
+            These environment variables are set for you. If you don't post a comment, the user will never see your response.
 
           show_full_output: true
           claude_args: |
