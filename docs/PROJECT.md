@@ -2,6 +2,8 @@
 
 Svensk receptapp för veckoplanering och smarta inköpslistor.
 
+**Status:** Pre-MVP — kärnarkitektur klar, 5 kritiska uppgifter kvar innan betastart. Se `docs/TODO.md`.
+
 ## Team
 - **David** – Lead backend (Go)
 - **Jesper** – Lead frontend (Vue)
@@ -78,24 +80,37 @@ migrations/                 # SQL-migreringar
   5. När `dev` är stabil → merge till `main` för deploy
 
 ## Kärnfunktioner (MVP)
-1. Generera veckomenyer (5 dagar default)
-2. Flexibla dagar (skippa, fler personer, matlådor)
-3. Smart inköpslista med kategorier + offline
-4. Familje-inbjudan med kod (7 dagar giltighet)
 
-## Iteration 2+
+**Fungerar idag:**
+1. Registrera/logga in/logga ut med JWT-auth och roller (owner/member/guest)
+2. Skapa hushåll, bjud in med kod (7 dagar giltighet), gå med
+3. Lägg till recept manuellt eller via AI-parsning (Claude)
+4. Generera veckomeny (5–7 dagar, skip-dagar, låsa dagar, anpassade portioner)
+5. Se inköpslista-sammanfattning (widget med progress)
+
+**Saknas för MVP-lansering (se `docs/TODO.md` för detaljer):**
+- Interaktiv inköpslista (markera enskilda varor)
+- Redigera/ta bort recept
+- Toast/notifikationer (feedback vid handlingar)
+- Spara meny utan att re-generera
+- Kopiera inbjudningskod
+
+## Post-MVP
 - Preferensinlärning (gilla/ogilla)
-- Näringsbalans-varningar
+- Erbjudanden i inköpslista (Tjek API POC finns)
+- Näringsbalans (Livsmedelsverkets API)
 - Skafferi/inventory
 - Kylskåpsscan (Claude Vision)
+- PWA/offline-stöd
+- Google/Apple OAuth
 
 ## Datakällor
 - **Recept:** Egen databas (svenska klassiker) – Philip matar in via Claude
-- **Näringsvärden:** Livsmedelsverkets API (CC BY 4.0)
-- **Spoonacular:** Endast realtidssökning, får EJ lagra data
+- **Näringsvärden:** Livsmedelsverkets API (CC BY 4.0) — ej implementerat ännu
+- **Erbjudanden:** Tjek/etilbudsavis.dk API — POC klar, ej integrerad i inköpslista
 
 ## Auth-flöde
-1. Registrera med Google/Apple/Email
+1. Registrera med email/lösenord (OAuth planerat post-MVP)
 2. Skapa hushåll automatiskt
 3. Generera inbjudningskod för familjemedlemmar
 4. Kod gäller 7 dagar
