@@ -4,6 +4,7 @@ import type { HouseholdMember } from '@/api/types/dashboard.types'
 import { useUserStore } from '@/stores/user'
 import { useDashboardStore } from '@/stores/dashboard'
 import { updateMemberStatus } from '@/api/household.api'
+import { useToast } from '@/composables/useToast'
 
 interface Props {
   members: HouseholdMember[]
@@ -19,6 +20,7 @@ const emit = defineEmits<{
 
 const userStore = useUserStore()
 const dashboardStore = useDashboardStore()
+const toast = useToast()
 
 const showSettings = ref(false)
 const confirmRemove = ref<HouseholdMember | null>(null)
@@ -40,10 +42,9 @@ function toggleEating(member: HouseholdMember) {
   const newValue = !member.isEatingToday
   dashboardStore.updateMemberLocally(member.id, { isEatingToday: newValue })
 
-  updateMemberStatus(member.id, { isEatingToday: newValue }).catch((error: unknown) => {
+  updateMemberStatus(member.id, { isEatingToday: newValue }).catch(() => {
     dashboardStore.updateMemberLocally(member.id, { isEatingToday: !newValue })
-    // TODO: Show toast notification when toast system is added
-    console.error('Failed to update eating status:', error)
+    toast.error('Kunde inte uppdatera status. Försök igen.')
   })
 }
 
@@ -55,10 +56,9 @@ function toggleLunchBox(member: HouseholdMember, event: Event) {
   const newValue = !member.wantsLunchBox
   dashboardStore.updateMemberLocally(member.id, { wantsLunchBox: newValue })
 
-  updateMemberStatus(member.id, { wantsLunchBox: newValue }).catch((error: unknown) => {
+  updateMemberStatus(member.id, { wantsLunchBox: newValue }).catch(() => {
     dashboardStore.updateMemberLocally(member.id, { wantsLunchBox: !newValue })
-    // TODO: Show toast notification when toast system is added
-    console.error('Failed to update lunchbox status:', error)
+    toast.error('Kunde inte uppdatera matlådestatus. Försök igen.')
   })
 }
 
