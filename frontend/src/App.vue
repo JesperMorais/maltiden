@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
+import ToastNotification from '@/components/common/ToastNotification.vue'
 </script>
 
 <template>
@@ -8,6 +9,7 @@ import { RouterView } from 'vue-router'
       <component :is="Component" :key="route.path" />
     </Transition>
   </RouterView>
+  <ToastNotification />
 </template>
 
 <style>
