@@ -29,16 +29,6 @@ jobs:
       actions: read
 
     steps:
-      - name: Debug event context
-        run: |
-          echo "Event: ${{ github.event_name }}"
-          echo "Action: ${{ github.event.action }}"
-          echo "Actor: ${{ github.actor }}"
-          echo "Trigger ref: ${{ github.ref }}"
-          echo "Commit SHA: ${{ github.sha }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "PR number: ${{ github.event.pull_request.number || github.event.issue.number || 'N/A' }}"
-
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
@@ -65,7 +55,6 @@ jobs:
               gh issue comment $ISSUE_NUMBER --body "your response"
             These environment variables are set for you. If you don't post a comment, the user will never see your response.
 
-          show_full_output: true
           claude_args: |
             --allowedTools "Read,Write,Edit,Bash(git:*),Bash(gh:*),Bash(bun:*),Bash(go:*)"
             --model "claude-opus-4-5"
