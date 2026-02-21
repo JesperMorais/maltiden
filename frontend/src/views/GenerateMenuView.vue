@@ -122,13 +122,8 @@ function handleLockToggle(date: string) {
  */
 async function handleSave() {
   hasNavigatedFromSave.value = true
-  try {
-    const success = await store.saveDraftMenu(router)
-    if (success) {
-      // Navigation handled by store
-    }
-  } catch {
-    toast.error('Kunde inte spara menyn. Försök igen.')
+  const success = await store.saveDraftMenu(router)
+  if (!success) {
     hasNavigatedFromSave.value = false
   }
 }

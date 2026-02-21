@@ -352,6 +352,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       return true
     } catch {
       error.value = 'Kunde inte spara menyn. Försök igen.'
+      toast.error('Kunde inte spara menyn. Försök igen.')
       return false
     } finally {
       isSaving.value = false
