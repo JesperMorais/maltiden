@@ -13,6 +13,15 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 - `emoji` field added to `CreateRecipeRequest`, `Recipe`, and `RecipeSummary` (optional, omitted when empty)
 - Auth client now sets `sessionStorage.session_expired = 'true'` before redirecting to `/login` on 401
 
+**Documentation fixes:**
+- Corrected `POST /menus/generate` and `GET /menus/current` to show auth requirement
+- Corrected `POST /recipes/parse` and `POST /recipes/parse-and-save` to show auth requirement
+- Added missing auth requirement note to Shopping List section
+- Added missing error cases: `household_not_found`, `code_required`, `already_member`, `no_fields_to_update` per endpoint and in error table
+- Fixed `DELETE /households/members/:id` to document all three error cases (`cannot_remove`, `forbidden`, `not_found`)
+- Added error cases (`invalid_days`, `invalid_servings`, `no_recipes_available`) to `POST /menus/generate`
+- Fixed skip-day examples to include `"servings": 0`
+
 ## Changes in PR #35
 
 **Recipe Navigation Consolidation:**
@@ -86,9 +95,13 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 // Roles: "owner" (full access + can delete household)
 //        "member" (full access)
 //        "guest" (view only)
+
+// Error 404
+{ "error": "household_not_found" }
 ```
 
 ### POST /households/invite
+Only members and owners may create invite codes. Guests receive 403.
 ```json
 // Request
 {}
@@ -98,6 +111,9 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
   "code": "ABC123",
   "expiresAt": "2025-01-20T12:00:00Z"
 }
+
+// Error 403 (caller is a guest — only members and owners can invite)
+{ "error": "forbidden" }
 ```
 
 ### POST /households/join
@@ -108,8 +124,14 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 // Response 200
 { "householdId": "hh_xyz789" }
 
-// Error 400
+// Error 400 (code field missing)
+{ "error": "code_required" }
+
+// Error 400 (code invalid or expired)
 { "error": "invalid_code" }
+
+// Error 409 (user is already a member of a household)
+{ "error": "already_member" }
 ```
 
 ### GET /households/members/status
@@ -133,7 +155,7 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
 ### PATCH /households/members/:id/status
 ```json
-// Request (partial update)
+// Request (partial update — at least one field required)
 { "isEatingToday": false }
 // or
 { "wantsLunchBox": true }
@@ -142,6 +164,12 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
 // Response 200
 { "ok": true }
+
+// Error 400 (neither field provided)
+{ "error": "no_fields_to_update" }
+
+// Error 404 (member not found)
+{ "error": "not_found" }
 ```
 
 ### DELETE /households/members/:id
@@ -149,8 +177,14 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 // Response 200
 { "ok": true }
 
-// Error 403 (can't remove yourself or owner)
+// Error 403 (target is the owner, or caller is trying to remove themselves)
 { "error": "cannot_remove" }
+
+// Error 403 (caller lacks permission to remove members)
+{ "error": "forbidden" }
+
+// Error 404 (member not found in household)
+{ "error": "not_found" }
 ```
 
 ---
@@ -276,7 +310,7 @@ Delete a recipe. **Auth required.**
 ```
 
 ### POST /recipes/parse
-Parse unstructured recipe text into structured data using AI.
+Parse unstructured recipe text into structured data using AI. **Auth required.**
 ```json
 // Request
 {
@@ -312,7 +346,7 @@ Parse unstructured recipe text into structured data using AI.
 ```
 
 ### POST /recipes/parse-and-save
-Parse recipe text and immediately save it to the database.
+Parse recipe text and immediately save it to the database. **Auth required.**
 ```json
 // Request
 {
@@ -345,6 +379,8 @@ Parse recipe text and immediately save it to the database.
 
 ## Menu
 
+**Auth required:** `Authorization: Bearer <token>`
+
 ### POST /menus/generate
 ```json
 // Request
@@ -361,10 +397,15 @@ Parse recipe text and immediately save it to the database.
   "days": [
     { "date": "2025-01-20", "recipeId": "rec_001", "servings": 4 },
     { "date": "2025-01-21", "recipeId": "rec_002", "servings": 4 },
-    { "date": "2025-01-22", "skip": true },
+    { "date": "2025-01-22", "skip": true, "servings": 0 },
     { "date": "2025-01-23", "recipeId": "rec_003", "servings": 6 }
   ]
 }
+
+// Error 400
+{ "error": "invalid_days" }
+{ "error": "invalid_servings" }
+{ "error": "no_recipes_available" }
 ```
 
 ### PUT /menus/current
@@ -402,6 +443,7 @@ Use this to replace the generated menu's day assignments without regenerating fr
 ```
 
 ### GET /menus/current
+**Auth required.**
 ```json
 // Response 200
 {
@@ -419,6 +461,8 @@ Use this to replace the generated menu's day assignments without regenerating fr
 ---
 
 ## Shopping List
+
+**Auth required:** `Authorization: Bearer <token>`
 
 ### GET /shopping-list
 ```json
@@ -559,10 +603,14 @@ Alla errors följer samma struktur:
 | `invalid_credentials` | 401 | Fel email/lösenord |
 | `unauthorized` | 401 | Token saknas/ogiltig |
 | `email_taken` | 400 | Email redan registrerad |
+| `code_required` | 400 | Inbjudningskod saknas i requesten |
 | `invalid_code` | 400 | Inbjudningskod ogiltig/utgången |
+| `already_member` | 409 | Användaren är redan medlem i ett hushåll |
+| `household_not_found` | 404 | Hushållet finns inte |
+| `no_fields_to_update` | 400 | Minst ett fält krävs vid status-uppdatering |
 | `not_found` | 404 | Resursen finns inte |
 | `no_active_menu` | 404 | Ingen aktiv meny |
-| `invalid_days` | 400 | Ogiltigt dagformat i PUT /menus/current |
+| `invalid_days` | 400 | Ogiltigt dagformat eller antal dagar |
 | `name_required` | 400 | Receptnamn saknas |
 | `invalid_servings` | 400 | Ogiltigt antal portioner |
 | `ingredients_required` | 400 | Ingredienser saknas |
@@ -570,7 +618,7 @@ Alla errors följer samma struktur:
 | `name_too_long` | 400 | Receptnamnet är för långt |
 | `too_many_ingredients` | 400 | För många ingredienser |
 | `cannot_remove` | 403 | Kan inte ta bort sig själv eller ägaren |
-| `forbidden` | 403 | Åtkomst nekad (resursen tillhör annat hushåll) |
+| `forbidden` | 403 | Åtkomst nekad (otillräckliga rättigheter eller fel hushåll) |
 | `menu_not_found` | 404 | Angivet menuId hittades inte |
 | `no_recipes_available` | 400 | Inga recept att generera meny från |
 | `invalid_input` | 400 | Ogiltig indata till recipe parser |
