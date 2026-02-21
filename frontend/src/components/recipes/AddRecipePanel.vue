@@ -9,12 +9,14 @@ import ClickSpark from '@/components/vue-bits/ClickSpark.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
 import ProgressBar from '@/components/common/ProgressBar.vue'
 import { useProgressBar } from '@/composables/useProgressBar'
+import { useToast } from '@/composables/useToast'
 
 type EditableRecipe = CreateRecipeRequest & { emoji?: string }
 
 // Progress bar for AI parsing (Claude API can take up to 60s)
 const { progress: parseProgress, isActive: parseActive, start: parseStart, finish: parseFinish } =
   useProgressBar({ duration: 20000 })
+const toast = useToast()
 
 const emit = defineEmits<{
   (e: 'navigate-to-list'): void
@@ -108,8 +110,9 @@ async function handleSave() {
     savedName.value = editableRecipe.value.name
     savedEmoji.value = editableRecipe.value.emoji || '🍽️'
     step.value = 'success'
-  } catch (err: unknown) {
-    console.error('Save failed:', err)
+    toast.success('Receptet har sparats!')
+  } catch {
+    toast.error('Kunde inte spara receptet. Försök igen.')
   } finally {
     isSaving.value = false
   }
