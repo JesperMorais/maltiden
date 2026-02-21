@@ -40,11 +40,14 @@ type RecipeRepository interface {
 	GetByID(id string) (*Recipe, error)
 	GetByIDs(ids []string) (map[string]*Recipe, error)
 	Create(recipe *Recipe) error
+	Update(recipe *Recipe) error
+	Delete(id string) error
 }
 
 // MenuRepository defines the interface for menu storage operations.
 type MenuRepository interface {
 	Create(menu *Menu) error
+	Update(menu *Menu) error
 	GetCurrentByHousehold(householdID string) (*Menu, error)
 	GetByID(id string) (*Menu, error)
 	GetHouseholdIDByMenuID(menuID string) (string, error)

@@ -105,6 +105,12 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.Handle("POST /recipes", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.recipe.Create),
 	))
+	mux.Handle("PUT /recipes/{id}", middleware.RequireAuth(jwtService)(
+		http.HandlerFunc(deps.recipe.Update),
+	))
+	mux.Handle("DELETE /recipes/{id}", middleware.RequireAuth(jwtService)(
+		http.HandlerFunc(deps.recipe.Delete),
+	))
 	if parserHandler != nil {
 		mux.Handle("POST /recipes/parse", middleware.RequireAuth(jwtService)(
 			http.HandlerFunc(parserHandler.ParseRecipe),

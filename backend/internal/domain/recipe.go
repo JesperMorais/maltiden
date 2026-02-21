@@ -36,6 +36,15 @@ type CreateRecipeRequest struct {
 	Instructions []string     `json:"instructions"`
 }
 
+type UpdateRecipeRequest struct {
+	Name         string       `json:"name"`
+	Servings     int          `json:"servings"`
+	Emoji        string       `json:"emoji,omitempty"`
+	Tags         []string     `json:"tags"`
+	Ingredients  []Ingredient `json:"ingredients"`
+	Instructions []string     `json:"instructions"`
+}
+
 type RecipesResponse struct {
 	Recipes []RecipeSummary `json:"recipes"`
 }
