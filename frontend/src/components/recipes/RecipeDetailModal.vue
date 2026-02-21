@@ -86,13 +86,14 @@ async function handleSaveEdit() {
 
   isSaving.value = true
   try {
-    const { name, servings, ingredients, instructions, tags } = editableRecipe.value
+    const { name, servings, ingredients, instructions, tags, emoji } = editableRecipe.value
     const updated = await updateRecipe(props.recipeId, {
       name,
       servings,
       ingredients,
       instructions,
       tags,
+      emoji,
     })
     recipe.value = updated
     mode.value = 'detail'
