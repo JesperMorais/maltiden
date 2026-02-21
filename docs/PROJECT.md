@@ -2,7 +2,7 @@
 
 Svensk receptapp för veckoplanering och smarta inköpslistor.
 
-**Status:** Pre-MVP — kärnarkitektur klar, 5 kritiska uppgifter kvar innan betastart. Se `docs/TODO.md`.
+**Status:** MVP-redo — alla kritiska (K1–K5) och viktiga UX-uppgifter (V1–V3) klara. Kvar: databasbackup (V4), seed-recept (V5), QA-genomgång. Se `docs/TODO.md`.
 
 ## Team
 - **David** – Lead backend (Go)
@@ -83,17 +83,18 @@ migrations/                 # SQL-migreringar
 
 **Fungerar idag:**
 1. Registrera/logga in/logga ut med JWT-auth och roller (owner/member/guest)
-2. Skapa hushåll, bjud in med kod (7 dagar giltighet), gå med
-3. Lägg till recept manuellt eller via AI-parsning (Claude)
+2. Skapa hushåll, bjud in med kod (kopiera till urklipp), gå med
+3. Lägg till, redigera och ta bort recept manuellt eller via AI-parsning (Claude)
 4. Generera veckomeny (5–7 dagar, skip-dagar, låsa dagar, anpassade portioner)
-5. Se inköpslista-sammanfattning (widget med progress)
+5. Spara meny med exakta recept-val (PUT /menus/current)
+6. Interaktiv inköpslista med kategorier, avkryssning och progress
+7. Toast-notifikationer (success/error/info/warning) med svenska meddelanden
+8. Sessionshantering — tydligt meddelande vid JWT-utgång
 
-**Saknas för MVP-lansering (se `docs/TODO.md` för detaljer):**
-- Interaktiv inköpslista (markera enskilda varor)
-- Redigera/ta bort recept
-- Toast/notifikationer (feedback vid handlingar)
-- Spara meny utan att re-generera
-- Kopiera inbjudningskod
+**Kvar innan lansering (se `docs/TODO.md`):**
+- Databasbackup (V4)
+- Seed-recept (V5)
+- QA-genomgång (Philip)
 
 ## Post-MVP
 - Preferensinlärning (gilla/ogilla)
