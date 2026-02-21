@@ -23,6 +23,10 @@ type GenerateMenuRequest struct {
 	ExtraPortions map[string]int `json:"extraPortions"`
 }
 
+type UpdateMenuRequest struct {
+	Days []MenuDay `json:"days"`
+}
+
 type MenuResponse struct {
 	ID   string    `json:"id"`
 	Days []MenuDay `json:"days"`

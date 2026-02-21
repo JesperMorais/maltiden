@@ -122,6 +122,9 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.Handle("POST /menus/generate", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.menu.Generate),
 	))
+	mux.Handle("PUT /menus/current", middleware.RequireAuth(jwtService)(
+		http.HandlerFunc(deps.menu.UpdateCurrent),
+	))
 	mux.Handle("GET /menus/current", middleware.RequireAuth(jwtService)(
 		http.HandlerFunc(deps.menu.GetCurrent),
 	))

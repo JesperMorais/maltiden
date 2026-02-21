@@ -110,6 +110,34 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 	}, nil
 }
 
+func (s *MenuService) UpdateCurrent(householdID string, req domain.UpdateMenuRequest) (*domain.MenuResponse, error) {
+	// Get current menu for this household
+	menu, err := s.menuStorage.GetCurrentByHousehold(householdID)
+	if err != nil {
+		return nil, err
+	}
+	if menu == nil {
+		return nil, domain.ErrNotFound
+	}
+
+	// Validate days
+	if len(req.Days) == 0 || len(req.Days) > 31 {
+		return nil, domain.ErrInvalidDays
+	}
+
+	// Update the menu days
+	menu.Days = req.Days
+
+	if err := s.menuStorage.Update(menu); err != nil {
+		return nil, err
+	}
+
+	return &domain.MenuResponse{
+		ID:   menu.ID,
+		Days: menu.Days,
+	}, nil
+}
+
 func (s *MenuService) GetCurrent(householdID string) (*domain.MenuResponse, error) {
 	menu, err := s.menuStorage.GetCurrentByHousehold(householdID)
 	if err != nil {

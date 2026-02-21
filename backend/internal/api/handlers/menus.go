@@ -52,6 +52,35 @@ func (h *MenuHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusCreated, menu)
 }
 
+func (h *MenuHandler) UpdateCurrent(w http.ResponseWriter, r *http.Request) {
+	householdID := middleware.GetHouseholdID(r)
+	if householdID == "" {
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var req domain.UpdateMenuRequest
+	if !DecodeJSON(w, r, maxBodySize, &req) {
+		return
+	}
+
+	menu, err := h.menuService.UpdateCurrent(householdID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrNotFound):
+			WriteError(w, http.StatusNotFound, "no_active_menu")
+		case errors.Is(err, domain.ErrInvalidDays):
+			WriteError(w, http.StatusBadRequest, "invalid_days")
+		default:
+			log.Printf("ERROR [UpdateCurrentMenu] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, menu)
+}
+
 func (h *MenuHandler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 	// Get household ID from auth context
 	householdID := middleware.GetHouseholdID(r)
