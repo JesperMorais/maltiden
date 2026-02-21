@@ -2,7 +2,7 @@
 
 Svensk receptapp för veckoplanering och smarta inköpslistor.
 
-**Status:** MVP-redo — alla kritiska (K1–K5) och viktiga UX-uppgifter (V1–V3) klara. Kvar: databasbackup (V4), seed-recept (V5), QA-genomgång. Se `docs/TODO.md`.
+**Status:** MVP-redo för soft launch — alla kritiska (K1–K5) och viktiga (V1–V5) uppgifter klara. 20 seed-recept, dagliga backups. Kvar: Philips QA-genomgång. Se `docs/TODO.md`.
 
 ## Team
 - **David** – Lead backend (Go)

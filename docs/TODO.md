@@ -71,9 +71,9 @@ Uppgiftslista för Jesper & David.
 
 ### Nuläge
 
-Alla kritiska (🔴) och viktiga UX-uppgifter (🟡 V1–V3) är **klara**. Kvar innan lansering: databasbackup (V4), seed-recept (V5), och Philips QA-genomgång.
+Alla kritiska (🔴) och viktiga UX-uppgifter (🟡 V1–V5) är **klara**. Kvar innan lansering: Philips QA-genomgång.
 
-**Vad familjer KAN göra idag:** registrera sig, logga in, skapa/gå med i hushåll, bläddra/lägga till/redigera/ta bort recept, AI-parsa recept, generera veckomeny, spara meny, se & markera inköpslista, kopiera inbjudningskod, logga ut — med toast-feedback på alla handlingar.
+**Vad familjer KAN göra idag:** registrera sig, logga in, skapa/gå med i hushåll, bläddra 20 svenska basrecept, lägga till/redigera/ta bort recept, AI-parsa recept, generera veckomeny, spara meny, se & markera inköpslista, kopiera inbjudningskod, logga ut — med toast-feedback på alla handlingar.
 
 ---
 
@@ -111,22 +111,11 @@ Appen fungerar utan dessa, men UX blir klart sämre.
 #### V3. Felhantering — audit ✅
 - **Klart:** Svenska toast-meddelanden på alla nyckelflöden: recept (skapa/redigera/ta bort), menygeneration/sparning, inköpslista-toggle. Nätverksfel och serverfel hanteras.
 
-#### V4. Databasbackup
-- **Problem:** SQLite på Fly.io-volym — om volymen försvinner, försvinner all data
-- **Scope:**
-  - [ ] **OPS:** Verifiera att Fly.io volume snapshots är aktiverade
-  - [ ] **OPS:** Sätt upp daglig backup-rutin (kan vara simpelt `fly ssh sftp get`)
-- **Ansvarig:** David
-- **Effort:** 0.5 dag
+#### V4. Databasbackup ✅
+- **Klart:** Fly.io volume snapshots verifierade — dagliga automatiska snapshots aktiva (volym `vol_r635e3l1jj1x36nr`, region arn, 1 GB). 5 dagars retention med snapshots var ~24h. Manuell backup möjlig via `fly ssh sftp get /data/maltiden.db ./backups/maltiden-$(date +%Y%m%d).db -a maltiden`. Restore via `fly volumes restore <snapshot-id>`.
 
-#### V5. Startrecept / seed-data
-- **Problem:** Nya familjer startar med 0 recept → kan inte generera menyer
-- **Scope:**
-  - [ ] **BE/DATA:** Skapa 15–20 svenska basisrecept (köttfärssås, pannkakor, pasta carbonara, etc.)
-  - [ ] **BE:** Seed-script eller migration som lägger in dem som "globala" recept
-  - [ ] Alternativt: Philip matar in via appen
-- **Ansvarig:** Philip + David
-- **Effort:** 1–2 dagar
+#### V5. Startrecept / seed-data ✅
+- **Klart:** 20 svenska basrecept via SQL-migrations (`004_seed_recipes.sql` + `008_seed_more_recipes.sql`). Recept: Pasta Carbonara, Kycklingwok, Tacos, Laxfilé, Köttfärssås, Pannkakor, Kycklinggryta, Ärtsoppa, Falukorv, Fiskpinnar, Korvstroganoff, Janssons frestelse, Pytt i panna, Vegetarisk pasta med pesto, Stekt fläsk, Köttbullar, Ugnsbakad torsk, Chili con carne, Tomatsoppa med ostmacka, Kyckling med currysås. Taggar: vardag, barn, klassiker, husmanskost, fisk, vegetariskt, m.fl.
 
 ---
 
@@ -156,10 +145,11 @@ Appen fungerar utan dessa, men UX blir klart sämre.
 - [x] 🟡 V1 klar (kopiera inbjudningskod)
 - [x] 🟡 V2 klar (sessionshantering UX)
 - [x] 🟡 V3 klar (felhantering audit)
-- [ ] 🟡 V4 klar (databasbackup)
+- [x] 🟡 V4 klar (databasbackup)
+- [x] 🟡 V5 klar (20 seed-recept)
+- [x] Minst 15 seed-recept finns (20 st)
+- [x] Fly.io volume snapshots verifierade (dagliga, 5d retention)
 - [ ] Philip gör en komplett QA-genomgång av alla flöden
-- [ ] Minst 15 seed-recept finns
-- [ ] Fly.io volume snapshots verifierade
 
 ### Soft launch
 - Deploy till `maltiden.fly.dev`
