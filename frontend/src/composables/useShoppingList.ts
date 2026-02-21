@@ -5,8 +5,10 @@ import {
   type ShoppingList,
   type ShoppingCategory,
 } from '@/api/shopping.api'
+import { useToast } from '@/composables/useToast'
 
 export function useShoppingList() {
+  const toast = useToast()
   const shoppingList = ref<ShoppingList | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -65,6 +67,7 @@ export function useShoppingList() {
           break
         }
       }
+      toast.error('Kunde inte uppdatera varan. Försök igen.')
     }
   }
 
