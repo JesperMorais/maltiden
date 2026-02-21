@@ -5,7 +5,7 @@
 
 import apiClient from './client'
 import { USE_MOCKS } from '@/mocks'
-import { mockGenerateMenu, mockGetCurrentMenu } from '@/mocks/menu.mock'
+import { mockGenerateMenu, mockGetCurrentMenu, mockSaveMenu } from '@/mocks/menu.mock'
 
 export interface MenuDay {
   date: string
@@ -37,6 +37,25 @@ export async function generateMenu(request: GenerateMenuRequest): Promise<Menu> 
   }
 
   const { data } = await apiClient.post<Menu>('/menus/generate', request)
+  return data
+}
+
+export interface SaveMenuDay {
+  date: string
+  recipeId?: string
+  servings: number
+  skip?: boolean
+}
+
+/**
+ * Save exact recipe-day selections to the current menu
+ */
+export async function saveMenu(days: SaveMenuDay[]): Promise<Menu> {
+  if (USE_MOCKS) {
+    return mockSaveMenu(days)
+  }
+
+  const { data } = await apiClient.put<Menu>('/menus/current', { days })
   return data
 }
 

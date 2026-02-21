@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { useUserStore } from '@/stores/user'
+import { useToast } from '@/composables/useToast'
 import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
+const toast = useToast()
+
+onMounted(() => {
+  if (sessionStorage.getItem('session_expired')) {
+    sessionStorage.removeItem('session_expired')
+    toast.info('Din session har löpt ut. Logga in igen.')
+  }
+})
 
 const email = ref('')
 const password = ref('')

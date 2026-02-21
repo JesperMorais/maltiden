@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import type { RecipeSummary } from '@/api/recipes.api'
+import type { RecipeSummary, Recipe } from '@/api/recipes.api'
 import { getRecipes } from '@/api/recipes.api'
 import RecipeCard from '@/components/recipes/RecipeCard.vue'
 import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
@@ -80,6 +80,24 @@ function openRecipe(id: string) {
 }
 
 function closeDetail() {
+  selectedRecipeId.value = null
+}
+
+function handleRecipeUpdated(updated: Recipe) {
+  const index = recipes.value.findIndex((r) => r.id === updated.id)
+  if (index !== -1) {
+    recipes.value[index] = {
+      id: updated.id,
+      name: updated.name,
+      servings: updated.servings,
+      tags: updated.tags,
+      emoji: updated.emoji,
+    }
+  }
+}
+
+function handleRecipeDeleted(recipeId: string) {
+  recipes.value = recipes.value.filter((r) => r.id !== recipeId)
   selectedRecipeId.value = null
 }
 
@@ -166,6 +184,8 @@ onMounted(fetchRecipes)
     <RecipeDetailModal
       :recipe-id="selectedRecipeId"
       @close="closeDetail"
+      @updated="handleRecipeUpdated"
+      @deleted="handleRecipeDeleted"
     />
   </div>
 </template>

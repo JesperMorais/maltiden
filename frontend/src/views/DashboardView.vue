@@ -11,6 +11,7 @@ import QuickActions from '@/components/dashboard/QuickActions.vue'
 import HouseholdWidget from '@/components/dashboard/HouseholdWidget.vue'
 import ShoppingListWidget from '@/components/dashboard/ShoppingListWidget.vue'
 import SettingsModal from '@/components/dashboard/SettingsModal.vue'
+import InviteModal from '@/components/dashboard/InviteModal.vue'
 import DashboardSkeleton from '@/components/skeleton/layouts/DashboardSkeleton.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
 import RotatingText from '@/components/vue-bits/RotatingText.vue'
@@ -28,8 +29,9 @@ const dashboardStore = useDashboardStore()
 const userStore = useUserStore()
 const prefsStore = usePlanningPreferencesStore()
 
-// Settings modal state
+// Modal state
 const showSettings = ref(false)
+const showInvite = ref(false)
 
 onMounted(() => {
   dashboardStore.fetchDashboard()
@@ -72,13 +74,15 @@ function handleParseRecipe() {
 }
 
 function handleInviteMember() {
-  console.log('Invite member')
-  // TODO: Show invite modal
+  showInvite.value = true
 }
 
 function handleShowInvite() {
-  console.log('Show invite code')
-  // TODO: Show invite modal
+  showInvite.value = true
+}
+
+function handleCloseInvite() {
+  showInvite.value = false
 }
 
 function handleRemoveMember(memberId: string) {
@@ -185,6 +189,13 @@ function handleViewShoppingList() {
         :is-open="showSettings"
         @close="handleCloseSettings"
         @logout="handleLogout"
+      />
+
+      <!-- Invite Modal -->
+      <InviteModal
+        :is-open="showInvite"
+        :invite-code="dashboardStore.inviteCode"
+        @close="handleCloseInvite"
       />
     </template>
   </div>
