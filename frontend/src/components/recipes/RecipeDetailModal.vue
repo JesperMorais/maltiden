@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { Recipe } from '@/api/recipes.api'
-import { getRecipe } from '@/api/recipes.api'
+import type { Recipe, CreateRecipeRequest } from '@/api/recipes.api'
+import { getRecipe, updateRecipe, deleteRecipe } from '@/api/recipes.api'
+import RecipeEditForm from '@/components/recipe-parser/RecipeEditForm.vue'
+import { useToast } from '@/composables/useToast'
+
+type EditableRecipe = CreateRecipeRequest & { emoji?: string }
 
 interface Props {
   recipeId: string | null
@@ -9,35 +13,131 @@ interface Props {
 
 const props = defineProps<Props>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
+  updated: [recipe: Recipe]
+  deleted: [recipeId: string]
 }>()
+
+const toast = useToast()
 
 const recipe = ref<Recipe | null>(null)
 const isLoading = ref(false)
 const error = ref('')
 
-watch(() => props.recipeId, async (id) => {
-  if (!id) {
-    recipe.value = null
-    return
-  }
+// Edit mode state
+const mode = ref<'detail' | 'edit' | 'confirm-delete'>('detail')
+const editableRecipe = ref<EditableRecipe>({
+  name: '',
+  servings: 4,
+  ingredients: [],
+  instructions: [],
+  tags: [],
+  emoji: '',
+})
+const isSaving = ref(false)
+const isDeleting = ref(false)
 
-  isLoading.value = true
-  error.value = ''
-  try {
-    recipe.value = await getRecipe(id)
-  } catch {
-    error.value = 'Kunde inte ladda receptet'
-  } finally {
-    isLoading.value = false
+watch(
+  () => props.recipeId,
+  async (id) => {
+    mode.value = 'detail'
+    if (!id) {
+      recipe.value = null
+      return
+    }
+
+    isLoading.value = true
+    error.value = ''
+    try {
+      recipe.value = await getRecipe(id)
+    } catch {
+      error.value = 'Kunde inte ladda receptet'
+    } finally {
+      isLoading.value = false
+    }
+  },
+  { immediate: true },
+)
+
+function startEdit() {
+  if (!recipe.value) return
+  editableRecipe.value = {
+    name: recipe.value.name,
+    servings: recipe.value.servings,
+    ingredients: recipe.value.ingredients.map((i) => ({ ...i })),
+    instructions: [...recipe.value.instructions],
+    tags: [...recipe.value.tags],
+    emoji: recipe.value.emoji,
   }
-}, { immediate: true })
+  mode.value = 'edit'
+}
+
+function cancelEdit() {
+  mode.value = 'detail'
+}
+
+function handleUpdateRecipe(updated: EditableRecipe) {
+  editableRecipe.value = updated
+}
+
+async function handleSaveEdit() {
+  if (!recipe.value || !props.recipeId) return
+
+  isSaving.value = true
+  try {
+    const { name, servings, ingredients, instructions, tags } = editableRecipe.value
+    const updated = await updateRecipe(props.recipeId, {
+      name,
+      servings,
+      ingredients,
+      instructions,
+      tags,
+    })
+    recipe.value = updated
+    mode.value = 'detail'
+    toast.success('Receptet har uppdaterats')
+    emit('updated', updated)
+  } catch {
+    toast.error('Kunde inte uppdatera receptet. Försök igen.')
+  } finally {
+    isSaving.value = false
+  }
+}
+
+function confirmDelete() {
+  mode.value = 'confirm-delete'
+}
+
+function cancelDelete() {
+  mode.value = 'detail'
+}
+
+async function handleDelete() {
+  if (!props.recipeId) return
+
+  isDeleting.value = true
+  try {
+    await deleteRecipe(props.recipeId)
+    toast.success('Receptet har tagits bort')
+    emit('deleted', props.recipeId)
+    emit('close')
+  } catch {
+    toast.error('Kunde inte ta bort receptet. Försök igen.')
+  } finally {
+    isDeleting.value = false
+  }
+}
+
+function handleClose() {
+  mode.value = 'detail'
+  emit('close')
+}
 </script>
 
 <template>
   <Teleport to="body">
-    <div v-if="recipeId" class="modal-overlay" @click="$emit('close')">
+    <div v-if="recipeId" class="modal-overlay" @click="handleClose">
       <div class="modal-card" @click.stop>
         <!-- Loading -->
         <div v-if="isLoading" class="modal-loading">
@@ -51,7 +151,47 @@ watch(() => props.recipeId, async (id) => {
           <p class="error-text">{{ error }}</p>
         </div>
 
-        <!-- Recipe content -->
+        <!-- Confirm delete -->
+        <template v-else-if="mode === 'confirm-delete' && recipe">
+          <div class="confirm-content">
+            <div class="confirm-icon">⚠️</div>
+            <h3 class="confirm-title">Ta bort recept?</h3>
+            <p class="confirm-text">
+              Är du säker på att du vill ta bort
+              <strong>{{ recipe.name }}</strong>? Detta kan inte ångras.
+            </p>
+            <div class="confirm-actions">
+              <button class="btn-cancel" @click="cancelDelete">Avbryt</button>
+              <button class="btn-delete" :disabled="isDeleting" @click="handleDelete">
+                {{ isDeleting ? 'Tar bort...' : 'Ta bort' }}
+              </button>
+            </div>
+          </div>
+        </template>
+
+        <!-- Edit mode -->
+        <template v-else-if="mode === 'edit'">
+          <div class="edit-wrapper">
+            <div class="edit-header">
+              <h2>Redigera recept</h2>
+            </div>
+            <div class="edit-body">
+              <RecipeEditForm
+                :recipe="editableRecipe"
+                :confidence="0"
+                :warnings="[]"
+                :is-saving="isSaving"
+                :show-confidence="false"
+                back-label="Avbryt"
+                @save="handleSaveEdit"
+                @back="cancelEdit"
+                @update:recipe="handleUpdateRecipe"
+              />
+            </div>
+          </div>
+        </template>
+
+        <!-- Detail view -->
         <template v-else-if="recipe">
           <div class="modal-header">
             <div class="recipe-emoji">{{ recipe.emoji || '🍽️' }}</div>
@@ -84,10 +224,17 @@ watch(() => props.recipeId, async (id) => {
               </ol>
             </section>
           </div>
+
+          <div class="modal-footer">
+            <button class="delete-btn" @click="confirmDelete">Ta bort</button>
+            <button class="edit-btn" @click="startEdit">Redigera</button>
+            <button class="close-btn" @click="handleClose">Stäng</button>
+          </div>
         </template>
 
-        <div class="modal-footer">
-          <button class="close-btn" @click="$emit('close')">Stäng</button>
+        <!-- Fallback footer for loading/error states -->
+        <div v-if="isLoading || error" class="modal-footer">
+          <button class="close-btn" @click="handleClose">Stäng</button>
         </div>
       </div>
     </div>
@@ -129,9 +276,15 @@ watch(() => props.recipeId, async (id) => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(180deg) scale(1.2); }
-  100% { transform: rotate(360deg) scale(1); }
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.2);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
 }
 
 .loading-text {
@@ -271,6 +424,7 @@ watch(() => props.recipeId, async (id) => {
   border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: center;
+  gap: 0.75rem;
 }
 
 .close-btn {
@@ -289,6 +443,151 @@ watch(() => props.recipeId, async (id) => {
 .close-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(255, 107, 91, 0.4);
+}
+
+.edit-btn {
+  padding: 0.875rem 2rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 100px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.delete-btn {
+  padding: 0.875rem 1.5rem;
+  background: transparent;
+  color: var(--error);
+  border: none;
+  border-radius: 100px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+
+.delete-btn:hover {
+  opacity: 1;
+  background: rgba(229, 62, 62, 0.08);
+}
+
+/* Confirm delete */
+.confirm-content {
+  text-align: center;
+  padding: 2.5rem 2rem;
+}
+
+.confirm-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.confirm-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin: 0 0 0.75rem;
+}
+
+.confirm-text {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 1.5rem;
+}
+
+.confirm-text strong {
+  color: var(--text-primary);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.btn-cancel {
+  flex: 1;
+  max-width: 150px;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--bg-hover);
+  border: none;
+  color: var(--text-primary);
+}
+
+.btn-cancel:hover {
+  background: var(--border-color);
+}
+
+.btn-delete {
+  flex: 1;
+  max-width: 150px;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #e53e3e;
+  border: none;
+  color: white;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: #c53030;
+  transform: translateY(-1px);
+}
+
+.btn-delete:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* Edit mode */
+.edit-wrapper {
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+}
+
+.edit-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.edit-header h2 {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.edit-body {
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+  flex: 1;
 }
 
 @media (max-width: 768px) {
@@ -314,6 +613,10 @@ watch(() => props.recipeId, async (id) => {
 
   .recipe-emoji {
     font-size: 2.5rem;
+  }
+
+  .modal-footer {
+    flex-wrap: wrap;
   }
 }
 </style>

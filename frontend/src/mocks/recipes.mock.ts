@@ -148,6 +148,31 @@ export async function mockCreateRecipe(_recipe: CreateRecipeRequest): Promise<{ 
   return { id: newId }
 }
 
+export async function mockUpdateRecipe(id: string, recipe: CreateRecipeRequest): Promise<Recipe> {
+  await delay(400)
+
+  const existing = mockRecipes.find((r) => r.id === id)
+  if (!existing) {
+    throw { response: { status: 404, data: { error: 'not_found' } } }
+  }
+
+  const updated: Recipe = { ...existing, ...recipe }
+  const index = mockRecipes.indexOf(existing)
+  mockRecipes[index] = updated
+  return { ...updated }
+}
+
+export async function mockDeleteRecipe(id: string): Promise<void> {
+  await delay(300)
+
+  const index = mockRecipes.findIndex((r) => r.id === id)
+  if (index === -1) {
+    throw { response: { status: 404, data: { error: 'not_found' } } }
+  }
+
+  mockRecipes.splice(index, 1)
+}
+
 export async function mockParseRecipe(_req: ParseRecipeRequest): Promise<ParseRecipeResponse> {
   await delay(1500)
 

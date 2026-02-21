@@ -5,7 +5,15 @@
 
 import apiClient from './client'
 import { USE_MOCKS } from '@/mocks'
-import { mockGetRecipes, mockGetRecipe, mockCreateRecipe, mockParseRecipe, mockParseAndSaveRecipe } from '@/mocks/recipes.mock'
+import {
+  mockGetRecipes,
+  mockGetRecipe,
+  mockCreateRecipe,
+  mockUpdateRecipe,
+  mockDeleteRecipe,
+  mockParseRecipe,
+  mockParseAndSaveRecipe,
+} from '@/mocks/recipes.mock'
 
 export interface Ingredient {
   name: string
@@ -92,6 +100,29 @@ export async function parseRecipe(req: ParseRecipeRequest): Promise<ParseRecipeR
 
   const { data } = await apiClient.post<ParseRecipeResponse>('/recipes/parse', req, { timeout: 60000 })
   return data
+}
+
+/**
+ * Update an existing recipe
+ */
+export async function updateRecipe(id: string, recipe: CreateRecipeRequest): Promise<Recipe> {
+  if (USE_MOCKS) {
+    return mockUpdateRecipe(id, recipe)
+  }
+
+  const { data } = await apiClient.put<Recipe>(`/recipes/${id}`, recipe)
+  return data
+}
+
+/**
+ * Delete a recipe
+ */
+export async function deleteRecipe(id: string): Promise<void> {
+  if (USE_MOCKS) {
+    return mockDeleteRecipe(id)
+  }
+
+  await apiClient.delete(`/recipes/${id}`)
 }
 
 /**
