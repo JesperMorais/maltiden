@@ -2,7 +2,7 @@
  * Menu API Mock Data
  */
 
-import type { Menu, GenerateMenuRequest } from '@/api/menu.api'
+import type { Menu, GenerateMenuRequest, SaveMenuDay } from '@/api/menu.api'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -49,6 +49,27 @@ export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Me
   return {
     id: 'menu_mock_' + Date.now(),
     days
+  }
+}
+
+export async function mockSaveMenu(days: SaveMenuDay[]): Promise<Menu> {
+  await delay(500)
+
+  const recipeLookup = new Map(mockRecipes.map((r) => [r.id, r]))
+
+  return {
+    id: 'menu_saved_' + Date.now(),
+    days: days.map((day) => {
+      const recipe = day.recipeId ? recipeLookup.get(day.recipeId) : undefined
+      return {
+        date: day.date,
+        recipeId: day.recipeId,
+        recipeName: recipe?.name,
+        emoji: recipe?.emoji,
+        servings: day.servings,
+        skip: day.skip,
+      }
+    }),
   }
 }
 
