@@ -40,6 +40,7 @@ export interface CreateRecipeRequest {
   ingredients: Ingredient[]
   instructions: string[]
   tags: string[]
+  emoji?: string
 }
 
 export interface ParseRecipeRequest {
