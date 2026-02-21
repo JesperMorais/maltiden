@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useMenuGeneratorStore } from '@/stores/menuGenerator'
 import { useSlotMachine, type DisplayRecipe } from '@/composables/useSlotMachine'
+import { useToast } from '@/composables/useToast'
 import MenuDayCard from '@/components/menu/MenuDayCard.vue'
 import GenerateMenuEmptyState from '@/components/menu/GenerateMenuEmptyState.vue'
 import MenuGeneratorActions from '@/components/menu/MenuGeneratorActions.vue'
@@ -10,6 +11,7 @@ import MenuGeneratorActions from '@/components/menu/MenuGeneratorActions.vue'
 const router = useRouter()
 const store = useMenuGeneratorStore()
 const slotMachine = useSlotMachine()
+const toast = useToast()
 
 // Local state
 const showUnsavedWarning = ref(false)
@@ -61,8 +63,8 @@ async function handleInitialGenerate() {
     // Land sequentially left-to-right
     await slotMachine.landSequentially(finalRecipes, store.lockedDays)
     store.onSlotAnimationComplete()
-  } catch (error) {
-    console.error('Generation failed:', error)
+  } catch {
+    toast.error('Kunde inte generera meny. Försök igen.')
     store.setError('Kunde inte generera meny. Försök igen.')
     slotMachine.reset()
     store.onSlotAnimationComplete()
@@ -98,8 +100,8 @@ async function handleRegenerate() {
 
     await slotMachine.landSequentially(finalRecipes, store.lockedDays)
     store.onSlotAnimationComplete()
-  } catch (error) {
-    console.error('Regeneration failed:', error)
+  } catch {
+    toast.error('Kunde inte generera nya recept. Försök igen.')
     store.setError('Kunde inte generera nya recept. Försök igen.')
     slotMachine.reset()
     store.onSlotAnimationComplete()
@@ -125,8 +127,8 @@ async function handleSave() {
     if (success) {
       // Navigation handled by store
     }
-  } catch (error) {
-    console.error('Save failed:', error)
+  } catch {
+    toast.error('Kunde inte spara menyn. Försök igen.')
     hasNavigatedFromSave.value = false
   }
 }
