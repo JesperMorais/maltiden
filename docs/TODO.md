@@ -2,7 +2,7 @@
 
 Uppgiftslista för Jesper & David.
 
-**Senast uppdaterad:** 2026-02-20
+**Senast uppdaterad:** 2026-02-21
 
 ---
 
@@ -71,11 +71,9 @@ Uppgiftslista för Jesper & David.
 
 ### Nuläge
 
-Appen är **arkitekturmässigt solid** med alla kärnflöden på plats. Det som saknas för att bjuda in familjer är UX-polish, saknad feedback, och ett par kritiska luckiga funktioner.
+Alla kritiska (🔴) och viktiga UX-uppgifter (🟡 V1–V3) är **klara**. Kvar innan lansering: databasbackup (V4), seed-recept (V5), och Philips QA-genomgång.
 
-**Vad familjer KAN göra idag:** registrera sig, logga in, skapa/gå med i hushåll, bläddra/lägga till recept, AI-parsa recept, generera veckomeny, se inköpslista-sammanfattning, logga ut.
-
-**Vad som saknas:** redigera/ta bort recept, interaktiv inköpslista (markera varor), toast-feedback, spara meny (re-genererar idag), kopiera inbjudningskod.
+**Vad familjer KAN göra idag:** registrera sig, logga in, skapa/gå med i hushåll, bläddra/lägga till/redigera/ta bort recept, AI-parsa recept, generera veckomeny, spara meny, se & markera inköpslista, kopiera inbjudningskod, logga ut — med toast-feedback på alla handlingar.
 
 ---
 
@@ -83,65 +81,20 @@ Appen är **arkitekturmässigt solid** med alla kärnflöden på plats. Det som 
 
 Utan dessa kan familjer inte använda appen meningsfullt.
 
-#### K1. Toast/notifikationssystem
-- **Problem:** Ingen visuell feedback vid sparning, generering, fel, eller lyckade handlingar
-- **Nuläge:** `HouseholdWidget.vue` har `// TODO: Show toast notification` på 2 ställen. Inga andra filer hanterar detta
-- **Scope:**
-  - [ ] **FE:** Skapa `ToastNotification.vue` komponent (success/error/info)
-  - [ ] **FE:** Skapa `useToast()` composable med queue-hantering
-  - [ ] **FE:** Integrera i alla stores/views som har handlingar (recept, meny, hushåll)
-- **Ansvarig:** Jesper
-- **Effort:** 1–2 dagar
+#### K1. Toast/notifikationssystem ✅
+- **Klart:** `ToastNotification.vue` + `useToast()` composable med success/error/info/warning, motion-v animationer, queue (max 3), auto-dismiss. Integrerat i HouseholdWidget och alla nyckelflöden.
 
-#### K2. Interaktiv inköpslista
-- **Problem:** Dashboard visar bara en widget-sammanfattning (antal varor, progress). Inget fullständigt UI för att se/markera enskilda varor
-- **Nuläge:**
-  - Backend: `GET /shopping-list` + `PATCH /shopping-list/items/{id}` fungerar
-  - Frontend: `useShoppingList.ts` composable finns med optimistic updates, `shopping.api.ts` finns med real/mock toggle
-  - Saknas: Fullständig `ShoppingListPanel.vue` eller modal med varulista, kategorier, avkryssning
-- **Scope:**
-  - [ ] **FE:** Skapa `ShoppingListModal.vue` (eller panel) med kategoriserad varulista
-  - [ ] **FE:** Wire:a composable till modal — visa varor per kategori, avkryssning, progress
-  - [ ] **FE:** Koppla "visa lista"-knappen i `ShoppingListWidget.vue` till modalen
-  - [ ] **FE:** Testa med riktig backend-data
-- **Ansvarig:** Jesper
-- **Effort:** 2–3 dagar
+#### K2. Interaktiv inköpslista ✅
+- **Klart:** `ShoppingListView.vue` kopplad till router, `useShoppingList.ts` composable ansluten till riktig API, widget-knapp navigerar till fullständig vy med kategorier och avkryssning.
 
-#### K3. Recept — redigera
-- **Problem:** Recept kan inte ändras efter sparning. Om AI-parsern får fel eller man gör en typo → måste man radera och göra om
-- **Nuläge:** Ingen `PUT/PATCH /recipes/{id}` endpoint. Ingen edit-form i frontend
-- **Scope:**
-  - [ ] **BE:** `UpdateRecipe()` i storage, service, handler
-  - [ ] **BE:** `PUT /recipes/{id}` route i router
-  - [ ] **BE:** Validering: bara hushållsmedlem kan redigera sina recept
-  - [ ] **FE:** Återanvänd `RecipeEditForm.vue` i edit-läge
-  - [ ] **FE:** Redigera-knapp i `RecipeDetailModal.vue`
-  - [ ] **FE:** API-service: `updateRecipe(id, data)` i `recipes.api.ts`
-- **Ansvarig:** David (BE) + Jesper (FE)
-- **Effort:** 1–2 dagar
+#### K3. Recept — redigera ✅
+- **Klart:** `PUT /recipes/{id}` endpoint (handler → service → storage). Frontend: redigera-knapp i `RecipeDetailModal.vue`, återanvänder `RecipeEditForm.vue`, `updateRecipe()` i API-service + mock.
 
-#### K4. Recept — ta bort
-- **Problem:** Användare kan inte ta bort felaktiga eller testrecept
-- **Nuläge:** Ingen `DELETE /recipes/{id}` endpoint. Ingen delete-knapp i UI
-- **Scope:**
-  - [ ] **BE:** `DeleteRecipe()` i storage, service, handler
-  - [ ] **BE:** `DELETE /recipes/{id}` route
-  - [ ] **BE:** Kontrollera att receptet inte är i aktiv meny (eller hantera)
-  - [ ] **FE:** Ta-bort-knapp med bekräftelsedialog i `RecipeDetailModal.vue`
-  - [ ] **FE:** API-service: `deleteRecipe(id)` i `recipes.api.ts`
-- **Ansvarig:** David (BE) + Jesper (FE)
-- **Effort:** 0.5–1 dag
+#### K4. Recept — ta bort ✅
+- **Klart:** `DELETE /recipes/{id}` endpoint (204 No Content). Frontend: ta-bort-knapp med bekräftelsedialog i `RecipeDetailModal.vue`, `deleteRecipe()` i API-service + mock.
 
-#### K5. Meny — spara nuvarande val
-- **Problem:** "Spara"-knappen anropar `POST /menus/generate` igen → genererar ny meny istället för att spara den visade
-- **Nuläge:** Kommentar i `menuGenerator.ts:329`: "For MVP: Call generateMenu to create a new menu. In the future, this should call a PUT /menus/current endpoint"
-- **Scope:**
-  - [ ] **BE:** `PUT /menus/current` eller `PUT /menus/{id}` endpoint som sparar exakta recept-val
-  - [ ] **BE:** Handler + service + storage för att uppdatera befintlig meny
-  - [ ] **FE:** Ändra `saveMenu()` i store att anropa PUT istället för generate
-  - [ ] **FE:** Bevara låsta dagar och använde val
-- **Ansvarig:** David (BE) + Jesper (FE)
-- **Effort:** 1–2 dagar
+#### K5. Meny — spara nuvarande val ✅
+- **Klart:** `PUT /menus/current` endpoint (transaktionell uppdatering av menydagar). Frontend: `saveMenu()` i store anropar PUT med exakta recept-val istället för att re-generera.
 
 ---
 
@@ -149,30 +102,14 @@ Utan dessa kan familjer inte använda appen meningsfullt.
 
 Appen fungerar utan dessa, men UX blir klart sämre.
 
-#### V1. Kopiera inbjudningskod
-- **Problem:** `handleShowInvite()` i `DashboardView.vue` gör bara `console.log('Show invite code')` med `// TODO: Show invite modal`
-- **Scope:**
-  - [ ] **FE:** Skapa invite-modal med kod-visning + kopiera-till-urklipp-knapp
-  - [ ] **FE:** Eventuellt "Dela via..."-funktion (Web Share API)
-- **Ansvarig:** Jesper
-- **Effort:** 0.5 dag
+#### V1. Kopiera inbjudningskod ✅
+- **Klart:** `InviteModal.vue` med kod-visning, kopiera-till-urklipp och "Kopierad!"-feedback. Kopplad till `handleShowInvite()` i dashboard.
 
-#### V2. Sessionshantering UX
-- **Problem:** JWT löper ut efter 7 dagar utan förvarning. Användaren får 401 och slängs till login-sidan utan förklaring
-- **Nuläge:** 401-interceptor i `client.ts` tar bort token och redirectar till `/login`
-- **Scope:**
-  - [ ] **FE:** Visa "Din session har löpt ut, logga in igen"-meddelande (kräver toast-system, K1)
-  - [ ] **FE:** Eventuellt proaktiv kontroll av token-expiry vid app-start
-- **Ansvarig:** Jesper
-- **Effort:** 0.5 dag (efter K1)
+#### V2. Sessionshantering UX ✅
+- **Klart:** 401-interceptor sätter `session_expired`-flagga i sessionStorage. `LoginView.vue` visar toast "Din session har löpt ut. Logga in igen." vid redirect.
 
-#### V3. Felhantering — audit
-- **Problem:** Vissa API-fel kan visa kryptiska meddelanden eller bara hamna i console.log
-- **Scope:**
-  - [ ] **FE:** Gå igenom alla API-anrop och se till att fel visas som svenska, användarvänliga toasts
-  - [ ] **FE:** Särskilt: rate limiting-fel, nätverksfel, server 500
-- **Ansvarig:** Jesper
-- **Effort:** 1 dag (efter K1)
+#### V3. Felhantering — audit ✅
+- **Klart:** Svenska toast-meddelanden på alla nyckelflöden: recept (skapa/redigera/ta bort), menygeneration/sparning, inköpslista-toggle. Nätverksfel och serverfel hanteras.
 
 #### V4. Databasbackup
 - **Problem:** SQLite på Fly.io-volym — om volymen försvinner, försvinner all data
@@ -215,8 +152,11 @@ Appen fungerar utan dessa, men UX blir klart sämre.
 ## Lansering
 
 ### Före lansering (checklista)
-- [ ] Alla 🔴-uppgifter klara
-- [ ] Minst 🟡 V1 + V4 klara
+- [x] Alla 🔴-uppgifter klara (K1–K5)
+- [x] 🟡 V1 klar (kopiera inbjudningskod)
+- [x] 🟡 V2 klar (sessionshantering UX)
+- [x] 🟡 V3 klar (felhantering audit)
+- [ ] 🟡 V4 klar (databasbackup)
 - [ ] Philip gör en komplett QA-genomgång av alla flöden
 - [ ] Minst 15 seed-recept finns
 - [ ] Fly.io volume snapshots verifierade
