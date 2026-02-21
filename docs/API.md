@@ -2,23 +2,28 @@
 
 Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
-## Recent Changes (PR #35)
+## Recent Changes (PR #82)
+
+**New API Endpoints:**
+- `PUT /recipes/{id}` - Update an existing recipe (auth required)
+- `DELETE /recipes/{id}` - Delete a recipe (auth required)
+- `PUT /menus/current` - Save exact recipe-day selections to the current active menu (auth required)
+
+**Breaking / Additive Changes:**
+- `emoji` field added to `CreateRecipeRequest`, `Recipe`, and `RecipeSummary` (optional, omitted when empty)
+- Auth client now sets `sessionStorage.session_expired = 'true'` before redirecting to `/login` on 401
+
+## Changes in PR #35
 
 **Recipe Navigation Consolidation:**
 - Added new unified `/recipes` route with tabbed interface ("Mina recept" and "Lägg till")
 - Added redirect from legacy `/recipes/parse` route to `/recipes`
-- Route requires authentication and member access
 
 **New API Endpoints:**
 - `POST /recipes/parse` - Parse unstructured recipe text into structured data using AI
 - `POST /recipes/parse-and-save` - Parse and immediately save recipe to database
 - Both endpoints support 60-second timeout for AI processing
 - Both endpoints accept optional `source` URL parameter
-
-**Frontend Implementation:**
-- Frontend API client implemented in `frontend/src/api/recipes.api.ts`
-- Mock implementations available for development
-- Integrated into new `RecipesView` component with tabs
 
 ## Auth
 
@@ -161,6 +166,7 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
       "id": "rec_001",
       "name": "Köttfärssås",
       "servings": 4,
+      "emoji": "🍝",        // optional — omitted when empty
       "tags": ["vardag", "barn"]
     }
   ]
@@ -174,6 +180,7 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
   "id": "rec_001",
   "name": "Köttfärssås",
   "servings": 4,
+  "emoji": "🍝",            // optional — omitted when empty
   "ingredients": [
     { "name": "Köttfärs", "amount": 400, "unit": "g" },
     { "name": "Krossade tomater", "amount": 400, "unit": "g" }
@@ -183,23 +190,85 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
     "Tillsätt tomater",
     "Låt sjuda 20 min"
   ],
-  "tags": ["vardag", "barn"]
+  "tags": ["vardag", "barn"],
+  "createdAt": "2026-02-01T10:00:00Z"
 }
 ```
 
-### POST /recipes (admin/Philip)
+### POST /recipes
+**Auth required.**
 ```json
 // Request
 {
   "name": "Köttfärssås",
   "servings": 4,
-  "ingredients": [...],
-  "instructions": [...],
+  "emoji": "🍝",            // optional
+  "ingredients": [
+    { "name": "Köttfärs", "amount": 400, "unit": "g" }
+  ],
+  "instructions": ["Bryn köttfärsen", "Tillsätt tomater"],
   "tags": ["vardag"]
 }
 
 // Response 201
 { "id": "rec_001" }
+
+// Errors 400
+{ "error": "name_required" }
+{ "error": "invalid_servings" }
+{ "error": "ingredients_required" }
+{ "error": "instructions_required" }
+{ "error": "name_too_long" }
+{ "error": "too_many_ingredients" }
+```
+
+### PUT /recipes/{id}
+Update an existing recipe. **Auth required.**
+```json
+// Request — same shape as POST /recipes
+{
+  "name": "Köttfärssås med lök",
+  "servings": 4,
+  "emoji": "🍝",            // optional
+  "ingredients": [
+    { "name": "Köttfärs", "amount": 500, "unit": "g" },
+    { "name": "Lök", "amount": 1, "unit": "st" }
+  ],
+  "instructions": ["Hacka löken", "Bryn köttfärsen", "Tillsätt tomater"],
+  "tags": ["vardag"]
+}
+
+// Response 200 — full recipe object
+{
+  "id": "rec_001",
+  "name": "Köttfärssås med lök",
+  "servings": 4,
+  "emoji": "🍝",
+  "ingredients": [...],
+  "instructions": [...],
+  "tags": ["vardag"],
+  "createdAt": "2026-02-01T10:00:00Z"
+}
+
+// Error 404
+{ "error": "not_found" }
+
+// Errors 400
+{ "error": "name_required" }
+{ "error": "invalid_servings" }
+{ "error": "ingredients_required" }
+{ "error": "instructions_required" }
+{ "error": "name_too_long" }
+{ "error": "too_many_ingredients" }
+```
+
+### DELETE /recipes/{id}
+Delete a recipe. **Auth required.**
+```json
+// Response 204 — no body
+
+// Error 404
+{ "error": "not_found" }
 ```
 
 ### POST /recipes/parse
@@ -294,10 +363,54 @@ Parse recipe text and immediately save it to the database.
 }
 ```
 
+### PUT /menus/current
+Save exact recipe-day selections to the current active menu. **Auth required.**
+
+Use this to replace the generated menu's day assignments without regenerating from scratch.
+
+```json
+// Request
+{
+  "days": [
+    { "date": "2026-02-24", "recipeId": "rec_001", "servings": 4 },
+    { "date": "2026-02-25", "recipeId": "rec_002", "servings": 4 },
+    { "date": "2026-02-26", "skip": true, "servings": 0 },
+    { "date": "2026-02-27", "recipeId": "rec_003", "servings": 6 }
+  ]
+}
+
+// Response 200 — updated menu
+{
+  "id": "menu_001",
+  "householdId": "hh_xyz789",
+  "days": [
+    { "date": "2026-02-24", "recipeId": "rec_001", "servings": 4 },
+    { "date": "2026-02-25", "recipeId": "rec_002", "servings": 4 },
+    { "date": "2026-02-26", "skip": true },
+    { "date": "2026-02-27", "recipeId": "rec_003", "servings": 6 }
+  ],
+  "createdAt": "2026-02-21T08:00:00Z"
+}
+
+// Error 404
+{ "error": "no_active_menu" }
+
+// Error 400
+{ "error": "invalid_days" }
+```
+
 ### GET /menus/current
 ```json
 // Response 200
-{ "id": "menu_001", "days": [...] }
+{
+  "id": "menu_001",
+  "householdId": "hh_xyz789",
+  "days": [
+    { "date": "2026-02-24", "recipeId": "rec_001", "servings": 4 },
+    { "date": "2026-02-25", "skip": true }
+  ],
+  "createdAt": "2026-02-21T08:00:00Z"
+}
 
 // Response 404 (ingen aktiv meny)
 { "error": "no_active_menu" }
@@ -433,6 +546,15 @@ Alla errors följer samma struktur:
 | `email_taken` | 400 | Email redan registrerad |
 | `invalid_code` | 400 | Inbjudningskod ogiltig/utgången |
 | `not_found` | 404 | Resursen finns inte |
+| `no_active_menu` | 404 | Ingen aktiv meny |
+| `invalid_days` | 400 | Ogiltigt dagformat i PUT /menus/current |
+| `name_required` | 400 | Receptnamn saknas |
+| `invalid_servings` | 400 | Ogiltigt antal portioner |
+| `ingredients_required` | 400 | Ingredienser saknas |
+| `instructions_required` | 400 | Instruktioner saknas |
+| `name_too_long` | 400 | Receptnamnet är för långt |
+| `too_many_ingredients` | 400 | För många ingredienser |
+| `internal_error` | 500 | Oväntat serverfel |
 
 ---
 
@@ -475,9 +597,12 @@ The frontend uses Vue Router with the following routes:
 | GET /recipes | ✅ | ✅ |
 | GET /recipes/:id | ✅ | ✅ |
 | POST /recipes | ✅ | ✅ |
+| PUT /recipes/{id} | ✅ | ✅ |
+| DELETE /recipes/{id} | ✅ | ✅ |
 | POST /recipes/parse | ✅ | ✅ |
 | POST /recipes/parse-and-save | ✅ | ✅ |
 | POST /menus/generate | ✅ | ✅ |
+| PUT /menus/current | ✅ | ✅ |
 | GET /menus/current | ✅ | ✅ |
 | GET /shopping-list | ✅ | ✅ |
 | PATCH /shopping-list/items/:id | ✅ | ✅ |
