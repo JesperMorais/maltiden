@@ -159,6 +159,10 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
 ### GET /recipes
 ```json
+// Query parameters (all optional):
+// ?name=köttfärs    - Filter by recipe name (partial match)
+// ?tag=vardag       - Filter by tag
+
 // Response 200
 {
   "recipes": [
@@ -422,7 +426,7 @@ Use this to replace the generated menu's day assignments without regenerating fr
 
 ### GET /shopping-list
 ```json
-// Query: ?menuId=menu_001
+// Query: ?menuId=menu_001   — REQUIRED
 
 // Response 200
 {
@@ -431,26 +435,39 @@ Use this to replace the generated menu's day assignments without regenerating fr
     {
       "name": "Kött & Fisk",
       "items": [
-        { "name": "Köttfärs", "amount": 800, "unit": "g", "checked": false }
+        { "id": "item_001", "name": "Köttfärs", "amount": 800, "unit": "g", "checked": false }
       ]
     },
     {
       "name": "Mejeri",
       "items": [
-        { "name": "Grädde", "amount": 2, "unit": "dl", "checked": false }
+        { "id": "item_002", "name": "Grädde", "amount": 2, "unit": "dl", "checked": false }
       ]
     }
   ]
 }
+
+// Error 403 (menu belongs to a different household)
+{ "error": "forbidden" }
+
+// Error 404
+{ "error": "menu_not_found" }
 ```
 
 ### PATCH /shopping-list/items/:id
 ```json
-// Request
+// Query: ?menuId=menu_001   — REQUIRED
+// Body
 { "checked": true }
 
 // Response 200
 { "ok": true }
+
+// Error 403 (menu belongs to a different household)
+{ "error": "forbidden" }
+
+// Error 404
+{ "error": "menu_not_found" }
 ```
 
 ---
@@ -472,20 +489,21 @@ Search for grocery offers near a location (defaults to Haninge).
   "offers": [
     {
       "id": "offer_123",
-      "product": "Arla Mellanmjölk 1.5L",
-      "store": "ICA Maxi",
-      "originalPrice": 23.95,
-      "offerPrice": 19.95,
-      "discount": 17,  // percentage
-      "validFrom": "2026-02-10",
-      "validTo": "2026-02-16",
-      "catalogId": "cat_456",
-      "catalogPages": [12, 13],
-      "imageUrl": "https://..."
+      "heading": "Arla Mellanmjölk 1.5L",
+      "description": "Ekologisk mellanmjölk",
+      "price": 19.95,
+      "prePrice": 23.95,           // optional — omitted when not discounted
+      "currency": "SEK",
+      "validFrom": "2026-02-10T00:00:00Z",
+      "validTo": "2026-02-16T23:59:59Z",
+      "storeName": "ICA Maxi",
+      "storeLogo": "https://...",   // optional
+      "storeAddress": "Handelsvägen 1",  // optional
+      "storeCity": "Haninge",            // optional
+      "imageUrl": "https://..."          // optional
     }
   ],
-  "query": "mjölk",
-  "location": { "lat": 59.168, "lng": 18.137, "radius": 10000 }
+  "count": 1
 }
 
 // Timeout: 30 seconds
@@ -502,15 +520,16 @@ Get top discounted offers sorted by discount percentage.
   "offers": [
     {
       "id": "offer_789",
-      "product": "Lax Filéer 500g",
-      "store": "Willys",
-      "originalPrice": 89.90,
-      "offerPrice": 49.90,
-      "discount": 44,
-      "validFrom": "2026-02-10",
-      "validTo": "2026-02-16"
+      "heading": "Lax Filéer 500g",
+      "price": 49.90,
+      "prePrice": 89.90,
+      "currency": "SEK",
+      "validFrom": "2026-02-10T00:00:00Z",
+      "validTo": "2026-02-16T23:59:59Z",
+      "storeName": "Willys"
     }
-  ]
+  ],
+  "count": 1
 }
 
 // Timeout: 30 seconds
@@ -554,6 +573,12 @@ Alla errors följer samma struktur:
 | `instructions_required` | 400 | Instruktioner saknas |
 | `name_too_long` | 400 | Receptnamnet är för långt |
 | `too_many_ingredients` | 400 | För många ingredienser |
+| `cannot_remove` | 403 | Kan inte ta bort sig själv eller ägaren |
+| `forbidden` | 403 | Åtkomst nekad (resursen tillhör annat hushåll) |
+| `menu_not_found` | 404 | Angivet menuId hittades inte |
+| `no_recipes_available` | 400 | Inga recept att generera meny från |
+| `invalid_input` | 400 | Ogiltig indata till recipe parser |
+| `service_unavailable` | 502 | Extern tjänst (Tjek API) svarade inte |
 | `internal_error` | 500 | Oväntat serverfel |
 
 ---
@@ -571,6 +596,7 @@ The frontend uses Vue Router with the following routes:
 | `/menu/generate` | GenerateMenuView | Yes | Yes | Menu generator (members only) |
 | `/recipes` | RecipesView | Yes | Yes | Unified recipes page with tabs |
 | `/recipes/parse` | *(redirect to /recipes)* | Yes | Yes | Legacy route, redirects to recipes |
+| `/shopping-list` | ShoppingListView | Yes | Yes | Shopping list (members only) |
 | `/about` | AboutView | No | No | About page |
 | `/offers-poc` | OffersView | No | No | Offers POC page |
 
