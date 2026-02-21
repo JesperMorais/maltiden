@@ -386,14 +386,12 @@ Use this to replace the generated menu's day assignments without regenerating fr
 // Response 200 — updated menu
 {
   "id": "menu_001",
-  "householdId": "hh_xyz789",
   "days": [
     { "date": "2026-02-24", "recipeId": "rec_001", "servings": 4 },
     { "date": "2026-02-25", "recipeId": "rec_002", "servings": 4 },
-    { "date": "2026-02-26", "skip": true },
+    { "date": "2026-02-26", "skip": true, "servings": 0 },
     { "date": "2026-02-27", "recipeId": "rec_003", "servings": 6 }
-  ],
-  "createdAt": "2026-02-21T08:00:00Z"
+  ]
 }
 
 // Error 404
@@ -408,12 +406,10 @@ Use this to replace the generated menu's day assignments without regenerating fr
 // Response 200
 {
   "id": "menu_001",
-  "householdId": "hh_xyz789",
   "days": [
     { "date": "2026-02-24", "recipeId": "rec_001", "servings": 4 },
-    { "date": "2026-02-25", "skip": true }
-  ],
-  "createdAt": "2026-02-21T08:00:00Z"
+    { "date": "2026-02-25", "skip": true, "servings": 0 }
+  ]
 }
 
 // Response 404 (ingen aktiv meny)
