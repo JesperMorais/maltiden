@@ -57,6 +57,65 @@ func (h *RecipeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, recipe)
 }
 
+func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !ValidateID(w, id, "recipe_id") {
+		return
+	}
+
+	var req domain.UpdateRecipeRequest
+	if !DecodeJSON(w, r, maxBodySize, &req) {
+		return
+	}
+
+	recipe, err := h.recipeService.Update(id, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrNotFound):
+			WriteError(w, http.StatusNotFound, "not_found")
+		case errors.Is(err, domain.ErrNameRequired):
+			WriteError(w, http.StatusBadRequest, "name_required")
+		case errors.Is(err, domain.ErrInvalidServings):
+			WriteError(w, http.StatusBadRequest, "invalid_servings")
+		case errors.Is(err, domain.ErrIngredientsRequired):
+			WriteError(w, http.StatusBadRequest, "ingredients_required")
+		case errors.Is(err, domain.ErrInstructionsRequired):
+			WriteError(w, http.StatusBadRequest, "instructions_required")
+		case errors.Is(err, domain.ErrNameTooLong):
+			WriteError(w, http.StatusBadRequest, "name_too_long")
+		case errors.Is(err, domain.ErrTooManyIngredients):
+			WriteError(w, http.StatusBadRequest, "too_many_ingredients")
+		default:
+			log.Printf("ERROR [UpdateRecipe] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, recipe)
+}
+
+func (h *RecipeHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !ValidateID(w, id, "recipe_id") {
+		return
+	}
+
+	err := h.recipeService.Delete(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrNotFound):
+			WriteError(w, http.StatusNotFound, "not_found")
+		default:
+			log.Printf("ERROR [DeleteRecipe] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req domain.CreateRecipeRequest
 	if !DecodeJSON(w, r, maxBodySize, &req) {

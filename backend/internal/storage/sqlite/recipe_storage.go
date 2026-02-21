@@ -254,6 +254,70 @@ func (s *RecipeStorage) GetAllPaginated(filter *domain.RecipeFilter, limit, offs
 	return recipes, totalCount, rows.Err()
 }
 
+func (s *RecipeStorage) Update(recipe *domain.Recipe) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tagsJSON, err := json.Marshal(recipe.Tags)
+	if err != nil {
+		return err
+	}
+
+	ingredientsJSON, err := json.Marshal(recipe.Ingredients)
+	if err != nil {
+		return err
+	}
+
+	instructionsJSON, err := json.Marshal(recipe.Instructions)
+	if err != nil {
+		return err
+	}
+
+	query := `
+		UPDATE recipes SET name = ?, servings = ?, emoji = ?, tags = ?, ingredients = ?, instructions = ?
+		WHERE id = ?
+	`
+
+	result, err := s.db.ExecContext(ctx, query,
+		recipe.Name, recipe.Servings, recipe.Emoji,
+		string(tagsJSON), string(ingredientsJSON), string(instructionsJSON),
+		recipe.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return domain.ErrNotFound
+	}
+
+	return nil
+}
+
+func (s *RecipeStorage) Delete(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := s.db.ExecContext(ctx, `DELETE FROM recipes WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return domain.ErrNotFound
+	}
+
+	return nil
+}
+
 func (s *RecipeStorage) Create(recipe *domain.Recipe) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
