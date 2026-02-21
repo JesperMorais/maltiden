@@ -123,7 +123,7 @@ function handleLockToggle(date: string) {
 async function handleSave() {
   hasNavigatedFromSave.value = true
   try {
-    const success = await store.saveMenu(router)
+    const success = await store.saveDraftMenu(router)
     if (success) {
       // Navigation handled by store
     }
