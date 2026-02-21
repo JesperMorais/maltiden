@@ -47,6 +47,7 @@ apiClient.interceptors.response.use(
       tokenUtils.remove()
       // Only redirect if not already on login page
       if (!window.location.pathname.includes('/login')) {
+        sessionStorage.setItem('session_expired', 'true')
         window.location.href = '/login'
       }
     }
