@@ -634,7 +634,7 @@ import { RouterLink } from 'vue-router'
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: clamp(1.75rem, 4vw, 2.5rem);
-  color: white;
+  color: var(--text-on-accent);
   margin: 0 0 1rem;
 }
 

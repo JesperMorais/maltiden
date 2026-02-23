@@ -76,7 +76,7 @@ const isLocked = props.requiresMember && userStore.isGuest
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.7rem;
-  color: white;
+  color: var(--text-on-accent);
   white-space: nowrap;
 }
 </style>

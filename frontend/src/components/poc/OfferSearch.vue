@@ -258,7 +258,7 @@ function calculateDiscount(offer: TjekOffer): number | null {
 .search-button {
   padding: 0.875rem 2rem;
   background: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
   border: none;
   border-radius: 12px;
   cursor: pointer;

@@ -27,7 +27,16 @@ type UpdateMenuRequest struct {
 	Days []MenuDay `json:"days"`
 }
 
+type MenuResponseDay struct {
+	Date       string `json:"date"`
+	RecipeID   string `json:"recipeId,omitempty"`
+	RecipeName string `json:"recipeName,omitempty"`
+	Emoji      string `json:"emoji,omitempty"`
+	Servings   int    `json:"servings"`
+	Skip       bool   `json:"skip,omitempty"`
+}
+
 type MenuResponse struct {
-	ID   string    `json:"id"`
-	Days []MenuDay `json:"days"`
+	ID   string            `json:"id"`
+	Days []MenuResponseDay `json:"days"`
 }

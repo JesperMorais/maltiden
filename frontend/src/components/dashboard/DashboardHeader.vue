@@ -187,7 +187,7 @@ function handleSettings() {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 1rem;
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .user-name {
@@ -209,12 +209,12 @@ function handleSettings() {
 
 .role-badge.owner {
   background: var(--role-owner-bg);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .role-badge.member {
   background: var(--role-member-bg);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .role-badge.guest {
@@ -270,7 +270,7 @@ function handleSettings() {
 }
 
 .dropdown-item.logout:hover {
-  background: rgba(229, 62, 62, 0.1);
+  background: var(--error-bg);
   color: var(--error);
 }
 
