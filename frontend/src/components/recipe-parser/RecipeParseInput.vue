@@ -99,7 +99,7 @@ Rör ner äggblandningen."
 .form-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(255, 107, 91, 0.1);
+  box-shadow: 0 0 0 4px var(--accent-bg);
 }
 
 .form-input::placeholder {
@@ -137,7 +137,7 @@ Rör ner äggblandningen."
   color: #e53e3e;
   margin: 1rem 0 0;
   padding: 0.5rem 0.75rem;
-  background: rgba(229, 62, 62, 0.1);
+  background: var(--error-bg);
   border-radius: 8px;
   text-align: center;
 }

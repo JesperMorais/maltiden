@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, toRefs } from 'vue'
 import type { User } from '@/api/types/dashboard.types'
 import { useThemeStore } from '@/stores/theme'
+import { useFocusTrap } from '@/composables/useFocusTrap'
 
 interface Props {
   user: User | null
   isOpen: boolean
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+const { isOpen } = toRefs(props)
 
 const emit = defineEmits<{
   close: []
@@ -17,6 +19,13 @@ const emit = defineEmits<{
 
 // Theme store for dark mode
 const themeStore = useThemeStore()
+
+const settingsModalRef = ref<HTMLElement | null>(null)
+
+useFocusTrap(settingsModalRef, {
+  isActive: isOpen,
+  onEscape: () => emit('close'),
+})
 
 // Settings state
 const notificationsEnabled = ref(true)
@@ -42,10 +51,10 @@ function handleOverlayClick(e: MouseEvent) {
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="isOpen" class="settings-overlay" @click="handleOverlayClick">
-        <div class="settings-modal">
+        <div ref="settingsModalRef" class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
           <!-- Header -->
           <div class="modal-header">
-            <h2>Inställningar</h2>
+            <h2 id="settings-modal-title">Inställningar</h2>
             <button class="close-btn" @click="handleClose">
               <span>×</span>
             </button>
@@ -289,7 +298,7 @@ function handleOverlayClick(e: MouseEvent) {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 1.5rem;
-  color: white;
+  color: var(--text-on-accent);
   flex-shrink: 0;
 }
 
@@ -329,12 +338,12 @@ function handleOverlayClick(e: MouseEvent) {
 
 .profile-role.owner {
   background: var(--role-owner-bg);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .profile-role.member {
   background: var(--role-member-bg);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .profile-role.guest {
@@ -460,13 +469,13 @@ function handleOverlayClick(e: MouseEvent) {
 }
 
 .logout-btn {
-  background: rgba(229, 62, 62, 0.1);
+  background: var(--error-bg);
   color: var(--error);
 }
 
 .logout-btn:hover {
   background: var(--error);
-  color: white;
+  color: var(--text-on-accent);
   transform: translateY(-2px);
 }
 

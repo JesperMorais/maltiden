@@ -89,6 +89,8 @@ function cancelRemove() {
           v-if="userStore.isMember"
           class="settings-btn"
           :class="{ active: showSettings }"
+          :aria-expanded="showSettings"
+          aria-haspopup="true"
           @click="toggleSettings"
           aria-label="Inställningar"
         >
@@ -300,7 +302,7 @@ function cancelRemove() {
 }
 
 .remove-member-btn:hover {
-  background: rgba(229, 62, 62, 0.08);
+  background: var(--error-bg);
 }
 
 .remove-member-btn .member-initial {
@@ -337,7 +339,7 @@ function cancelRemove() {
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 0.85rem;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: linear-gradient(135deg, var(--warning-surface) 0%, var(--warning-surface-end) 100%);
   border-radius: 10px;
   margin-bottom: 1rem;
 }
@@ -350,7 +352,7 @@ function cancelRemove() {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.8rem;
-  color: #92400e;
+  color: var(--warning-dark);
 }
 
 /* Members list */
@@ -398,7 +400,7 @@ function cancelRemove() {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 0.9rem;
-  color: white;
+  color: var(--text-on-accent);
   flex-shrink: 0;
 }
 
@@ -414,7 +416,7 @@ function cancelRemove() {
 
 .member-avatar.guest,
 .member-initial.guest {
-  background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+  background: var(--role-guest-avatar);
 }
 
 .member-info {
@@ -440,11 +442,12 @@ function cancelRemove() {
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--text-secondary);
   opacity: 0.4;
+  position: relative;
 }
 
 .status-dot.eating {
@@ -452,20 +455,33 @@ function cancelRemove() {
   opacity: 1;
 }
 
+.status-dot.eating::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  width: 3px;
+  height: 5px;
+  border: solid white;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
 .lunchbox-toggle {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: 1.5px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 0.9rem;
+  border-radius: 10px;
+  font-size: 1rem;
   cursor: pointer;
   opacity: 0.35;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .lunchbox-toggle:hover {
@@ -475,7 +491,7 @@ function cancelRemove() {
 
 .lunchbox-toggle.active {
   opacity: 1;
-  background: rgba(237, 197, 63, 0.12);
+  background: var(--warning-bg);
   border-color: #edc53f;
 }
 
@@ -486,7 +502,7 @@ function cancelRemove() {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #c05621;
-  background: rgba(237, 137, 54, 0.15);
+  background: var(--role-owner-text-bg);
   padding: 0.2rem 0.5rem;
   border-radius: 100px;
 }
@@ -622,7 +638,7 @@ function cancelRemove() {
 .btn-confirm {
   background: #e53e3e;
   border: none;
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .btn-confirm:hover {

@@ -4,9 +4,11 @@ import { RouterLink, useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
 import { useUserStore } from '@/stores/user'
+import { useThemeStore } from '@/stores/theme'
 
 const router = useRouter()
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 
 type Choice = 'none' | 'join' | 'create'
 type JoinStep = 'code' | 'welcome' | 'member-or-guest' | 'member-form' | 'guest-form'
@@ -171,11 +173,21 @@ async function handleCreate() {
     </div>
 
     <div class="onboarding-container">
-      <!-- Back link -->
-      <RouterLink to="/" class="back-link">
-        <span class="back-arrow">←</span>
-        <span>Tillbaka</span>
-      </RouterLink>
+      <!-- Top bar with back link and theme toggle -->
+      <div class="onboarding-top-bar">
+        <RouterLink to="/" class="back-link">
+          <span class="back-arrow">←</span>
+          <span>Tillbaka</span>
+        </RouterLink>
+        <button
+          class="theme-toggle"
+          @click="themeStore.toggleDarkMode()"
+          :aria-label="themeStore.isDarkMode ? 'Byt till ljust läge' : 'Byt till mörkt läge'"
+        >
+          <svg v-if="themeStore.isDarkMode" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
 
       <!-- Header -->
       <header class="onboarding-header">
@@ -245,10 +257,11 @@ async function handleCreate() {
                       placeholder="T.ex. ABC123"
                       class="form-input code-input"
                       maxlength="8"
+                      :aria-describedby="codeError ? 'code-error' : undefined"
                       @keyup.enter="validateCode"
                     />
                   </label>
-                  <p v-if="codeError" class="form-error">{{ codeError }}</p>
+                  <p v-if="codeError" id="code-error" role="alert" class="form-error">{{ codeError }}</p>
                   <p v-else class="form-hint">Fråga den som skapade kontot efter koden</p>
 
                   <BaseButton
@@ -322,8 +335,8 @@ async function handleCreate() {
                 </div>
 
                 <!-- Step 4a: Member form -->
-                <div v-else-if="joinStep === 'member-form'" class="form-card">
-                  <button class="back-to-choice" @click="joinStep = 'member-or-guest'">
+                <form v-else-if="joinStep === 'member-form'" class="form-card" @submit.prevent="handleJoinAsMember">
+                  <button type="button" class="back-to-choice" @click="joinStep = 'member-or-guest'">
                     ← Tillbaka
                   </button>
 
@@ -335,6 +348,8 @@ async function handleCreate() {
                     <input
                       v-model="joinForm.name"
                       type="text"
+                      name="name"
+                      autocomplete="name"
                       placeholder="Anna Andersson"
                       class="form-input"
                     />
@@ -345,6 +360,8 @@ async function handleCreate() {
                     <input
                       v-model="joinForm.email"
                       type="email"
+                      name="email"
+                      autocomplete="email"
                       placeholder="anna@exempel.se"
                       class="form-input"
                     />
@@ -356,6 +373,8 @@ async function handleCreate() {
                       <input
                         v-model="joinForm.password"
                         :type="showJoinPassword ? 'text' : 'password'"
+                        name="password"
+                        autocomplete="new-password"
                         placeholder="Minst 8 tecken"
                         class="form-input"
                       />
@@ -375,6 +394,7 @@ async function handleCreate() {
                       <input
                         v-model="joinForm.passwordConfirm"
                         :type="showJoinPasswordConfirm ? 'text' : 'password'"
+                        autocomplete="new-password"
                         placeholder="Skriv lösenordet igen"
                         class="form-input"
                         :class="{ 'input-error': joinForm.passwordConfirm && !passwordsMatchJoin }"
@@ -393,19 +413,19 @@ async function handleCreate() {
                   </label>
 
                   <BaseButton
+                    type="submit"
                     variant="primary"
                     size="lg"
                     :disabled="!canSubmitJoinMember"
                     :loading="isSubmitting"
-                    @click="handleJoinAsMember"
                   >
                     Skapa konto och gå med
                   </BaseButton>
-                </div>
+                </form>
 
                 <!-- Step 4b: Guest form -->
-                <div v-else-if="joinStep === 'guest-form'" class="form-card">
-                  <button class="back-to-choice" @click="joinStep = 'member-or-guest'">
+                <form v-else-if="joinStep === 'guest-form'" class="form-card" @submit.prevent="handleJoinAsGuest">
+                  <button type="button" class="back-to-choice" @click="joinStep = 'member-or-guest'">
                     ← Tillbaka
                   </button>
 
@@ -417,6 +437,8 @@ async function handleCreate() {
                     <input
                       v-model="joinForm.name"
                       type="text"
+                      name="name"
+                      autocomplete="name"
                       placeholder="Anna"
                       class="form-input"
                     />
@@ -427,15 +449,15 @@ async function handleCreate() {
                   </p>
 
                   <BaseButton
+                    type="submit"
                     variant="primary"
                     size="lg"
                     :disabled="!canSubmitJoinGuest"
                     :loading="isSubmitting"
-                    @click="handleJoinAsGuest"
                   >
                     Gå med som gäst
                   </BaseButton>
-                </div>
+                </form>
               </div>
             </Transition>
           </div>
@@ -466,12 +488,14 @@ async function handleCreate() {
             <!-- Create form -->
             <Transition name="form-slide">
               <div v-if="selectedChoice === 'create'" class="inline-form">
-                <div class="form-card">
+                <form class="form-card" @submit.prevent="handleCreate">
                   <label class="form-label">
                     <span>Ditt namn</span>
                     <input
                       v-model="createForm.name"
                       type="text"
+                      name="name"
+                      autocomplete="name"
                       placeholder="Anna Andersson"
                       class="form-input"
                     />
@@ -482,6 +506,8 @@ async function handleCreate() {
                     <input
                       v-model="createForm.email"
                       type="email"
+                      name="email"
+                      autocomplete="email"
                       placeholder="anna@exempel.se"
                       class="form-input"
                     />
@@ -493,6 +519,8 @@ async function handleCreate() {
                       <input
                         v-model="createForm.password"
                         :type="showCreatePassword ? 'text' : 'password'"
+                        name="password"
+                        autocomplete="new-password"
                         placeholder="Minst 8 tecken"
                         class="form-input"
                       />
@@ -512,6 +540,7 @@ async function handleCreate() {
                       <input
                         v-model="createForm.passwordConfirm"
                         :type="showCreatePasswordConfirm ? 'text' : 'password'"
+                        autocomplete="new-password"
                         placeholder="Skriv lösenordet igen"
                         class="form-input"
                         :class="{ 'input-error': createForm.passwordConfirm && !passwordsMatchCreate }"
@@ -534,19 +563,21 @@ async function handleCreate() {
                     <input
                       v-model="createForm.householdName"
                       type="text"
+                      name="organization"
+                      autocomplete="organization"
                       placeholder="T.ex. Familjen Andersson"
                       class="form-input"
                     />
                   </label>
 
-                  <p v-if="createError" class="form-error">{{ createError }}</p>
+                  <p v-if="createError" id="create-error" role="alert" class="form-error">{{ createError }}</p>
 
                   <BaseButton
+                    type="submit"
                     variant="primary"
                     size="lg"
                     :disabled="!canSubmitCreate"
                     :loading="isSubmitting"
-                    @click="handleCreate"
                   >
                     Skapa konto
                   </BaseButton>
@@ -555,7 +586,7 @@ async function handleCreate() {
                     Genom att skapa konto godkänner du våra
                     <a href="#">villkor</a> och <a href="#">integritetspolicy</a>.
                   </p>
-                </div>
+                </form>
               </div>
             </Transition>
           </div>
@@ -635,6 +666,14 @@ async function handleCreate() {
   margin: 0 auto;
 }
 
+/* Top bar */
+.onboarding-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
 /* Back link */
 .back-link {
   display: inline-flex;
@@ -648,12 +687,32 @@ async function handleCreate() {
   padding: 0.5rem 1rem;
   border-radius: 100px;
   transition: all 0.3s ease;
-  margin-bottom: 2rem;
+}
+
+/* Theme toggle */
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--border-color-hover);
+  color: var(--text-primary);
+  transform: scale(1.1);
 }
 
 .back-link:hover {
   color: var(--accent);
-  background: var(--accent-bg);
+  background: var(--bg-hover);
 }
 
 .back-arrow {
@@ -796,14 +855,14 @@ async function handleCreate() {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
-  background: var(--accent-bg);
+  background: var(--bg-hover);
   color: var(--accent);
   transition: all 0.3s ease;
 }
 
 .choice-card:hover .choice-indicator {
   background: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .choice-indicator .check {
@@ -812,7 +871,7 @@ async function handleCreate() {
 
 .choice-card-wrapper.active .choice-indicator {
   background: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 /* Inline form */
@@ -858,7 +917,7 @@ async function handleCreate() {
 .form-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-bg);
+  box-shadow: 0 0 0 4px var(--accent-focus-ring);
 }
 
 .form-input::placeholder {
@@ -935,27 +994,27 @@ async function handleCreate() {
 .form-error {
   font-family: 'Nunito', sans-serif;
   font-size: 0.9rem;
-  color: #e53e3e;
+  color: var(--error);
   margin: -0.5rem 0 1.5rem;
   padding: 0.5rem 0.75rem;
-  background: rgba(229, 62, 62, 0.1);
+  background: var(--error-bg);
   border-radius: 8px;
 }
 
 .input-error {
-  border-color: #e53e3e !important;
-  background: rgba(229, 62, 62, 0.03);
+  border-color: var(--error) !important;
+  background: var(--error-bg);
 }
 
 .input-error:focus {
-  box-shadow: 0 0 0 4px rgba(229, 62, 62, 0.15) !important;
+  box-shadow: 0 0 0 4px var(--error-bg) !important;
 }
 
 .field-error {
   display: block;
   font-family: 'Nunito', sans-serif;
   font-size: 0.8rem;
-  color: #e53e3e;
+  color: var(--error);
   margin-top: 0.4rem;
 }
 
@@ -1091,7 +1150,7 @@ async function handleCreate() {
 
 .option-badge.recommended {
   background: linear-gradient(135deg, var(--accent) 0%, var(--peach) 100%);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 /* Benefits comparison */
@@ -1176,7 +1235,7 @@ async function handleCreate() {
   font-family: 'Nunito', sans-serif;
   font-size: 0.85rem;
   color: var(--text-secondary);
-  background: var(--accent-bg);
+  background: var(--bg-hover);
   padding: 0.75rem 1rem;
   border-radius: 10px;
   margin: 0 0 1.5rem;
@@ -1200,7 +1259,7 @@ async function handleCreate() {
 
 .reset-choice:hover {
   color: var(--accent);
-  background: var(--accent-bg);
+  background: var(--bg-hover);
 }
 
 /* Animations */
@@ -1251,6 +1310,12 @@ async function handleCreate() {
 }
 
 /* Responsive */
+@media (max-width: 480px) {
+  .benefits-comparison {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .onboarding-page {
     padding: 1.5rem;

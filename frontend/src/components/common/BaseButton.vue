@@ -19,6 +19,7 @@ withDefaults(defineProps<Props>(), {
     class="base-button"
     :class="[`variant-${variant}`, `size-${size}`, { loading, disabled }]"
     :disabled="disabled || loading"
+    :aria-busy="loading"
   >
     <span class="button-content" :class="{ invisible: loading }">
       <slot />
@@ -68,7 +69,7 @@ withDefaults(defineProps<Props>(), {
 /* Variant: Primary */
 .variant-primary {
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-  color: white;
+  color: var(--text-on-accent);
   box-shadow: var(--shadow-accent);
 }
 
@@ -107,7 +108,7 @@ withDefaults(defineProps<Props>(), {
 
 .variant-outline:hover:not(:disabled) {
   background: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
   box-shadow:
     inset 0 0 0 2.5px var(--accent),
     var(--shadow-accent);

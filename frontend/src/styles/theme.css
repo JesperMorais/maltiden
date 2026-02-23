@@ -43,12 +43,58 @@
   --success: #48bb78;
   --warning: #f6ad55;
   --error: #e53e3e;
+  --error-bg: rgba(229, 62, 62, 0.1);
+
+  /* Text on colored backgrounds */
+  --text-on-accent: #ffffff;
+
+  /* Focus rings */
+  --accent-focus-ring: rgba(255, 107, 91, 0.15);
+
+  /* Spacing scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* Border radius scale */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Animation tokens */
+  --ease-default: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+
+  /* Semantic status colors */
+  --success-dark: #38a169;
+  --success-bg: rgba(72, 187, 120, 0.12);
+  --error-dark: #c53030;
+  --warning-bg: rgba(246, 173, 85, 0.12);
+  --warning-dark: #92400e;
+  --warning-surface: #fef3c7;
+  --warning-surface-end: #fde68a;
+  --accent-bg: rgba(255, 107, 91, 0.1);
+  --accent-bg-subtle: rgba(255, 107, 91, 0.12);
+  --shadow-accent-hover: 0 6px 16px rgba(255, 107, 91, 0.4);
+  --shadow-success: 0 6px 20px rgba(72, 187, 120, 0.35);
 
   /* Role badges */
   --role-owner-bg: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+  --role-owner-text: #c05621;
+  --role-owner-text-bg: rgba(237, 137, 54, 0.15);
   --role-member-bg: linear-gradient(135deg, #ff6b5b 0%, #ffb599 100%);
   --role-guest-bg: rgba(61, 44, 41, 0.1);
   --role-guest-text: #6b5a56;
+  --role-guest-avatar: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
 }
 
 [data-theme="dark"] {
@@ -91,12 +137,47 @@
   --success: #68d391;
   --warning: #fbd38d;
   --error: #fc8181;
+  --error-bg: rgba(252, 129, 129, 0.12);
+
+  /* Text on colored backgrounds */
+  --text-on-accent: #ffffff;
+
+  /* Focus rings */
+  --accent-focus-ring: rgba(255, 138, 125, 0.2);
+
+  /* Semantic status colors */
+  --success-dark: #48bb78;
+  --success-bg: rgba(104, 211, 145, 0.15);
+  --error-dark: #fc8181;
+  --warning-bg: rgba(251, 211, 141, 0.15);
+  --warning-dark: #fbd38d;
+  --warning-surface: rgba(251, 211, 141, 0.15);
+  --warning-surface-end: rgba(251, 211, 141, 0.25);
+  --accent-bg: rgba(255, 138, 125, 0.1);
+  --accent-bg-subtle: rgba(255, 138, 125, 0.15);
+  --shadow-accent-hover: 0 6px 16px rgba(255, 138, 125, 0.3);
+  --shadow-success: 0 6px 20px rgba(104, 211, 145, 0.25);
 
   /* Role badges */
   --role-owner-bg: linear-gradient(135deg, #fbd38d 0%, #f6ad55 100%);
+  --role-owner-text: #fbd38d;
+  --role-owner-text-bg: rgba(251, 211, 141, 0.15);
   --role-member-bg: linear-gradient(135deg, #ff8a7d 0%, #ffcbb8 100%);
   --role-guest-bg: rgba(255, 255, 255, 0.1);
   --role-guest-text: #b8aea8;
+  --role-guest-avatar: linear-gradient(135deg, #8a9bb0 0%, #607080 100%);
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Smooth transition when theme changes */
@@ -108,4 +189,23 @@ html {
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
+}
+
+/* Global focus-visible for all interactive elements (WCAG 2.4.7) */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--accent-focus-ring);
+}
+
+/* Remove default outline since we handle it above */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
 }

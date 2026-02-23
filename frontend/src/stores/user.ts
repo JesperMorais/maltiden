@@ -3,6 +3,19 @@ import { defineStore } from 'pinia'
 import type { User, UserRole } from '@/api/types/dashboard.types'
 import { tokenUtils } from '@/utils/token'
 import * as authApi from '@/api/auth.api'
+import { isAxiosError } from 'axios'
+
+function getSwedishAuthError(e: unknown, fallback: string): string {
+  if (isAxiosError(e)) {
+    const status = e.response?.status
+    const code = e.response?.data?.error as string | undefined
+    if (status === 401 || code === 'invalid_credentials') return 'Fel e-post eller lösenord'
+    if (status === 409 || code === 'email_taken') return 'E-postadressen är redan registrerad'
+    if (status === 400) return 'Ogiltig förfrågan — kontrollera dina uppgifter'
+    if (!e.response) return 'Kunde inte nå servern — kontrollera din internetanslutning'
+  }
+  return fallback
+}
 
 /**
  * User Store
@@ -91,8 +104,7 @@ export const useUserStore = defineStore('user', () => {
       })
       return true
     } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Inloggningen misslyckades'
-      error.value = errorMessage
+      error.value = getSwedishAuthError(e, 'Inloggningen misslyckades')
       return false
     } finally {
       isLoading.value = false
@@ -117,8 +129,7 @@ export const useUserStore = defineStore('user', () => {
       })
       return true
     } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Registreringen misslyckades'
-      error.value = errorMessage
+      error.value = getSwedishAuthError(e, 'Registreringen misslyckades')
       return false
     } finally {
       isLoading.value = false
