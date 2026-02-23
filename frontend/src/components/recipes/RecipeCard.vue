@@ -16,7 +16,7 @@ defineEmits<{
 
 <template>
   <SpotlightCard
-    spotlight-color="rgba(255, 107, 91, 0.12)"
+    :spotlight-color="'var(--accent-bg-subtle)'"
     class-name="recipe-spotlight"
   >
     <BaseCard class="recipe-card" padding="md" @click="$emit('click')">

@@ -1,16 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, toRefs } from 'vue'
+import { useFocusTrap } from '@/composables/useFocusTrap'
 
 interface Props {
   isOpen: boolean
   inviteCode: string
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+const { isOpen } = toRefs(props)
 
 const emit = defineEmits<{
   close: []
 }>()
+
+const inviteModalRef = ref<HTMLElement | null>(null)
+
+useFocusTrap(inviteModalRef, {
+  isActive: isOpen,
+  onEscape: () => emit('close'),
+})
 
 const copied = ref(false)
 let copyTimer: ReturnType<typeof setTimeout> | undefined
@@ -52,10 +61,10 @@ function handleOverlayClick(e: MouseEvent) {
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="isOpen" class="invite-overlay" @click="handleOverlayClick">
-        <div class="invite-modal">
+        <div ref="inviteModalRef" class="invite-modal" role="dialog" aria-modal="true" aria-labelledby="invite-modal-title">
           <!-- Header -->
           <div class="modal-header">
-            <h2>Bjud in familjemedlem</h2>
+            <h2 id="invite-modal-title">Bjud in familjemedlem</h2>
             <button class="close-btn" @click="emit('close')">
               <span>&times;</span>
             </button>
@@ -206,7 +215,7 @@ function handleOverlayClick(e: MouseEvent) {
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-  color: white;
+  color: var(--text-on-accent);
   box-shadow: var(--shadow-accent);
   margin-bottom: 1.25rem;
 }

@@ -20,6 +20,44 @@ func NewMenuService(menuStorage domain.MenuRepository, recipeStorage domain.Reci
 	}
 }
 
+// enrichMenuDays converts MenuDay slice to MenuResponseDay slice,
+// populating recipeName and emoji from recipe storage.
+func (s *MenuService) enrichMenuDays(days []domain.MenuDay) ([]domain.MenuResponseDay, error) {
+	// Collect unique recipe IDs
+	ids := make([]string, 0, len(days))
+	for _, d := range days {
+		if d.RecipeID != "" {
+			ids = append(ids, d.RecipeID)
+		}
+	}
+
+	// Batch-fetch recipes
+	recipeMap := make(map[string]*domain.Recipe)
+	if len(ids) > 0 {
+		var err error
+		recipeMap, err = s.recipeStorage.GetByIDs(ids)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	result := make([]domain.MenuResponseDay, len(days))
+	for i, d := range days {
+		rd := domain.MenuResponseDay{
+			Date:     d.Date,
+			RecipeID: d.RecipeID,
+			Servings: d.Servings,
+			Skip:     d.Skip,
+		}
+		if r, ok := recipeMap[d.RecipeID]; ok {
+			rd.RecipeName = r.Name
+			rd.Emoji = r.Emoji
+		}
+		result[i] = rd
+	}
+	return result, nil
+}
+
 func (s *MenuService) Generate(householdID string, req domain.GenerateMenuRequest) (*domain.MenuResponse, error) {
 	// Validate and default days (VALID-13)
 	days := req.Days
@@ -104,9 +142,14 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		return nil, err
 	}
 
+	enrichedDays, err := s.enrichMenuDays(menu.Days)
+	if err != nil {
+		return nil, err
+	}
+
 	return &domain.MenuResponse{
 		ID:   menu.ID,
-		Days: menu.Days,
+		Days: enrichedDays,
 	}, nil
 }
 
@@ -132,9 +175,14 @@ func (s *MenuService) UpdateCurrent(householdID string, req domain.UpdateMenuReq
 		return nil, err
 	}
 
+	enrichedDays, err := s.enrichMenuDays(menu.Days)
+	if err != nil {
+		return nil, err
+	}
+
 	return &domain.MenuResponse{
 		ID:   menu.ID,
-		Days: menu.Days,
+		Days: enrichedDays,
 	}, nil
 }
 
@@ -148,8 +196,13 @@ func (s *MenuService) GetCurrent(householdID string) (*domain.MenuResponse, erro
 		return nil, nil
 	}
 
+	enrichedDays, err := s.enrichMenuDays(menu.Days)
+	if err != nil {
+		return nil, err
+	}
+
 	return &domain.MenuResponse{
 		ID:   menu.ID,
-		Days: menu.Days,
+		Days: enrichedDays,
 	}, nil
 }

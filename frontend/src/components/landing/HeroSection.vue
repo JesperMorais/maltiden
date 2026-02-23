@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
+import { computed } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
@@ -14,8 +15,17 @@ interface Props {
 
 defineProps<Props>()
 
+const router = useRouter()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
+
+function goToDashboard() {
+  router.push('/dashboard')
+}
+
+const waveLineColor = computed(() =>
+  themeStore.isDarkMode ? 'rgba(255, 138, 125, 0.15)' : 'rgba(255, 107, 91, 0.12)',
+)
 </script>
 
 <template>
@@ -41,7 +51,7 @@ const themeStore = useThemeStore()
 
     <!-- Interactive wave background -->
     <WavesBackground
-      line-color="rgba(255, 107, 91, 0.12)"
+      :line-color="waveLineColor"
       background-color="transparent"
       :wave-speed-x="0.01"
       :wave-speed-y="0.004"
@@ -63,7 +73,7 @@ const themeStore = useThemeStore()
     </div>
 
     <!-- Floating food illustrations -->
-    <div class="floating-elements">
+    <div class="floating-elements" aria-hidden="true">
       <span class="float-item float-1">🥕</span>
       <span class="float-item float-2">🍅</span>
       <span class="float-item float-3">🥦</span>
@@ -84,12 +94,10 @@ const themeStore = useThemeStore()
       <div class="hero-actions">
         <!-- Logged in: Go to dashboard -->
         <template v-if="userStore.isAuthenticated">
-          <RouterLink v-prefetch="'dashboard'" to="/dashboard" class="cta-link">
-            <BaseButton variant="primary" size="lg">
-              Gå till Dashboard
-              <span class="btn-arrow">→</span>
-            </BaseButton>
-          </RouterLink>
+          <BaseButton variant="primary" size="lg" @click="goToDashboard">
+            Gå till Dashboard
+            <span class="btn-arrow">→</span>
+          </BaseButton>
           <p class="logged-in-text">
             Inloggad som <strong>{{ userStore.userName }}</strong>
           </p>

@@ -224,17 +224,17 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
 }
 
 .confidence-badge.high {
-  background: rgba(72, 187, 120, 0.15);
+  background: var(--success-bg);
   color: #2f855a;
 }
 
 .confidence-badge.medium {
-  background: rgba(237, 181, 61, 0.15);
+  background: var(--warning-bg);
   color: #b7791f;
 }
 
 .confidence-badge.low {
-  background: rgba(229, 62, 62, 0.15);
+  background: var(--error-bg);
   color: #c53030;
 }
 
@@ -251,7 +251,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
   font-weight: 600;
   font-size: 0.9rem;
   color: #b7791f;
-  background: rgba(237, 181, 61, 0.1);
+  background: var(--warning-bg);
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
 }
@@ -300,7 +300,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
 .form-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(255, 107, 91, 0.1);
+  box-shadow: 0 0 0 4px var(--accent-bg);
 }
 
 .form-input::placeholder {
@@ -382,7 +382,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 107, 91, 0.1);
+  background: var(--accent-bg);
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -402,7 +402,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
 
 .remove-btn:hover {
   opacity: 1;
-  background: rgba(229, 62, 62, 0.1);
+  background: var(--error-bg);
 }
 
 .add-btn {
@@ -422,7 +422,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
 
 .add-btn:hover {
   border-color: var(--accent);
-  background: rgba(255, 107, 91, 0.05);
+  background: var(--bg-hover);
 }
 
 /* Actions */

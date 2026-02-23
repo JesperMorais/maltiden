@@ -12,7 +12,9 @@ import HouseholdWidget from '@/components/dashboard/HouseholdWidget.vue'
 import ShoppingListWidget from '@/components/dashboard/ShoppingListWidget.vue'
 import SettingsModal from '@/components/dashboard/SettingsModal.vue'
 import InviteModal from '@/components/dashboard/InviteModal.vue'
+import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
 import DashboardSkeleton from '@/components/skeleton/layouts/DashboardSkeleton.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
 import RotatingText from '@/components/vue-bits/RotatingText.vue'
 import type { MenuDay } from '@/api/types/dashboard.types'
@@ -32,6 +34,7 @@ const prefsStore = usePlanningPreferencesStore()
 // Modal state
 const showSettings = ref(false)
 const showInvite = ref(false)
+const selectedRecipeId = ref<string | null>(null)
 
 onMounted(() => {
   dashboardStore.fetchDashboard()
@@ -40,13 +43,11 @@ onMounted(() => {
 })
 
 function handleDayClick(day: MenuDay) {
-  console.log('Day clicked:', day)
-  // TODO: Open day detail modal
+  selectedRecipeId.value = day.meal?.id ?? null
 }
 
 function handleMealClick() {
-  console.log('Today meal clicked')
-  // TODO: Open recipe detail
+  selectedRecipeId.value = dashboardStore.todaysMeal?.id ?? null
 }
 
 function handleLogout() {
@@ -103,12 +104,7 @@ function handleViewShoppingList() {
     <!-- Error state -->
     <div v-else-if="dashboardStore.error" class="error-state">
       <div class="error-content">
-        <span class="error-icon">😅</span>
-        <h2>Något gick fel</h2>
-        <p>{{ dashboardStore.error }}</p>
-        <button class="retry-btn" @click="dashboardStore.fetchDashboard(true)">
-          Försök igen
-        </button>
+        <ErrorState :description="dashboardStore.error" @retry="dashboardStore.fetchDashboard(true)" />
       </div>
     </div>
 
@@ -197,6 +193,14 @@ function handleViewShoppingList() {
         :invite-code="dashboardStore.inviteCode"
         @close="handleCloseInvite"
       />
+
+      <!-- Recipe Detail Modal -->
+      <RecipeDetailModal
+        :recipe-id="selectedRecipeId"
+        @close="selectedRecipeId = null"
+        @updated="dashboardStore.fetchDashboard(true)"
+        @deleted="selectedRecipeId = null; dashboardStore.fetchDashboard(true)"
+      />
     </template>
   </div>
 </template>
@@ -218,46 +222,7 @@ function handleViewShoppingList() {
 }
 
 .error-content {
-  text-align: center;
   max-width: 400px;
-}
-
-.error-icon {
-  font-size: 4rem;
-  display: block;
-  margin-bottom: 1rem;
-}
-
-.error-content h2 {
-  font-family: 'Fraunces', serif;
-  font-weight: 700;
-  font-size: 1.75rem;
-  color: var(--text-primary);
-  margin: 0 0 0.5rem;
-}
-
-.error-content p {
-  font-family: 'Nunito', sans-serif;
-  color: var(--text-secondary);
-  margin: 0 0 1.5rem;
-}
-
-.retry-btn {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 1rem;
-  color: white;
-  background: var(--accent);
-  border: none;
-  border-radius: 100px;
-  padding: 0.85em 2em;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.retry-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-accent);
 }
 
 /* Dashboard greeting */
@@ -282,7 +247,7 @@ function handleViewShoppingList() {
 .dashboard-content {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1rem 2rem 2rem;
+  padding: 2rem 2rem 2rem;
 }
 
 .dashboard-grid {

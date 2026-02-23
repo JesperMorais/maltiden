@@ -272,7 +272,7 @@ function handleViewRecipes() {
 .choose-card:hover {
   border-color: var(--accent);
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(255, 107, 91, 0.15);
+  box-shadow: 0 8px 24px var(--accent-focus-ring);
 }
 
 .choose-card-icon {

@@ -116,7 +116,7 @@ const icons: Record<string, string> = {
   font-size: 0.75rem;
   font-weight: 800;
   flex-shrink: 0;
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .icon-success {

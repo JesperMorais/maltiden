@@ -133,15 +133,15 @@ const emit = defineEmits<{
   background: linear-gradient(
     90deg,
     transparent 0%,
-    var(--shimmer-color) 50%,
+    rgba(255, 255, 255, 0.12) 50%,
     transparent 100%
   );
-  animation: shimmer 3s ease-in-out infinite;
+  animation: shimmer 8s ease-in-out infinite;
 }
 
 @keyframes shimmer {
-  0%, 100% { left: -100%; }
-  50% { left: 100%; }
+  0%, 70%, 100% { left: -100%; }
+  30% { left: 100%; }
 }
 
 /* Content */
@@ -223,7 +223,7 @@ const emit = defineEmits<{
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
   background: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
   border-radius: 100px;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;

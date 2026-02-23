@@ -41,6 +41,8 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
         <button
           class="days-badge"
           :class="{ open: isPickerOpen }"
+          :aria-expanded="isPickerOpen"
+          aria-haspopup="true"
           @click="isPickerOpen = !isPickerOpen"
         >
           {{ badgeLabel }}
@@ -166,6 +168,7 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
 .days-grid {
   display: grid;
   gap: 0.5rem;
+  overflow: hidden;
 }
 
 /* Day list TransitionGroup animations */
@@ -176,6 +179,10 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
 .day-list-leave-active {
   transition: all 0.2s ease;
   position: absolute;
+  width: 0;
+  overflow: hidden;
+  padding: 0;
+  opacity: 0;
 }
 
 .day-list-enter-from {
@@ -224,6 +231,13 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
 
 .day-card.skipped {
   opacity: 0.5;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    var(--border-color) 4px,
+    var(--border-color) 5px
+  );
 }
 
 .day-card.skipped:hover {

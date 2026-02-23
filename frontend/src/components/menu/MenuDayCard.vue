@@ -163,7 +163,7 @@ const emit = defineEmits<{
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 107, 91, 0.1) 50%,
+    var(--accent-bg) 50%,
     transparent 100%
   );
   animation: shimmer 1.5s ease-in-out infinite;
@@ -186,7 +186,7 @@ const emit = defineEmits<{
 .menu-day-card.rolling {
   border-color: var(--accent);
   border-style: solid;
-  box-shadow: 0 0 0 1px rgba(255, 107, 91, 0.15),
+  box-shadow: 0 0 0 1px var(--accent-focus-ring),
     var(--shadow-sm);
 }
 
