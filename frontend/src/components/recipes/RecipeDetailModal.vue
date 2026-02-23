@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Recipe, CreateRecipeRequest } from '@/api/recipes.api'
 import { getRecipe, updateRecipe, deleteRecipe } from '@/api/recipes.api'
+import { getCurrentMenu, saveMenu } from '@/api/menu.api'
+import type { Menu, MenuDay as ApiMenuDay } from '@/api/menu.api'
 import RecipeEditForm from '@/components/recipe-parser/RecipeEditForm.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
 import { useToast } from '@/composables/useToast'
+import { useFocusTrap } from '@/composables/useFocusTrap'
 
 type EditableRecipe = CreateRecipeRequest & { emoji?: string }
 
@@ -20,6 +24,13 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const modalCardRef = ref<HTMLElement | null>(null)
+const isModalActive = computed(() => !!props.recipeId)
+
+useFocusTrap(modalCardRef, {
+  isActive: isModalActive,
+  onEscape: handleClose,
+})
 
 const recipe = ref<Recipe | null>(null)
 const isLoading = ref(false)
@@ -37,6 +48,12 @@ const editableRecipe = ref<EditableRecipe>({
 })
 const isSaving = ref(false)
 const isDeleting = ref(false)
+
+// Add to menu state
+const showDayPicker = ref(false)
+const addingToMenu = ref(false)
+const currentMenu = ref<Menu | null>(null)
+const dayNames = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
 
 watch(
   () => props.recipeId,
@@ -130,8 +147,62 @@ async function handleDelete() {
   }
 }
 
+async function openDayPicker() {
+  try {
+    const menu = await getCurrentMenu()
+    if (!menu) {
+      toast.error('Generera en meny först')
+      return
+    }
+    currentMenu.value = menu
+    showDayPicker.value = true
+  } catch {
+    toast.error('Kunde inte hämta menyn')
+  }
+}
+
+function getDayLabel(day: ApiMenuDay): string {
+  const date = new Date(day.date + 'T12:00:00')
+  return dayNames[date.getDay()]!
+}
+
+async function addToMenuDay(dayIndex: number) {
+  if (!currentMenu.value || !recipe.value || !props.recipeId) return
+
+  addingToMenu.value = true
+  try {
+    const updatedDays = currentMenu.value.days.map((d, i) => {
+      if (i === dayIndex) {
+        return {
+          date: d.date,
+          recipeId: props.recipeId!,
+          servings: recipe.value!.servings,
+        }
+      }
+      return {
+        date: d.date,
+        recipeId: d.recipeId,
+        servings: d.servings,
+        skip: d.skip,
+      }
+    })
+
+    await saveMenu(updatedDays)
+    const day = currentMenu.value.days[dayIndex]
+    const label = day ? getDayLabel(day) : ''
+    toast.success(`Recept tillagt för ${label}!`)
+    showDayPicker.value = false
+    emit('updated', recipe.value!)
+  } catch {
+    toast.error('Kunde inte uppdatera menyn')
+  } finally {
+    addingToMenu.value = false
+  }
+}
+
 function handleClose() {
   mode.value = 'detail'
+  showDayPicker.value = false
   emit('close')
 }
 </script>
@@ -139,7 +210,7 @@ function handleClose() {
 <template>
   <Teleport to="body">
     <div v-if="recipeId" class="modal-overlay" @click="handleClose">
-      <div class="modal-card" @click.stop>
+      <div ref="modalCardRef" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="recipe-detail-title" @click.stop>
         <!-- Loading -->
         <div v-if="isLoading" class="modal-loading">
           <div class="spinner-emoji">🍳</div>
@@ -147,10 +218,7 @@ function handleClose() {
         </div>
 
         <!-- Error -->
-        <div v-else-if="error" class="modal-error">
-          <div class="error-icon">⚠️</div>
-          <p class="error-text">{{ error }}</p>
-        </div>
+        <ErrorState v-else-if="error" icon="⚠️" title="Kunde inte ladda receptet" :show-retry="false" />
 
         <!-- Confirm delete -->
         <template v-else-if="mode === 'confirm-delete' && recipe">
@@ -196,7 +264,7 @@ function handleClose() {
         <template v-else-if="recipe">
           <div class="modal-header">
             <div class="recipe-emoji">{{ recipe.emoji || '🍽️' }}</div>
-            <h2 class="recipe-title">{{ recipe.name }}</h2>
+            <h2 id="recipe-detail-title" class="recipe-title">{{ recipe.name }}</h2>
             <p class="recipe-meta">{{ recipe.servings }} portioner</p>
             <div v-if="recipe.tags.length" class="recipe-tags">
               <span v-for="tag in recipe.tags" :key="tag" class="tag-chip">
@@ -226,8 +294,29 @@ function handleClose() {
             </section>
           </div>
 
+          <!-- Day picker for add to menu -->
+          <div v-if="showDayPicker && currentMenu" class="day-picker-section">
+            <div class="day-picker-header">
+              <span class="day-picker-title">Välj dag</span>
+              <button class="day-picker-close" @click="showDayPicker = false">&times;</button>
+            </div>
+            <div class="day-picker-grid">
+              <button
+                v-for="(day, i) in currentMenu.days"
+                :key="day.date"
+                class="day-picker-btn"
+                :disabled="addingToMenu"
+                @click="addToMenuDay(i)"
+              >
+                <span class="day-picker-label">{{ getDayLabel(day) }}</span>
+                <span class="day-picker-current">{{ day.emoji || (day.recipeId ? '🍽️' : '—') }}</span>
+              </button>
+            </div>
+          </div>
+
           <div class="modal-footer">
             <button class="delete-btn" @click="confirmDelete">Ta bort</button>
+            <button class="edit-btn" @click="openDayPicker">Lägg till i meny</button>
             <button class="edit-btn" @click="startEdit">Redigera</button>
             <button class="close-btn" @click="handleClose">Stäng</button>
           </div>
@@ -246,7 +335,7 @@ function handleClose() {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay-bg);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -265,8 +354,7 @@ function handleClose() {
   overflow-y: auto;
 }
 
-.modal-loading,
-.modal-error {
+.modal-loading {
   text-align: center;
   padding: 3rem 2rem;
 }
@@ -294,18 +382,6 @@ function handleClose() {
   font-size: 1.1rem;
   color: var(--text-primary);
   margin: 1rem 0 0;
-}
-
-.error-icon {
-  font-size: 3rem;
-  margin-bottom: 0.5rem;
-}
-
-.error-text {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin: 0;
 }
 
 .modal-header {
@@ -431,7 +507,7 @@ function handleClose() {
 .close-btn {
   padding: 0.875rem 2.5rem;
   background: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
   border: none;
   border-radius: 100px;
   font-family: 'Nunito', sans-serif;
@@ -481,7 +557,7 @@ function handleClose() {
 
 .delete-btn:hover {
   opacity: 1;
-  background: rgba(229, 62, 62, 0.08);
+  background: var(--error-bg);
 }
 
 /* Confirm delete */
@@ -552,7 +628,7 @@ function handleClose() {
   transition: all 0.2s ease;
   background: #e53e3e;
   border: none;
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .btn-delete:hover:not(:disabled) {
@@ -563,6 +639,83 @@ function handleClose() {
 .btn-delete:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+
+/* Day picker */
+.day-picker-section {
+  padding: 1rem 2rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.day-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.day-picker-title {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.day-picker-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+}
+
+.day-picker-close:hover {
+  color: var(--text-primary);
+}
+
+.day-picker-grid {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.day-picker-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 52px;
+}
+
+.day-picker-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.day-picker-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.day-picker-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.day-picker-current {
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 /* Edit mode */

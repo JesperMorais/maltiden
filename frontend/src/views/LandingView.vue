@@ -133,7 +133,7 @@ onMounted(() => {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 1rem;
-  color: white;
+  color: var(--text-on-accent);
   background: var(--accent);
   border: none;
   border-radius: 100px;

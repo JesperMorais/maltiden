@@ -149,7 +149,7 @@ const emit = defineEmits<{
   gap: 0.75rem;
   padding: 1rem 2.5rem;
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-  color: white;
+  color: var(--text-on-accent);
   border: none;
   border-radius: 100px;
   font-family: 'Nunito', sans-serif;

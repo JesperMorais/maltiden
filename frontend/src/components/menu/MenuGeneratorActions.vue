@@ -189,7 +189,7 @@ const emit = defineEmits<{
 /* Save button */
 .btn-save {
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-  color: white;
+  color: var(--text-on-accent);
   border-color: var(--accent);
   box-shadow: 0 4px 12px rgba(255, 107, 91, 0.3);
 }

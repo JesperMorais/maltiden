@@ -100,7 +100,7 @@ const isWeekdays = computed(() => {
 .day-chip.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .presets {
@@ -130,6 +130,6 @@ const isWeekdays = computed(() => {
 .preset-btn.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
 }
 </style>

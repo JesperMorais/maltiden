@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
+import { useThemeStore } from '@/stores/theme'
 
 interface Props {
   title: string
@@ -17,13 +19,19 @@ interface Props {
 }
 
 defineProps<Props>()
+
+const themeStore = useThemeStore()
+
+const waveLineColor = computed(() =>
+  themeStore.isDarkMode ? 'rgba(255, 180, 130, 0.14)' : 'rgba(255, 180, 130, 0.1)',
+)
 </script>
 
 <template>
   <section class="cta-section">
     <!-- Interactive wave background -->
     <WavesBackground
-      line-color="rgba(255, 180, 130, 0.1)"
+      :line-color="waveLineColor"
       background-color="transparent"
       :wave-speed-x="0.006"
       :wave-speed-y="0.003"
@@ -80,7 +88,7 @@ defineProps<Props>()
       </div>
 
       <!-- Decorative food items -->
-      <div class="food-decoration">
+      <div class="food-decoration" aria-hidden="true">
         <span class="food-item food-1">🥗</span>
         <span class="food-item food-2">🍝</span>
         <span class="food-item food-3">🥘</span>
