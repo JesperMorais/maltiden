@@ -17,12 +17,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/",
-    "test:e2e": "npx --prefix .. playwright test",
-    "test:e2e:ui": "npx --prefix .. playwright test --ui"
+    "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
     "axios": "^1.13.5",
+    "lucide-vue-next": "^0.575.0",
     "motion-v": "^2.0.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.29",

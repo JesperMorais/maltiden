@@ -6,6 +6,7 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useSkeleton } from '@/composables/useSkeleton'
 import ErrorState from '@/components/common/ErrorState.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { ClipboardList, ShoppingCart } from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
@@ -74,12 +75,13 @@ onMounted(async () => {
         <!-- No menu state -->
         <EmptyState
           v-else-if="!menuId"
-          icon="📋"
           title="Ingen aktiv meny"
           description="Generera en meny först så skapas din inköpslista automatiskt."
           action-label="Generera meny"
           @action="router.push({ name: 'generate-menu' })"
-        />
+        >
+          <template #icon><ClipboardList :size="48" color="var(--text-muted)" /></template>
+        </EmptyState>
 
         <!-- Error state -->
         <ErrorState v-else-if="error" :description="error" @retry="fetchList(menuId!)" />
@@ -87,12 +89,13 @@ onMounted(async () => {
         <!-- Empty state -->
         <EmptyState
           v-else-if="totalItems === 0"
-          icon="🛒"
           title="Ingen inköpslista"
           description="Generera en meny först så skapas din inköpslista automatiskt."
           action-label="Generera meny"
           @action="router.push({ name: 'generate-menu' })"
-        />
+        >
+          <template #icon><ShoppingCart :size="48" color="var(--text-muted)" /></template>
+        </EmptyState>
 
         <!-- Shopping list -->
         <template v-else>
@@ -279,7 +282,7 @@ onMounted(async () => {
 }
 
 .item-row.checked {
-  opacity: 0.5;
+  opacity: 0.65;
 }
 
 .item-label {

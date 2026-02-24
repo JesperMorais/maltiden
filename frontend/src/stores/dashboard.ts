@@ -151,6 +151,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
       // If backend fails, fall back to full mock data
       console.warn('Using mock dashboard data:', e)
       dashboardData.value = mockDashboardData
+      // Set menuId so shopping list can load in mock mode
+      currentMenuId.value = 'menu_current'
 
       if (dashboardData.value.user) {
         userStore.setUser(dashboardData.value.user)

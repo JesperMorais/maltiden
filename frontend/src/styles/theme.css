@@ -19,6 +19,7 @@
   --accent: #ff6b5b;
   --accent-dark: #e85a4a;
   --accent-light: #ff8a7d;
+  --accent-text: #c4402e; /* WCAG AA: 4.75:1 on cream backgrounds */
   --peach: #ffb599;
   --yellow-soft: #ffd93d;
   --orange-soft: #ffab5e;
@@ -89,11 +90,11 @@
 
   /* Role badges */
   --role-owner-bg: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
-  --role-owner-text: #c05621;
+  --role-owner-text: #9a4217; /* WCAG AA: 5.79:1 on #FCEDE1 */
   --role-owner-text-bg: rgba(237, 137, 54, 0.15);
   --role-member-bg: linear-gradient(135deg, #ff6b5b 0%, #ffb599 100%);
-  --role-guest-bg: rgba(61, 44, 41, 0.1);
-  --role-guest-text: #6b5a56;
+  --role-guest-bg: rgba(61, 44, 41, 0.12);
+  --role-guest-text: #655350; /* WCAG AA: 6.88:1 on #FFF8F4 */
   --role-guest-avatar: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
 }
 
@@ -113,6 +114,7 @@
   --accent: #ff8a7d;
   --accent-dark: #ff6b5b;
   --accent-light: #ffb599;
+  --accent-text: #ff8a7d; /* High contrast on dark backgrounds */
   --peach: #ffcbb8;
   --yellow-soft: #d4b535;
   --orange-soft: #cc8a4e;

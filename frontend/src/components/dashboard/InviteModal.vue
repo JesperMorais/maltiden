@@ -195,7 +195,7 @@ function handleOverlayClick(e: MouseEvent) {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 2rem;
-  color: var(--accent);
+  color: var(--accent-text);
   letter-spacing: 0.15em;
   user-select: all;
 }
