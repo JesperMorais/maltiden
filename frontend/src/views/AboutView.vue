@@ -101,7 +101,7 @@ import { RouterLink } from 'vue-router'
           <article class="team-card team-card-david">
             <div class="card-accent"></div>
             <div class="member-avatar">
-              <img src="@/assets/images/david.jpeg" alt="David" class="avatar-image" />
+              <img src="@/assets/images/david.webp" alt="David" class="avatar-image" loading="lazy" width="140" height="140" />
               <div class="avatar-ring"></div>
             </div>
             <h3 class="member-name">David</h3>
@@ -114,7 +114,7 @@ import { RouterLink } from 'vue-router'
           <article class="team-card team-card-jesper">
             <div class="card-accent"></div>
             <div class="member-avatar">
-              <img src="@/assets/images/jesper.jpeg" alt="Jesper" class="avatar-image" />
+              <img src="@/assets/images/jesper.webp" alt="Jesper" class="avatar-image" loading="lazy" width="140" height="140" />
               <div class="avatar-ring"></div>
             </div>
             <h3 class="member-name">Jesper</h3>
@@ -127,7 +127,7 @@ import { RouterLink } from 'vue-router'
           <article class="team-card team-card-philip">
             <div class="card-accent"></div>
             <div class="member-avatar">
-              <img src="@/assets/images/philip.jpeg" alt="Philip" class="avatar-image" />
+              <img src="@/assets/images/philip.webp" alt="Philip" class="avatar-image" loading="lazy" width="140" height="140" />
               <div class="avatar-ring"></div>
             </div>
             <h3 class="member-name">Philip</h3>

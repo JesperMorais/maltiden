@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import { RouterView } from 'vue-router'
-import ToastNotification from '@/components/common/ToastNotification.vue'
+
+const ToastNotification = defineAsyncComponent(() =>
+  import('@/components/common/ToastNotification.vue')
+)
 </script>
 
 <template>
