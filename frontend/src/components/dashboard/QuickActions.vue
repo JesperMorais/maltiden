@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { type Component } from 'vue'
 import { useUserStore } from '@/stores/user'
 import LockedAction from '@/components/common/LockedAction.vue'
 import SpotlightCard from '@/components/vue-bits/SpotlightCard.vue'
 import ClickSpark from '@/components/vue-bits/ClickSpark.vue'
+import { RefreshCw, BookOpen, Users, FileText } from 'lucide-vue-next'
 
 const userStore = useUserStore()
 
@@ -10,37 +12,44 @@ const emit = defineEmits<{
   (e: 'generate-menu' | 'view-recipes' | 'invite-member' | 'parse-recipe'): void
 }>()
 
-const actions = [
+const actions: {
+  id: string
+  icon: Component
+  label: string
+  description: string
+  event: 'generate-menu' | 'view-recipes' | 'invite-member' | 'parse-recipe'
+  requiresMember: boolean
+}[] = [
   {
     id: 'generate',
-    icon: '🔄',
+    icon: RefreshCw,
     label: 'Generera meny',
     description: 'Skapa ny veckomeny',
-    event: 'generate-menu' as const,
+    event: 'generate-menu',
     requiresMember: true
   },
   {
     id: 'recipes',
-    icon: '📖',
+    icon: BookOpen,
     label: 'Recept',
     description: 'Hantera dina recept',
-    event: 'view-recipes' as const,
+    event: 'view-recipes',
     requiresMember: true
   },
   {
     id: 'invite',
-    icon: '👥',
+    icon: Users,
     label: 'Bjud in',
     description: 'Dela med familjen',
-    event: 'invite-member' as const,
+    event: 'invite-member',
     requiresMember: true
   },
   {
     id: 'parse',
-    icon: '📝',
+    icon: FileText,
     label: 'Tolka recept',
     description: 'Klistra in & tolka',
-    event: 'parse-recipe' as const,
+    event: 'parse-recipe',
     requiresMember: true
   }
 ]
@@ -76,7 +85,7 @@ function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-memb
               class="action-button"
               @click="handleAction(action.event)"
             >
-              <span class="action-icon">{{ action.icon }}</span>
+              <span class="action-icon"><component :is="action.icon" :size="24" /></span>
               <div class="action-text">
                 <span class="action-label">{{ action.label }}</span>
                 <span class="action-desc">{{ action.description }}</span>
@@ -133,8 +142,13 @@ function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-memb
 }
 
 .action-icon {
-  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
+  color: var(--accent);
 }
 
 .action-text {

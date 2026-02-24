@@ -259,7 +259,7 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
 }
 
 .day-card.today .day-name {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .day-meal {
@@ -317,20 +317,27 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
 @media (max-width: 640px) {
   .days-grid {
     gap: 0.35rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    padding-bottom: 0.25rem;
   }
 
   .day-card {
-    padding: 0.5rem 0.25rem;
+    padding: 0.6rem 0.35rem;
     border-radius: 12px;
+    min-width: 52px;
+    min-height: 80px;
+    scroll-snap-align: start;
   }
 
   .day-name {
-    font-size: 0.65rem;
+    font-size: 0.7rem;
   }
 
   .day-meal {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
   }
 
   .meal-emoji {

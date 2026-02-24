@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { UserRole } from '@/api/types/dashboard.types'
+import { Home, Settings, LogOut } from 'lucide-vue-next'
 
 interface Props {
   householdName: string
@@ -48,7 +49,7 @@ function handleSettings() {
 
       <!-- Household name -->
       <div class="household-badge">
-        <span class="household-icon">🏠</span>
+        <span class="household-icon"><Home :size="16" /></span>
         <span class="household-name">{{ householdName }}</span>
       </div>
 
@@ -70,12 +71,12 @@ function handleSettings() {
         <Transition name="dropdown">
           <div v-if="isDropdownOpen" class="dropdown">
             <button class="dropdown-item" @click="handleSettings">
-              <span class="dropdown-icon">⚙️</span>
+              <span class="dropdown-icon"><Settings :size="18" /></span>
               <span>Inställningar</span>
             </button>
             <div class="dropdown-divider"></div>
             <button class="dropdown-item logout" @click="handleLogout">
-              <span class="dropdown-icon">👋</span>
+              <span class="dropdown-icon"><LogOut :size="18" /></span>
               <span>Logga ut</span>
             </button>
           </div>
@@ -200,7 +201,7 @@ function handleSettings() {
 .role-badge {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.2rem 0.5rem;
