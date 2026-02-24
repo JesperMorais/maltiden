@@ -47,6 +47,9 @@ export function useShoppingList() {
   }
 
   async function toggle(itemId: string, checked: boolean) {
+    const menuId = shoppingList.value?.menuId
+    if (!menuId) return
+
     // Optimistic update
     for (const cat of categories.value) {
       const item = cat.items.find((i) => i.id === itemId)
@@ -57,7 +60,7 @@ export function useShoppingList() {
     }
 
     try {
-      await toggleItem(itemId, checked)
+      await toggleItem(itemId, checked, menuId)
     } catch {
       // Revert on failure
       for (const cat of categories.value) {

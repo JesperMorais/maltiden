@@ -41,11 +41,15 @@ export async function getShoppingList(menuId?: string): Promise<ShoppingList> {
 /**
  * Toggle item checked status
  */
-export async function toggleItem(itemId: string, checked: boolean): Promise<{ ok: boolean }> {
+export async function toggleItem(
+  itemId: string,
+  checked: boolean,
+  menuId: string,
+): Promise<{ ok: boolean }> {
   if (USE_MOCKS) {
     return mockToggleItem(itemId, checked)
   }
 
-  const { data } = await apiClient.patch<{ ok: boolean }>(`/shopping-list/items/${itemId}`, { checked })
+  const { data } = await apiClient.patch<{ ok: boolean }>(`/shopping-list/items/${itemId}`, { checked }, { params: { menuId } })
   return data
 }
