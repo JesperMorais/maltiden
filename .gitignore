@@ -38,6 +38,10 @@ Thumbs.db
 node_modules/
 /test-results/
 /playwright-report/
+/playwright-report-e2e/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# E2E build artifacts
+backend/static/
