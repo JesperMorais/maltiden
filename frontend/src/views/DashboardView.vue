@@ -280,7 +280,7 @@ function handleViewShoppingList() {
   .sidebar {
     position: static;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
   }
 }
@@ -292,6 +292,22 @@ function handleViewShoppingList() {
 
   .sidebar {
     grid-template-columns: 1fr;
+    position: relative;
+  }
+
+  /* Scroll hint gradient for below-fold content */
+  .sidebar::after {
+    content: '';
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    background: linear-gradient(to top, var(--bg-secondary) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 10;
+    opacity: 1;
+    transition: opacity 0.3s ease;
   }
 }
 </style>

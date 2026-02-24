@@ -83,7 +83,7 @@ const isWeekdays = computed(() => {
   background: transparent;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;

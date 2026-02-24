@@ -3,6 +3,7 @@ import { ref, toRefs } from 'vue'
 import type { User } from '@/api/types/dashboard.types'
 import { useThemeStore } from '@/stores/theme'
 import { useFocusTrap } from '@/composables/useFocusTrap'
+import { User as UserIcon, Bell, Palette, Settings, LogOut } from 'lucide-vue-next'
 
 interface Props {
   user: User | null
@@ -65,7 +66,7 @@ function handleOverlayClick(e: MouseEvent) {
             <!-- Profile Section -->
             <section class="settings-section">
               <h3>
-                <span class="section-icon">👤</span>
+                <span class="section-icon"><UserIcon :size="16" /></span>
                 Profil
               </h3>
               <div class="profile-card">
@@ -85,7 +86,7 @@ function handleOverlayClick(e: MouseEvent) {
             <!-- Notifications Section -->
             <section class="settings-section">
               <h3>
-                <span class="section-icon">🔔</span>
+                <span class="section-icon"><Bell :size="16" /></span>
                 Notifikationer
               </h3>
               <div class="settings-options">
@@ -135,7 +136,7 @@ function handleOverlayClick(e: MouseEvent) {
             <!-- Appearance Section -->
             <section class="settings-section">
               <h3>
-                <span class="section-icon">🎨</span>
+                <span class="section-icon"><Palette :size="16" /></span>
                 Utseende
               </h3>
               <div class="settings-options">
@@ -159,12 +160,12 @@ function handleOverlayClick(e: MouseEvent) {
             <!-- Account Section -->
             <section class="settings-section">
               <h3>
-                <span class="section-icon">⚙️</span>
+                <span class="section-icon"><Settings :size="16" /></span>
                 Konto
               </h3>
               <div class="account-actions">
                 <button class="action-btn logout-btn" @click="handleLogout">
-                  <span class="btn-icon">👋</span>
+                  <span class="btn-icon"><LogOut :size="18" /></span>
                   Logga ut
                 </button>
               </div>
@@ -329,7 +330,7 @@ function handleOverlayClick(e: MouseEvent) {
   display: inline-block;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.25rem 0.75rem;

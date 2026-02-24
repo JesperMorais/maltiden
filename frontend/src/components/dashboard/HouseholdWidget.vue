@@ -5,6 +5,7 @@ import { useUserStore } from '@/stores/user'
 import { useDashboardStore } from '@/stores/dashboard'
 import { updateMemberStatus } from '@/api/household.api'
 import { useToast } from '@/composables/useToast'
+import { Settings, AlertTriangle, Link, Package } from 'lucide-vue-next'
 
 interface Props {
   members: HouseholdMember[]
@@ -94,7 +95,7 @@ function cancelRemove() {
           @click="toggleSettings"
           aria-label="Inställningar"
         >
-          ⚙️
+          <Settings :size="16" />
         </button>
       </div>
     </header>
@@ -125,7 +126,7 @@ function cancelRemove() {
       <Transition name="modal">
         <div v-if="confirmRemove" class="confirm-overlay" @click.self="cancelRemove">
           <div class="confirm-dialog">
-            <div class="confirm-icon">⚠️</div>
+            <div class="confirm-icon"><AlertTriangle :size="48" color="var(--warning)" /></div>
             <h4>Ta bort {{ confirmRemove.name }}?</h4>
             <p>
               Är du säker att du vill ta bort <strong>{{ confirmRemove.name }}</strong> från hushållet?
@@ -142,7 +143,7 @@ function cancelRemove() {
 
     <!-- Lunch box summary -->
     <div v-if="lunchBoxCount > 0" class="lunchbox-summary">
-      <span class="lunchbox-icon">🍱</span>
+      <span class="lunchbox-icon"><Package :size="18" /></span>
       <span class="lunchbox-text">{{ lunchBoxCount }} matlåda{{ lunchBoxCount > 1 ? 'or' : '' }} imorgon</span>
     </div>
 
@@ -151,13 +152,7 @@ function cancelRemove() {
         v-for="member in members"
         :key="member.id"
         class="member-item"
-        :class="{ 'not-eating': !member.isEatingToday, tappable: userStore.isMember }"
-        :role="userStore.isMember ? 'button' : undefined"
-        :tabindex="userStore.isMember ? 0 : undefined"
-        :aria-label="userStore.isMember ? `${member.name}: ${member.isEatingToday ? 'äter idag' : 'äter inte idag'}. Klicka för att ändra.` : undefined"
-        @click="userStore.isMember ? toggleEating(member) : undefined"
-        @keydown.enter="userStore.isMember ? toggleEating(member) : undefined"
-        @keydown.space.prevent="userStore.isMember ? toggleEating(member) : undefined"
+        :class="{ 'not-eating': !member.isEatingToday }"
       >
         <div class="member-avatar" :class="member.role">
           {{ member.name.charAt(0).toUpperCase() }}
@@ -176,13 +171,23 @@ function cancelRemove() {
           </span>
         </div>
         <button
+          v-if="userStore.isMember"
+          class="eating-toggle"
+          :class="{ active: member.isEatingToday }"
+          :aria-label="`${member.name}: ${member.isEatingToday ? 'äter idag' : 'äter inte idag'}. Klicka för att ändra.`"
+          @click="toggleEating(member)"
+        >
+          <span class="eating-toggle-icon">{{ member.isEatingToday ? '✓' : '✕' }}</span>
+        </button>
+        <button
           v-if="member.isEatingToday && userStore.isMember"
           class="lunchbox-toggle"
           :class="{ active: member.wantsLunchBox }"
           :title="member.wantsLunchBox ? 'Ta bort matlåda' : 'Lägg till matlåda'"
+          :aria-label="member.wantsLunchBox ? `Ta bort matlåda för ${member.name}` : `Lägg till matlåda för ${member.name}`"
           @click="toggleLunchBox(member, $event)"
         >
-          🍱
+          <Package :size="16" />
         </button>
         <span v-if="member.role === 'owner'" class="owner-badge">Ägare</span>
         <span v-else-if="member.role === 'guest'" class="guest-badge">Gäst</span>
@@ -190,7 +195,7 @@ function cancelRemove() {
     </div>
 
     <button class="invite-button" @click="emit('show-invite')">
-      <span class="invite-icon">🔗</span>
+      <span class="invite-icon"><Link :size="16" /></span>
       <span>Bjud in fler</span>
     </button>
   </section>
@@ -373,21 +378,16 @@ function cancelRemove() {
   transition: all 0.2s ease;
 }
 
-.member-item.not-eating {
-  opacity: 0.6;
+.member-item.not-eating .member-avatar {
+  opacity: 0.5;
 }
 
-.member-item.tappable {
-  cursor: pointer;
-  user-select: none;
+.member-item.not-eating .member-name {
+  color: #6b5e5a;
 }
 
-.member-item.tappable:hover {
-  background: var(--bg-hover);
-}
-
-.member-item.tappable:active {
-  transform: scale(0.98);
+.member-item.not-eating .member-status {
+  color: #7a6e69;
 }
 
 .member-avatar {
@@ -498,10 +498,10 @@ function cancelRemove() {
 .owner-badge {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #c05621;
+  color: var(--role-owner-text);
   background: var(--role-owner-text-bg);
   padding: 0.2rem 0.5rem;
   border-radius: 100px;
@@ -510,13 +510,48 @@ function cancelRemove() {
 .guest-badge {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-secondary);
-  background: var(--bg-hover);
+  color: var(--role-guest-text);
+  background: var(--role-guest-bg);
   padding: 0.2rem 0.5rem;
   border-radius: 100px;
+}
+
+.eating-toggle {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.eating-toggle .eating-toggle-icon {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.eating-toggle.active {
+  background: var(--success-bg);
+  border-color: var(--success);
+}
+
+.eating-toggle.active .eating-toggle-icon {
+  color: var(--success-dark);
+}
+
+.eating-toggle:hover {
+  border-color: var(--accent);
 }
 
 .invite-button {
@@ -533,7 +568,7 @@ function cancelRemove() {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
-  color: var(--accent);
+  color: var(--accent-text);
   transition: all 0.3s ease;
 }
 
