@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { ShoppingListSummary } from '@/api/types/dashboard.types'
 import CountUp from '@/components/vue-bits/CountUp.vue'
 import SpotlightCard from '@/components/vue-bits/SpotlightCard.vue'
+import { ShoppingCart } from 'lucide-vue-next'
 
 interface Props {
   shoppingList: ShoppingListSummary | null
@@ -23,7 +24,7 @@ const remainingItems = computed(() =>
   <SpotlightCard spotlight-color="rgba(104, 211, 145, 0.15)" class-name="shopping-spotlight">
     <section class="shopping-widget" @click="emit('view-list')">
       <div class="widget-content">
-        <div class="shopping-icon">🛒</div>
+        <div class="shopping-icon"><ShoppingCart :size="28" /></div>
 
         <div class="shopping-info" v-if="shoppingList">
           <h3 class="widget-title">Inköpslista</h3>
@@ -82,8 +83,11 @@ const remainingItems = computed(() =>
 }
 
 .shopping-icon {
-  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  color: var(--accent);
 }
 
 .shopping-info {

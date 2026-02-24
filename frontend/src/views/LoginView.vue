@@ -246,8 +246,8 @@ async function handleLogin() {
 
 /* Theme toggle */
 .theme-toggle {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -368,8 +368,9 @@ async function handleLogin() {
 }
 
 .login-footer a {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 700;
+  font-size: 1rem;
   text-decoration: none;
 }
 
