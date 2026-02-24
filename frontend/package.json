@@ -19,6 +19,7 @@
     "lint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/",
     "test:e2e": "npx --prefix .. playwright test",
+    "test:e2e:real": "npx --prefix .. playwright test --config=tests/e2e/playwright.e2e.config.ts",
     "test:e2e:ui": "npx --prefix .. playwright test --ui"
   },
   "dependencies": {
