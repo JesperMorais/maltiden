@@ -56,14 +56,14 @@ test.describe('Authentication E2E', () => {
 
   test('access protected route without JWT → redirect to login', async ({ page }) => {
     await page.goto('/')
-    await page.evaluate(() => localStorage.removeItem('token'))
+    await page.evaluate(() => localStorage.removeItem('maltiden_token'))
     await page.goto('/dashboard')
     await expect(page).toHaveURL(/\/login/)
   })
 
   test('expired/invalid JWT → redirect to login', async ({ page }) => {
     await page.goto('/')
-    await page.evaluate(() => localStorage.setItem('token', 'expired.invalid.token'))
+    await page.evaluate(() => localStorage.setItem('maltiden_token', 'expired.invalid.token'))
     await page.goto('/dashboard')
     // Axios interceptor catches 401, removes token, redirects to /login
     await expect(page).toHaveURL(/\/login/, { timeout: 10_000 })
