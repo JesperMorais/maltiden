@@ -71,9 +71,9 @@ test.describe('Household E2E', () => {
     // Wait for the household widget members list to load
     await expect(page.getByText('Hushållet')).toBeVisible({ timeout: 10_000 })
 
-    // Verify both owner and the joined member are visible
-    await expect(page.getByText(ownerName)).toBeVisible({ timeout: 10_000 })
-    await expect(page.getByText('Joining Member')).toBeVisible({ timeout: 10_000 })
+    // Verify both owner and the joined member are visible in the member list
+    await expect(page.locator('.member-name', { hasText: ownerName })).toBeVisible({ timeout: 10_000 })
+    await expect(page.locator('.member-name', { hasText: 'Joining Member' })).toBeVisible({ timeout: 10_000 })
 
     // Member count should now show 2 persons
     await expect(page.getByText('2 personer')).toBeVisible({ timeout: 10_000 })

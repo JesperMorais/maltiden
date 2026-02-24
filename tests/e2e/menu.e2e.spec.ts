@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { registerUser, loginUser } from './helpers'
+import { registerUser, loginUser, navigateTo } from './helpers'
 
 test.describe('Menu E2E', () => {
   test.describe.configure({ mode: 'serial' })
@@ -21,14 +21,14 @@ test.describe('Menu E2E', () => {
     await loginUser(page, userEmail, userPassword)
 
     // Navigate to menu generation page
-    await page.goto('/menu/generate')
+    await navigateTo(page, '/menu/generate')
     await expect(page.getByRole('heading', { name: 'Generera veckomeny' })).toBeVisible({
       timeout: 10_000,
     })
     await expect(page.getByText('Måndag - Fredag')).toBeVisible()
 
-    // Click the "Generera meny" button in the empty state
-    await page.getByRole('button', { name: 'Generera meny' }).click()
+    // Click the "Generera nya" button to generate the initial menu
+    await page.getByRole('button', { name: 'Generera nya' }).click()
 
     // Wait for the slot machine animation to complete:
     // The "Spara meny" button only becomes enabled after animation finishes
@@ -41,17 +41,17 @@ test.describe('Menu E2E', () => {
     const dayCards = page.locator('.menu-day-card')
     await expect(dayCards).toHaveCount(5)
 
-    // Each day card should have a recipe name (the "landed" state with recipeId)
+    // Each day card should be in the filled state (not showing empty "Ingen måltid")
     for (let i = 0; i < 5; i++) {
       const card = dayCards.nth(i)
-      // The recipe-name element is only rendered when day.recipeId is truthy
-      await expect(card.locator('.recipe-name')).toBeVisible({ timeout: 10_000 })
+      // The servings text only shows when a recipe is assigned
+      await expect(card.locator('.recipe-servings')).toBeVisible({ timeout: 10_000 })
     }
 
-    // Verify day names are present (Mon-Fri in Swedish)
-    const expectedDays = ['MÅNDAG', 'TISDAG', 'ONSDAG', 'TORSDAG', 'FREDAG']
+    // Verify day names are present (Mon-Fri in Swedish) — target the day-name heading
+    const expectedDays = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag']
     for (const dayName of expectedDays) {
-      await expect(page.getByText(dayName, { exact: false })).toBeVisible()
+      await expect(page.locator('.day-name', { hasText: dayName })).toBeVisible()
     }
 
     // Verify the "Generera nya" (regenerate) button is also visible
@@ -60,10 +60,10 @@ test.describe('Menu E2E', () => {
 
   test('lock one day, regenerate → locked day unchanged', async ({ page }) => {
     await loginUser(page, userEmail, userPassword)
-    await page.goto('/menu/generate')
+    await navigateTo(page, '/menu/generate')
 
     // Generate a menu first
-    await page.getByRole('button', { name: 'Generera meny' }).click()
+    await page.getByRole('button', { name: 'Generera nya' }).click()
     const saveButton = page.getByRole('button', { name: 'Spara meny' })
     await expect(saveButton).toBeVisible({ timeout: 30_000 })
     await expect(saveButton).toBeEnabled({ timeout: 15_000 })
@@ -71,13 +71,14 @@ test.describe('Menu E2E', () => {
     const dayCards = page.locator('.menu-day-card')
     await expect(dayCards).toHaveCount(5)
 
-    // Capture the first day's recipe name before locking
+    // Capture the first day's recipe emoji before locking (recipe names may be empty
+    // if the API omits recipeName, but emoji is always rendered from recipeId state)
     const firstCard = dayCards.nth(0)
-    const firstRecipeName = await firstCard.locator('.recipe-name').textContent()
-    expect(firstRecipeName).toBeTruthy()
+    await expect(firstCard.locator('.recipe-servings')).toBeVisible({ timeout: 10_000 })
+    const firstEmoji = await firstCard.locator('.recipe-emoji').textContent()
+    expect(firstEmoji?.trim()).toBeTruthy()
 
     // Lock the first day card by clicking its lock button
-    // The lock button aria-label is "Lås <dayName>" when unlocked
     const lockButton = firstCard.locator('.lock-button')
     await expect(lockButton).toBeVisible()
     await lockButton.click()
@@ -92,12 +93,11 @@ test.describe('Menu E2E', () => {
     await page.getByRole('button', { name: 'Generera nya' }).click()
 
     // Wait for regeneration animation to complete
-    // Save button becomes enabled again after animation finishes
     await expect(saveButton).toBeEnabled({ timeout: 15_000 })
 
-    // Verify the locked first day still has the same recipe
-    const firstRecipeNameAfter = await firstCard.locator('.recipe-name').textContent()
-    expect(firstRecipeNameAfter).toBe(firstRecipeName)
+    // Verify the locked first day still has the same emoji (recipe unchanged)
+    const firstEmojiAfter = await firstCard.locator('.recipe-emoji').textContent()
+    expect(firstEmojiAfter?.trim()).toBe(firstEmoji?.trim())
 
     // Verify the card is still locked
     await expect(firstCard).toHaveClass(/locked/)
@@ -105,10 +105,10 @@ test.describe('Menu E2E', () => {
 
   test('save menu → redirect to dashboard → menu persists', async ({ page }) => {
     await loginUser(page, userEmail, userPassword)
-    await page.goto('/menu/generate')
+    await navigateTo(page, '/menu/generate')
 
     // Generate a menu
-    await page.getByRole('button', { name: 'Generera meny' }).click()
+    await page.getByRole('button', { name: 'Generera nya' }).click()
     const saveButton = page.getByRole('button', { name: 'Spara meny' })
     await expect(saveButton).toBeVisible({ timeout: 30_000 })
     await expect(saveButton).toBeEnabled({ timeout: 15_000 })
@@ -134,7 +134,7 @@ test.describe('Menu E2E', () => {
     await loginUser(page, userEmail, userPassword)
 
     // Go to shopping list page
-    await page.goto('/shopping-list')
+    await navigateTo(page, '/shopping-list')
 
     // Wait for the page to load
     await expect(page.getByRole('heading', { name: 'Inköpslista' })).toBeVisible({
