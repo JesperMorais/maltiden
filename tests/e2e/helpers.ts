@@ -47,9 +47,9 @@ export async function loginUser(page: Page, email: string, password: string): Pr
   await page.waitForURL('**/dashboard', { timeout: 10_000 })
 }
 
-/** Get JWT token from localStorage. */
+/** Get JWT token from localStorage. Key is 'maltiden_token'. */
 export async function getToken(page: Page): Promise<string | null> {
-  return page.evaluate(() => localStorage.getItem('token'))
+  return page.evaluate(() => localStorage.getItem('maltiden_token'))
 }
 
 /** Make an authenticated API call from within the browser context. */
@@ -115,7 +115,26 @@ export async function registerUserViaAPI(options?: {
   }
 }
 
-/** Set JWT token in localStorage. */
+/** Set JWT token in localStorage. Key is 'maltiden_token'. */
 export async function setAuthToken(page: Page, token: string): Promise<void> {
-  await page.evaluate((t) => localStorage.setItem('token', t), token)
+  await page.evaluate((t) => localStorage.setItem('maltiden_token', t), token)
+}
+
+/**
+ * Navigate within the SPA without full page reload.
+ * Uses window.location.hash or direct URL bar navigation followed by
+ * waiting for the Vue Router to handle the route.
+ *
+ * IMPORTANT: page.goto() causes a full page reload which loses Pinia state.
+ * After login/register, the user store has auth state in memory. A full reload
+ * loses it, and the router guard redirects to /login. This helper navigates
+ * via the SPA's Vue Router to preserve state.
+ */
+export async function navigateTo(page: Page, path: string): Promise<void> {
+  await page.evaluate((p) => {
+    window.history.pushState({}, '', p)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }, path)
+  // Wait for Vue Router to handle the navigation
+  await page.waitForURL(`**${path}`, { timeout: 10_000 })
 }
