@@ -15,7 +15,8 @@ test.describe('Authentication E2E', () => {
     await expect(page).toHaveURL(/\/dashboard/)
     const token = await getToken(page)
     expect(token).toBeTruthy()
-    await expect(page.getByText('Test Hushåll')).toBeVisible({ timeout: 10_000 })
+    // Backend generates household name as "<name>'s household"
+    await expect(page.getByText("Test User's household")).toBeVisible({ timeout: 10_000 })
   })
 
   test('register with existing email → shows error', async ({ page }) => {
@@ -39,7 +40,7 @@ test.describe('Authentication E2E', () => {
   test('login with valid credentials → dashboard loads', async ({ page }) => {
     await loginUser(page, registeredEmail, registeredPassword)
     await expect(page).toHaveURL(/\/dashboard/)
-    await expect(page.getByText('Test Hushåll')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText("Test User's household")).toBeVisible({ timeout: 10_000 })
   })
 
   test('login with wrong password → shows error', async ({ page }) => {
