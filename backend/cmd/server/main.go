@@ -52,10 +52,14 @@ func main() {
 	// Wrap with static file serving and SPA fallback
 	handler := withSPA("./static", router)
 
-	// Configure HTTP server with graceful shutdown
+	// Configure HTTP server with graceful shutdown and timeouts
 	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: handler,
+		Addr:         ":" + port,
+		Handler:      handler,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 30 * time.Second, // higher to allow Claude API proxy calls
+		IdleTimeout:  60 * time.Second,
+		MaxHeaderBytes: 1 << 20, // 1 MB max header size
 	}
 
 	// Start server in a goroutine
