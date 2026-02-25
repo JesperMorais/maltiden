@@ -74,7 +74,7 @@ func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 
 	// Extract and validate item ID from path
 	itemID := r.PathValue("id")
-	if !ValidateID(w, itemID, "item_id") {
+	if !ValidateItemID(w, itemID, "item_id") {
 		return
 	}
 

@@ -169,7 +169,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
    * Check if menu exists
    */
   const hasMenu = computed(() => {
-    return draftMenu.value !== null && draftMenu.value.days.length > 0
+    return draftMenu.value !== null && draftMenu.value.days.some((day) => day.recipeId)
   })
 
   /**
