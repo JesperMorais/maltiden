@@ -21,7 +21,7 @@ type CreateFeedbackRequest struct {
 	Comment       string   `json:"comment,omitempty"`
 	Page          string   `json:"page,omitempty"`
 	ViewportWidth int      `json:"viewportWidth,omitempty"`
-	UserAgent     string   `json:"userAgent,omitempty"`
+	UserAgent     string   `json:"-"`
 }
 
 type CreateFeedbackResponse struct {

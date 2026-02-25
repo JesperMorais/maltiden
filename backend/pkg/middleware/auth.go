@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"maltiden/pkg/utils"
 	"net/http"
 	"strings"
@@ -60,6 +61,7 @@ func RequireAuth(validator TokenValidator, versionChecker TokenVersionChecker) f
 			// household removal or password change
 			currentVersion, err := versionChecker.GetTokenVersion(claims.UserID)
 			if err != nil {
+				log.Printf("ERROR [RequireAuth] token version check for user %s: %v", claims.UserID, err)
 				writeError(w, http.StatusUnauthorized, "invalid_token")
 				return
 			}
@@ -81,7 +83,8 @@ func RequireAuth(validator TokenValidator, versionChecker TokenVersionChecker) f
 // OptionalAuth extracts JWT claims into context if a valid token is present,
 // but does NOT reject requests without a token. Used for public routes that
 // behave differently for authenticated users (e.g., scoped recipe listing).
-func OptionalAuth(validator TokenValidator) func(http.Handler) http.Handler {
+// If the token's version doesn't match the DB, the request proceeds as unauthenticated.
+func OptionalAuth(validator TokenValidator, versionChecker TokenVersionChecker) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -89,9 +92,12 @@ func OptionalAuth(validator TokenValidator) func(http.Handler) http.Handler {
 				parts := strings.Split(authHeader, " ")
 				if len(parts) == 2 && parts[0] == "Bearer" {
 					if claims, err := validator.ValidateToken(parts[1]); err == nil {
-						ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
-						ctx = context.WithValue(ctx, HouseholdIDKey, claims.HouseholdID)
-						r = r.WithContext(ctx)
+						// Check token version — treat as unauthenticated if stale
+						if currentVersion, err := versionChecker.GetTokenVersion(claims.UserID); err == nil && claims.TokenVersion == currentVersion {
+							ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
+							ctx = context.WithValue(ctx, HouseholdIDKey, claims.HouseholdID)
+							r = r.WithContext(ctx)
+						}
 					}
 				}
 			}
