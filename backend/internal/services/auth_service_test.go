@@ -157,7 +157,7 @@ func TestLogin_NonexistentUser(t *testing.T) {
 func TestJWT_ValidToken(t *testing.T) {
 	jwtService := setupTestJWTService(t)
 
-	token, err := jwtService.GenerateToken("usr_abc", "hh_def")
+	token, err := jwtService.GenerateToken("usr_abc", "hh_def", 1)
 	if err != nil {
 		t.Fatalf("GenerateToken failed: %v", err)
 	}
@@ -173,13 +173,16 @@ func TestJWT_ValidToken(t *testing.T) {
 	if claims.HouseholdID != "hh_def" {
 		t.Errorf("expected HouseholdID hh_def, got %s", claims.HouseholdID)
 	}
+	if claims.TokenVersion != 1 {
+		t.Errorf("expected TokenVersion 1, got %d", claims.TokenVersion)
+	}
 }
 
 func TestJWT_WrongSecret(t *testing.T) {
 	jwtService1 := setupTestJWTService(t)
 	jwtService2, _ := utils.NewJWTService("different-secret-key-1234567890abcdef")
 
-	token, _ := jwtService1.GenerateToken("usr_abc", "hh_def")
+	token, _ := jwtService1.GenerateToken("usr_abc", "hh_def", 1)
 
 	_, err := jwtService2.ValidateToken(token)
 	if err == nil {

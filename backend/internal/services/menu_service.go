@@ -77,8 +77,8 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		return nil, domain.ErrInvalidServings
 	}
 
-	// Get all recipes
-	recipes, err := s.recipeStorage.GetAll(nil)
+	// Get recipes visible to this household (own + seed)
+	recipes, err := s.recipeStorage.GetAll(nil, householdID)
 	if err != nil {
 		return nil, err
 	}
