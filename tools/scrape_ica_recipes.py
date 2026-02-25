@@ -411,8 +411,9 @@ def scrape_recipe(url: str, category_tags: list[str], session: requests.Session)
 
         # Parse ingredients
         ingredients = [parse_ingredient(ing) for ing in raw_ingredients]
-        # Filter out empty names
-        ingredients = [i for i in ingredients if i.name and len(i.name) > 1]
+        # Filter out empty names and serving suggestions starting with "Gärna"
+        ingredients = [i for i in ingredients if i.name and len(i.name) > 1
+                       and not re.match(r'^gärna\b', i.name, re.IGNORECASE)]
 
         if len(ingredients) < 2:
             return None
