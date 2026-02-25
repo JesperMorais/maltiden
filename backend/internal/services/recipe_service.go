@@ -15,15 +15,27 @@ func NewRecipeService(recipeStorage domain.RecipeRepository) *RecipeService {
 	return &RecipeService{recipeStorage: recipeStorage}
 }
 
-func (s *RecipeService) GetAll(filter *domain.RecipeFilter) ([]domain.RecipeSummary, error) {
-	return s.recipeStorage.GetAll(filter)
+func (s *RecipeService) GetAll(filter *domain.RecipeFilter, householdID string) ([]domain.RecipeSummary, error) {
+	return s.recipeStorage.GetAll(filter, householdID)
 }
 
 func (s *RecipeService) GetByID(id string) (*domain.Recipe, error) {
 	return s.recipeStorage.GetByID(id)
 }
 
-func (s *RecipeService) Update(id string, req domain.UpdateRecipeRequest) (*domain.Recipe, error) {
+// checkOwnership verifies the requesting household can modify this recipe.
+// Seed recipes (empty HouseholdID) cannot be modified by anyone.
+func checkOwnership(recipe *domain.Recipe, householdID string) error {
+	if recipe.HouseholdID == "" {
+		return domain.ErrForbidden // seed recipe
+	}
+	if recipe.HouseholdID != householdID {
+		return domain.ErrForbidden // belongs to different household
+	}
+	return nil
+}
+
+func (s *RecipeService) Update(id string, householdID string, req domain.UpdateRecipeRequest) (*domain.Recipe, error) {
 	// Verify recipe exists
 	existing, err := s.recipeStorage.GetByID(id)
 	if err != nil {
@@ -31,6 +43,11 @@ func (s *RecipeService) Update(id string, req domain.UpdateRecipeRequest) (*doma
 	}
 	if existing == nil {
 		return nil, domain.ErrNotFound
+	}
+
+	// Check ownership
+	if err := checkOwnership(existing, householdID); err != nil {
+		return nil, err
 	}
 
 	// Validate fields (same rules as Create)
@@ -72,7 +89,7 @@ func (s *RecipeService) Update(id string, req domain.UpdateRecipeRequest) (*doma
 	return existing, nil
 }
 
-func (s *RecipeService) Delete(id string) error {
+func (s *RecipeService) Delete(id string, householdID string) error {
 	// Verify recipe exists
 	existing, err := s.recipeStorage.GetByID(id)
 	if err != nil {
@@ -82,10 +99,15 @@ func (s *RecipeService) Delete(id string) error {
 		return domain.ErrNotFound
 	}
 
+	// Check ownership
+	if err := checkOwnership(existing, householdID); err != nil {
+		return err
+	}
+
 	return s.recipeStorage.Delete(id)
 }
 
-func (s *RecipeService) Create(req domain.CreateRecipeRequest) (*domain.CreateRecipeResponse, error) {
+func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID string) (*domain.CreateRecipeResponse, error) {
 	if req.Name == "" {
 		return nil, domain.ErrNameRequired
 	}
@@ -119,6 +141,7 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest) (*domain.CreateRe
 		Tags:         req.Tags,
 		Ingredients:  req.Ingredients,
 		Instructions: req.Instructions,
+		HouseholdID:  householdID,
 		CreatedAt:    time.Now(),
 	}
 

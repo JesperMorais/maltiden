@@ -5,6 +5,7 @@ import (
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
+	"maltiden/pkg/middleware"
 	"net/http"
 )
 
@@ -17,13 +18,16 @@ func NewRecipeHandler(recipeService *services.RecipeService) *RecipeHandler {
 }
 
 func (h *RecipeHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+	// householdID is empty for unauthenticated requests (public route)
+	householdID := middleware.GetHouseholdID(r)
+
 	// Parse query parameters for filtering
 	filter := &domain.RecipeFilter{
 		Name: r.URL.Query().Get("name"),
 		Tag:  r.URL.Query().Get("tag"),
 	}
 
-	recipes, err := h.recipeService.GetAll(filter)
+	recipes, err := h.recipeService.GetAll(filter, householdID)
 	if err != nil {
 		log.Printf("ERROR [GetAllRecipes] %v", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
@@ -63,16 +67,20 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	householdID := middleware.GetHouseholdID(r)
+
 	var req domain.UpdateRecipeRequest
 	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
-	recipe, err := h.recipeService.Update(id, req)
+	recipe, err := h.recipeService.Update(id, householdID, req)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrNotFound):
 			WriteError(w, http.StatusNotFound, "not_found")
+		case errors.Is(err, domain.ErrForbidden):
+			WriteError(w, http.StatusForbidden, "forbidden")
 		case errors.Is(err, domain.ErrNameRequired):
 			WriteError(w, http.StatusBadRequest, "name_required")
 		case errors.Is(err, domain.ErrInvalidServings):
@@ -101,11 +109,15 @@ func (h *RecipeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.recipeService.Delete(id)
+	householdID := middleware.GetHouseholdID(r)
+
+	err := h.recipeService.Delete(id, householdID)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrNotFound):
 			WriteError(w, http.StatusNotFound, "not_found")
+		case errors.Is(err, domain.ErrForbidden):
+			WriteError(w, http.StatusForbidden, "forbidden")
 		default:
 			log.Printf("ERROR [DeleteRecipe] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
@@ -117,12 +129,14 @@ func (h *RecipeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
+	householdID := middleware.GetHouseholdID(r)
+
 	var req domain.CreateRecipeRequest
 	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
-	resp, err := h.recipeService.Create(req)
+	resp, err := h.recipeService.Create(req, householdID)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrNameRequired):

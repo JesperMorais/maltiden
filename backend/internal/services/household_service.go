@@ -168,7 +168,8 @@ func (s *HouseholdService) UpdateMemberStatus(householdID, memberID string, req 
 }
 
 // RemoveMember removes a member from the household. Owners cannot be removed, and
-// only owners/members can remove others.
+// only owners/members can remove others. Increments the removed user's token_version
+// to instantly invalidate all their existing JWTs.
 func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUserID string) error {
 	// Can't remove yourself
 	if requestingUserID == targetUserID {
@@ -196,7 +197,12 @@ func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUse
 		return domain.ErrCannotRemove
 	}
 
-	return s.householdStorage.RemoveMember(householdID, targetUserID)
+	if err := s.householdStorage.RemoveMember(householdID, targetUserID); err != nil {
+		return err
+	}
+
+	// Invalidate all existing JWTs for the removed user
+	return s.userStorage.IncrementTokenVersion(targetUserID)
 }
 
 // generateInviteCode creates a random 8-character alphanumeric code (~40 bits of entropy).
