@@ -81,7 +81,13 @@ async function handleParse() {
     step.value = 'ai-edit'
   } catch (err: unknown) {
     const e = err as { response?: { data?: { error?: string } } }
-    parseError.value = e?.response?.data?.error || 'Kunde inte tolka receptet. Försök igen.'
+    const code = e?.response?.data?.error
+    const errorMessages: Record<string, string> = {
+      rawText_required: 'Recepttext saknas',
+      input_too_long: 'Recepttexten är för lång',
+      failed_to_parse_recipe: 'Kunde inte tolka receptet — försök med en annan text',
+    }
+    parseError.value = (code && errorMessages[code]) || 'Kunde inte tolka receptet. Försök igen.'
   } finally {
     parseFinish()
     isParsing.value = false
