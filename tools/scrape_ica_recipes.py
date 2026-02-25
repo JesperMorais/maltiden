@@ -343,7 +343,7 @@ def derive_tags(title: str, ingredients: list[str], category_tags: list[str]) ->
     # Remove vegetariskt if meat/fish keywords are present
     meat_keywords = ["kyckling", "fläsk", "nöt", "fårkött", "lamm", "bacon",
                      "korv", "färs", "sidfläsk", "lax", "torsk", "tonfisk",
-                     "räkor", "fisk", "sej", "ryggbiff", "blandfärs"]
+                     "räkor", "fisk", "sej", "ryggbiff", "blandfärs", "lammkorv"]
     if "vegetariskt" in tags:
         if any(kw in search_text for kw in meat_keywords):
             tags.discard("vegetariskt")
