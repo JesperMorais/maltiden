@@ -10,7 +10,7 @@ function getSwedishAuthError(e: unknown, fallback: string): string {
     const status = e.response?.status
     const code = e.response?.data?.error as string | undefined
     if (status === 401 || code === 'invalid_credentials') return 'Fel e-post eller lösenord'
-    if (status === 409 || code === 'email_already_exists')
+    if (status === 409 || code === 'email_taken' || code === 'email_already_exists')
       return 'E-postadressen är redan registrerad'
     if (code === 'weak_password')
       return 'Lösenordet måste innehålla minst 3 av: versaler, gemener, siffror, specialtecken'
