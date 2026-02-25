@@ -8,11 +8,11 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 - `POST /feedback` — Submit user feedback (auth required, rate-limited to 5/hour per user)
 
 **Behavioral Changes:**
-- `GET /recipes` — Now uses optional auth (`OptionalAuth`). Authenticated requests include household-specific recipes in addition to global ones. Unauthenticated requests return global recipes only.
+- `GET /recipes` — Now uses optional auth (`OptionalAuth`). Authenticated requests are scoped to return only the household's own recipes plus global (seed) recipes. Unauthenticated requests return all recipes without scoping.
 
 **Response shape changes:**
 - `MenuResponseDay` (returned by `POST /menus/generate`, `PUT /menus/current`, `GET /menus/current`) now includes optional `recipeName` and `emoji` fields in each day object.
-- `Recipe` object now includes optional `householdId` field (omitted for global recipes).
+- Full `Recipe` object (returned by `GET /recipes/{id}`) now includes optional `householdId` field (omitted for global/seed recipes). The summary list response from `GET /recipes` does **not** include `householdId`.
 
 **Rate limiting additions:**
 - `POST /households/join` — 3 req/sec, burst 5 (brute-force protection on invite codes)
@@ -216,7 +216,7 @@ Only members and owners may create invite codes. Guests receive 403.
 ## Recipes
 
 ### GET /recipes
-**Auth optional.** Provide `Authorization: Bearer <token>` to include household-specific recipes alongside global ones. Unauthenticated requests return only global recipes.
+**Auth optional.** Provide `Authorization: Bearer <token>` to scope results to the household's own recipes plus global (seed) recipes. Unauthenticated requests return all recipes without household scoping.
 ```json
 // Query parameters (all optional):
 // ?name=köttfärs    - Filter by recipe name (partial match)
@@ -230,7 +230,6 @@ Only members and owners may create invite codes. Guests receive 403.
       "name": "Köttfärssås",
       "servings": 4,
       "emoji": "🍝",            // optional — omitted when empty
-      "householdId": "hh_xyz",  // optional — present for household-specific recipes
       "tags": ["vardag", "barn"]
     }
   ]
@@ -328,9 +327,12 @@ Update an existing recipe. **Auth required.**
 ```
 
 ### DELETE /recipes/{id}
-Delete a recipe. **Auth required.**
+Delete a recipe. **Auth required.** Only the owning household can delete a recipe; seed/global recipes cannot be deleted by anyone.
 ```json
 // Response 204 — no body
+
+// Error 403 (seed recipe, or recipe belongs to a different household)
+{ "error": "forbidden" }
 
 // Error 404
 { "error": "not_found" }
@@ -668,7 +670,10 @@ Alla errors följer samma struktur:
 | Kod | HTTP | Betydelse |
 |-----|------|-----------|
 | `invalid_credentials` | 401 | Fel email/lösenord |
-| `unauthorized` | 401 | Token saknas/ogiltig |
+| `unauthorized` | 401 | Authorization-header saknas |
+| `invalid_token_format` | 401 | Ogiltigt format på Authorization-headern (saknar "Bearer "-prefix) |
+| `invalid_token` | 401 | JWT-token är ogiltig, utgången eller kan inte valideras |
+| `token_revoked` | 401 | Token har återkallats (t.ex. efter lösenordsbyte eller att ha lämnat hushållet) |
 | `email_taken` | 400 | Email redan registrerad |
 | `code_required` | 400 | Inbjudningskod saknas i requesten |
 | `invalid_code` | 400 | Inbjudningskod ogiltig/utgången |
