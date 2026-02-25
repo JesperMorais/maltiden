@@ -405,7 +405,7 @@ async function handleCreate() {
                       </button>
                     </div>
                     <span v-if="joinForm.password.length > 0 && !passwordStrongEnoughJoin" class="field-hint">
-                      Minst 8 tecken med versaler, gemener och siffror
+                      Minst 8 tecken med minst 3 av: versaler, gemener, siffror, specialtecken
                     </span>
                   </label>
 
@@ -554,7 +554,7 @@ async function handleCreate() {
                       </button>
                     </div>
                     <span v-if="createForm.password.length > 0 && !passwordStrongEnoughCreate" class="field-hint">
-                      Minst 8 tecken med versaler, gemener och siffror
+                      Minst 8 tecken med minst 3 av: versaler, gemener, siffror, specialtecken
                     </span>
                   </label>
 
