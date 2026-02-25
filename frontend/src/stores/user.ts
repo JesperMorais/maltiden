@@ -10,7 +10,11 @@ function getSwedishAuthError(e: unknown, fallback: string): string {
     const status = e.response?.status
     const code = e.response?.data?.error as string | undefined
     if (status === 401 || code === 'invalid_credentials') return 'Fel e-post eller lösenord'
-    if (status === 409 || code === 'email_taken') return 'E-postadressen är redan registrerad'
+    if (status === 409 || code === 'email_taken' || code === 'email_already_exists')
+      return 'E-postadressen är redan registrerad'
+    if (code === 'weak_password')
+      return 'Lösenordet måste innehålla minst 3 av: versaler, gemener, siffror, specialtecken'
+    if (code === 'invalid_email') return 'Ogiltig e-postadress'
     if (status === 400) return 'Ogiltig förfrågan — kontrollera dina uppgifter'
     if (!e.response) return 'Kunde inte nå servern — kontrollera din internetanslutning'
   }
