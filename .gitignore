@@ -45,3 +45,4 @@ node_modules/
 
 # E2E build artifacts
 backend/static/
+tools/.venv/
