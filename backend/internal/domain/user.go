@@ -8,5 +8,6 @@ type User struct {
 	PasswordHash string    `json:"-"`
 	Name         string    `json:"name"`
 	HouseholdID  string    `json:"householdId"`
+	TokenVersion int       `json:"-"`
 	CreatedAt    time.Time `json:"createdAt"`
 }

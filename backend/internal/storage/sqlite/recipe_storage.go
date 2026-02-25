@@ -18,12 +18,18 @@ func NewRecipeStorage(db *sql.DB) *RecipeStorage {
 	return &RecipeStorage{db: db}
 }
 
-func (s *RecipeStorage) GetAll(filter *domain.RecipeFilter) ([]domain.RecipeSummary, error) {
+func (s *RecipeStorage) GetAll(filter *domain.RecipeFilter, householdID string) ([]domain.RecipeSummary, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	query := `SELECT id, name, servings, emoji, tags FROM recipes WHERE 1=1`
 	args := []interface{}{}
+
+	// Scope by household: own recipes + seed recipes (NULL household_id)
+	if householdID != "" {
+		query += ` AND (household_id = ? OR household_id IS NULL)`
+		args = append(args, householdID)
+	}
 
 	// Add name filter (case-insensitive partial match)
 	if filter != nil && filter.Name != "" {
@@ -78,16 +84,16 @@ func (s *RecipeStorage) GetByID(id string) (*domain.Recipe, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	query := `SELECT id, name, servings, emoji, tags, ingredients, instructions, created_at
+	query := `SELECT id, name, servings, emoji, tags, ingredients, instructions, household_id, created_at
 			  FROM recipes WHERE id = ?`
 
 	var r domain.Recipe
-	var emoji sql.NullString
+	var emoji, householdID sql.NullString
 	var tagsJSON, ingredientsJSON, instructionsJSON string
 
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&r.ID, &r.Name, &r.Servings, &emoji,
-		&tagsJSON, &ingredientsJSON, &instructionsJSON, &r.CreatedAt,
+		&tagsJSON, &ingredientsJSON, &instructionsJSON, &householdID, &r.CreatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -99,6 +105,9 @@ func (s *RecipeStorage) GetByID(id string) (*domain.Recipe, error) {
 
 	if emoji.Valid {
 		r.Emoji = emoji.String
+	}
+	if householdID.Valid {
+		r.HouseholdID = householdID.String
 	}
 
 	if err := json.Unmarshal([]byte(tagsJSON), &r.Tags); err != nil {
@@ -175,7 +184,7 @@ func (s *RecipeStorage) GetByIDs(ids []string) (map[string]*domain.Recipe, error
 	return result, rows.Err()
 }
 
-func (s *RecipeStorage) GetAllPaginated(filter *domain.RecipeFilter, limit, offset int) ([]domain.RecipeSummary, int, error) {
+func (s *RecipeStorage) GetAllPaginated(filter *domain.RecipeFilter, householdID string, limit, offset int) ([]domain.RecipeSummary, int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -190,6 +199,12 @@ func (s *RecipeStorage) GetAllPaginated(filter *domain.RecipeFilter, limit, offs
 	// Build WHERE clause
 	whereClause := "WHERE 1=1"
 	args := []interface{}{}
+
+	// Scope by household: own recipes + seed recipes (NULL household_id)
+	if householdID != "" {
+		whereClause += " AND (household_id = ? OR household_id IS NULL)"
+		args = append(args, householdID)
+	}
 
 	// Add name filter (case-insensitive partial match)
 	if filter != nil && filter.Name != "" {
@@ -337,15 +352,21 @@ func (s *RecipeStorage) Create(recipe *domain.Recipe) error {
 		return err
 	}
 
+	// Use NULL for empty householdID (seed recipes)
+	var householdID interface{}
+	if recipe.HouseholdID != "" {
+		householdID = recipe.HouseholdID
+	}
+
 	query := `
-		INSERT INTO recipes (id, name, servings, emoji, tags, ingredients, instructions, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO recipes (id, name, servings, emoji, tags, ingredients, instructions, household_id, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = s.db.ExecContext(ctx, query,
 		recipe.ID, recipe.Name, recipe.Servings, recipe.Emoji,
 		string(tagsJSON), string(ingredientsJSON), string(instructionsJSON),
-		recipe.CreatedAt,
+		householdID, recipe.CreatedAt,
 	)
 
 	return err

@@ -47,13 +47,13 @@ func (s *UserStorage) GetByEmail(email string) (*domain.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	query := `SELECT id, email, password_hash, name, household_id, created_at
+	query := `SELECT id, email, password_hash, name, household_id, token_version, created_at
 			  FROM users WHERE email = ?`
 
 	var user domain.User
 	err := s.db.QueryRowContext(ctx, query, email).Scan(
 		&user.ID, &user.Email, &user.PasswordHash,
-		&user.Name, &user.HouseholdID, &user.CreatedAt,
+		&user.Name, &user.HouseholdID, &user.TokenVersion, &user.CreatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -70,13 +70,13 @@ func (s *UserStorage) GetByID(id string) (*domain.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	query := `SELECT id, email, password_hash, name, household_id, created_at
+	query := `SELECT id, email, password_hash, name, household_id, token_version, created_at
 			  FROM users WHERE id = ?`
 
 	var user domain.User
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID, &user.Email, &user.PasswordHash,
-		&user.Name, &user.HouseholdID, &user.CreatedAt,
+		&user.Name, &user.HouseholdID, &user.TokenVersion, &user.CreatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -87,4 +87,28 @@ func (s *UserStorage) GetByID(id string) (*domain.User, error) {
 	}
 
 	return &user, nil
+}
+
+func (s *UserStorage) GetTokenVersion(userID string) (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var version int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT token_version FROM users WHERE id = ?`, userID,
+	).Scan(&version)
+	if err != nil {
+		return 0, err
+	}
+	return version, nil
+}
+
+func (s *UserStorage) IncrementTokenVersion(userID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE users SET token_version = token_version + 1 WHERE id = ?`, userID,
+	)
+	return err
 }

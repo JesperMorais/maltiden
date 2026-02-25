@@ -43,7 +43,7 @@ func (env *menuTestEnv) seedRecipes(t *testing.T, count int) []string {
 			Servings:     4,
 			Ingredients:  []domain.Ingredient{{Name: "Test", Amount: 1, Unit: "st"}},
 			Instructions: []string{"Do something"},
-		})
+		}, env.householdID)
 		if err != nil {
 			t.Fatalf("failed to seed recipe %d: %v", i, err)
 		}
