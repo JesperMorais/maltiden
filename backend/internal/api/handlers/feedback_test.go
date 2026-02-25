@@ -27,10 +27,6 @@ func (m *mockFeedbackStorage) Create(f *domain.Feedback) error {
 	return nil
 }
 
-func (m *mockFeedbackStorage) GetAll() ([]domain.Feedback, error) {
-	return nil, nil
-}
-
 func (m *mockFeedbackStorage) CountRecentByUser(_ string, _ time.Time) (int, error) {
 	return m.recentCount, nil
 }
