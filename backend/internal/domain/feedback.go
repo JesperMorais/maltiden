@@ -30,6 +30,5 @@ type CreateFeedbackResponse struct {
 
 type FeedbackRepository interface {
 	Create(feedback *Feedback) error
-	GetAll() ([]Feedback, error)
 	CountRecentByUser(userID string, since time.Time) (int, error)
 }
