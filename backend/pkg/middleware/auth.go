@@ -111,3 +111,11 @@ func GetHouseholdID(r *http.Request) string {
 	householdID, _ := r.Context().Value(HouseholdIDKey).(string)
 	return householdID
 }
+
+// WithAuthContext returns a context with userID and householdID set,
+// matching what RequireAuth injects. Useful for handler tests.
+func WithAuthContext(ctx context.Context, userID, householdID string) context.Context {
+	ctx = context.WithValue(ctx, UserIDKey, userID)
+	ctx = context.WithValue(ctx, HouseholdIDKey, householdID)
+	return ctx
+}
