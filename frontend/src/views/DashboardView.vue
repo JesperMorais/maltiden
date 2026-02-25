@@ -229,7 +229,7 @@ function handleViewShoppingList() {
 .dashboard-greeting {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem 2rem 0;
+  padding: 2rem 2rem 1rem;
   font-family: 'Fraunces', serif;
   font-weight: 700;
   font-size: clamp(1.25rem, 3vw, 1.75rem);
