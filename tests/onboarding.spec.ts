@@ -162,24 +162,27 @@ test.describe('Onboarding page', () => {
     await page.getByText('Skapa nytt hushåll').click()
     await page.waitForTimeout(800)
 
-    await page.getByPlaceholder('Anna Andersson').first().fill('Test User')
-    await page.getByPlaceholder('anna@exempel.se').first().fill('test@test.se')
-    await page.getByPlaceholder('Minst 8 tecken').first().fill('password123')
-    await page.getByPlaceholder('Skriv lösenordet igen').first().fill('password123')
-    await page.getByPlaceholder(/Familjen Andersson/).first().fill('Testfamiljen')
+    const form = page.locator('form.form-card').filter({ hasText: 'Skapa konto' })
+    await form.getByPlaceholder('Anna Andersson').fill('Test User')
+    await form.getByPlaceholder('anna@exempel.se').fill('test@test.se')
+    await form.getByPlaceholder('Minst 8 tecken').fill('password123')
+    await form.getByPlaceholder('Skriv lösenordet igen').fill('password123')
+    await form.getByPlaceholder(/Familjen Andersson/).fill('Testfamiljen')
+    await page.waitForTimeout(200)
 
-    await expect(page.getByRole('button', { name: 'Skapa konto' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Skapa konto' })).toBeEnabled({ timeout: 3000 })
   })
 
   test('create household flow: successful registration shows success', async ({ page }) => {
     await page.getByText('Skapa nytt hushåll').click()
     await page.waitForTimeout(800)
 
-    await page.getByPlaceholder('Anna Andersson').first().fill('Test User')
-    await page.getByPlaceholder('anna@exempel.se').first().fill('test@test.se')
-    await page.getByPlaceholder('Minst 8 tecken').first().fill('password123')
-    await page.getByPlaceholder('Skriv lösenordet igen').first().fill('password123')
-    await page.getByPlaceholder(/Familjen Andersson/).first().fill('Testfamiljen')
+    const form = page.locator('form.form-card').filter({ hasText: 'Skapa konto' })
+    await form.getByPlaceholder('Anna Andersson').fill('Test User')
+    await form.getByPlaceholder('anna@exempel.se').fill('test@test.se')
+    await form.getByPlaceholder('Minst 8 tecken').fill('password123')
+    await form.getByPlaceholder('Skriv lösenordet igen').fill('password123')
+    await form.getByPlaceholder(/Familjen Andersson/).fill('Testfamiljen')
 
     await page.getByRole('button', { name: 'Skapa konto' }).click()
     await expect(page.getByText('Konto skapat!')).toBeVisible({ timeout: 5000 })

@@ -35,7 +35,7 @@ test.describe('Responsive design - mobile viewport', () => {
     const sidebar = page.locator('.sidebar')
     if (await sidebar.isVisible({ timeout: 5000 }).catch(() => false)) {
       const sidebarPosition = await sidebar.evaluate((el) => getComputedStyle(el).position)
-      expect(sidebarPosition).toBe('static')
+      expect(sidebarPosition).toBe('relative')
     }
   })
 

@@ -52,9 +52,9 @@ test.describe('Recipes page', () => {
   })
 
   test('add tab becomes active when clicked', async ({ page }) => {
-    await page.getByRole('button', { name: 'Lägg till' }).click()
+    const addTab = page.locator('.tab-button', { hasText: 'Lägg till' })
+    await addTab.click()
     await page.waitForTimeout(300)
-    const addTab = page.getByRole('button', { name: 'Lägg till' })
     await expect(addTab).toHaveClass(/active/)
   })
 
