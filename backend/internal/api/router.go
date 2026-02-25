@@ -152,6 +152,7 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	}
 	allowedOrigins := strings.Split(corsOrigins, ",")
 
-	// Wrap with middleware: security headers → CORS → request ID → handler
-	return middleware.Security(middleware.CORS(allowedOrigins)(middleware.RequestID(mux)))
+	// Wrap with middleware: CORS → request ID → handler
+	// Note: Security headers are applied in main.go to cover both API and static files
+	return middleware.CORS(allowedOrigins)(middleware.RequestID(mux))
 }

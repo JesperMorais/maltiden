@@ -3,7 +3,7 @@ import { ref, toRefs } from 'vue'
 import type { User } from '@/api/types/dashboard.types'
 import { useThemeStore } from '@/stores/theme'
 import { useFocusTrap } from '@/composables/useFocusTrap'
-import { User as UserIcon, Bell, Palette, Settings, LogOut } from 'lucide-vue-next'
+import { User as UserIcon, Bell, Palette, Settings, LogOut, MessageCircle } from 'lucide-vue-next'
 
 interface Props {
   user: User | null
@@ -155,6 +155,24 @@ function handleOverlayClick(e: MouseEvent) {
                 </label>
               </div>
               <p class="coming-soon">Fler teman kommer snart!</p>
+            </section>
+
+            <!-- Feedback Section -->
+            <section class="settings-section">
+              <h3>
+                <span class="section-icon"><MessageCircle :size="16" /></span>
+                Feedback
+              </h3>
+              <div class="account-actions">
+                <a
+                  href="mailto:maltiden.app@gmail.com?subject=Feedback%20-%20Måltiden"
+                  class="action-btn feedback-btn"
+                >
+                  <span class="btn-icon"><MessageCircle :size="18" /></span>
+                  Skicka feedback
+                </a>
+              </div>
+              <p class="coming-soon">Hjälp oss bli bättre — vi läser all feedback!</p>
             </section>
 
             <!-- Account Section -->
@@ -467,6 +485,18 @@ function handleOverlayClick(e: MouseEvent) {
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
+}
+
+.feedback-btn {
+  background: var(--accent-bg, #e8f4fd);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.feedback-btn:hover {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  transform: translateY(-2px);
 }
 
 .logout-btn {
