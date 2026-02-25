@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
 import { RouterView } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
 
 const ToastNotification = defineAsyncComponent(() =>
   import('@/components/common/ToastNotification.vue')
+)
+const FeedbackWidget = defineAsyncComponent(() =>
+  import('@/components/common/FeedbackWidget.vue')
 )
 </script>
 
@@ -14,6 +20,7 @@ const ToastNotification = defineAsyncComponent(() =>
     </Transition>
   </RouterView>
   <ToastNotification />
+  <FeedbackWidget v-if="userStore.isAuthenticated" />
 </template>
 
 <style>
