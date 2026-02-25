@@ -1,8 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [main, dev]
   pull_request:
     branches: [main, dev]
 
@@ -21,10 +19,8 @@ jobs:
           filters: |
             backend:
               - 'backend/**'
-              - '.github/workflows/ci.yml'
             frontend:
               - 'frontend/**'
-              - '.github/workflows/ci.yml'
 
   backend:
     name: Backend
