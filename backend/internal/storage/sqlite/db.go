@@ -106,6 +106,8 @@ func runMigrations(db *sql.DB, fs embed.FS) error {
 		{6, "006_household_invites_and_member_status.sql"},
 		{7, "007_add_menu_date_index.sql"},
 		{8, "008_seed_more_recipes.sql"},
+		{9, "009_add_token_version.sql"},
+		{10, "010_add_recipe_household_id.sql"},
 	}
 
 	for _, m := range migrationFiles {
