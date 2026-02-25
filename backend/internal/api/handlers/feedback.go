@@ -26,6 +26,9 @@ func (h *FeedbackHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Override client-supplied UserAgent with actual HTTP header
+	req.UserAgent = r.Header.Get("User-Agent")
+
 	resp, err := h.feedbackService.Create(req, userID, householdID)
 	if err != nil {
 		switch {

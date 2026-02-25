@@ -141,7 +141,6 @@ async function submit() {
       comment: comment.value.trim() || undefined,
       page: route.path,
       viewportWidth: window.innerWidth,
-      userAgent: navigator.userAgent,
     })
 
     step.value = 'success'

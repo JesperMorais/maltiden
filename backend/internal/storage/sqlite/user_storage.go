@@ -112,3 +112,11 @@ func (s *UserStorage) IncrementTokenVersion(userID string) error {
 	)
 	return err
 }
+
+// IncrementTokenVersionTx increments token_version within a transaction.
+func (s *UserStorage) IncrementTokenVersionTx(tx *sql.Tx, userID string) error {
+	_, err := tx.Exec(
+		`UPDATE users SET token_version = token_version + 1 WHERE id = ?`, userID,
+	)
+	return err
+}
