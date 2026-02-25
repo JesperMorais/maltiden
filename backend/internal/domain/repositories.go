@@ -12,6 +12,7 @@ type UserRepository interface {
 	CreateTx(tx *sql.Tx, user *User) error
 	GetTokenVersion(userID string) (int, error)
 	IncrementTokenVersion(userID string) error
+	IncrementTokenVersionTx(tx *sql.Tx, userID string) error
 }
 
 // HouseholdRepository defines the interface for household storage operations.

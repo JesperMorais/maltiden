@@ -197,12 +197,24 @@ func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUse
 		return domain.ErrCannotRemove
 	}
 
-	if err := s.householdStorage.RemoveMember(householdID, targetUserID); err != nil {
+	// Run both writes in a transaction to prevent inconsistent state
+	// (member removed but JWT not invalidated if second write fails)
+	tx, err := s.householdStorage.DB().Begin()
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if err := s.householdStorage.RemoveMemberTx(tx, householdID, targetUserID); err != nil {
 		return err
 	}
 
 	// Invalidate all existing JWTs for the removed user
-	return s.userStorage.IncrementTokenVersion(targetUserID)
+	if err := s.userStorage.IncrementTokenVersionTx(tx, targetUserID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // generateInviteCode creates a random 8-character alphanumeric code (~40 bits of entropy).

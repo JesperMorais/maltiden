@@ -7,7 +7,6 @@ export interface FeedbackRequest {
   comment?: string
   page?: string
   viewportWidth?: number
-  userAgent?: string
 }
 
 export interface FeedbackResponse {

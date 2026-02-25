@@ -92,7 +92,7 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.HandleFunc("GET /offers/search", deps.offers.SearchOffers)
 	mux.HandleFunc("GET /offers/discounts", deps.offers.GetDiscounts)
 	mux.HandleFunc("GET /offers/stores", deps.offers.GetStores)
-	mux.Handle("GET /recipes", middleware.OptionalAuth(jwtService)(
+	mux.Handle("GET /recipes", middleware.OptionalAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.recipe.GetAll),
 	))
 	mux.HandleFunc("GET /recipes/{id}", deps.recipe.GetByID)
