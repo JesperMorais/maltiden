@@ -181,8 +181,10 @@ def clean_ingredient_name(name: str) -> str:
     name = re.sub(r"\s*\(.*?\)\s*", " ", name)
     # Remove "à X g" suffixes
     name = re.sub(r"\s*à\s+\d+.*$", "", name)
-    # Remove "eller ..." alternatives
+    # Remove "eller ..." alternatives, and any preceding comma-separated fragments
     name = re.sub(r"\s+eller\s+.*$", "", name)
+    # If stripping left just an adjective (e.g. "Frysta" from "Frysta eller färska X"), drop it
+    name = re.sub(r"^(Frysta|Färska|Tinade|Kylda|Kokta|Torkade)\s*$", "", name, flags=re.IGNORECASE)
     # Remove trailing descriptors like "till garnering", "till servering"
     name = re.sub(r"\s+till\s+(garnering|servering).*$", "", name, flags=re.IGNORECASE)
     # Remove trailing "ev." or leading "ev "/"ev. "
