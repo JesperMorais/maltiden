@@ -37,4 +37,10 @@ var (
 
 	// Auth validation
 	ErrInvalidEmail = errors.New("invalid_email")
+
+	// Feedback validation
+	ErrInvalidMood        = errors.New("invalid_mood")
+	ErrCommentTooLong     = errors.New("comment_too_long")
+	ErrInvalidCategory    = errors.New("invalid_category")
+	ErrFeedbackRateLimited = errors.New("feedback_rate_limited")
 )
