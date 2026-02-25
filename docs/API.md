@@ -2,6 +2,29 @@
 
 Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
+## Recent Changes (PR #85)
+
+**New Endpoints:**
+- `POST /feedback` — Submit user feedback (auth required, rate-limited to 5/hour per user)
+
+**Behavioral Changes:**
+- `GET /recipes` — Now uses optional auth (`OptionalAuth`). Authenticated requests include household-specific recipes in addition to global ones. Unauthenticated requests return global recipes only.
+
+**Response shape changes:**
+- `MenuResponseDay` (returned by `POST /menus/generate`, `PUT /menus/current`, `GET /menus/current`) now includes optional `recipeName` and `emoji` fields in each day object.
+- `Recipe` object now includes optional `householdId` field (omitted for global recipes).
+
+**Rate limiting additions:**
+- `POST /households/join` — 3 req/sec, burst 5 (brute-force protection on invite codes)
+- `POST /recipes/parse` — 2 req/sec, burst 5 (AI API credit protection)
+- `POST /recipes/parse-and-save` — 2 req/sec, burst 5 (AI API credit protection)
+
+**Auth / security:**
+- `RequireAuth` middleware now validates token version against the database on every request. Tokens invalidated server-side (e.g. after password change) are rejected with `401 unauthorized`.
+- On `401` responses the Axios client now sets `sessionStorage.session_expired = 'true'` before redirecting to `/login`.
+
+---
+
 ## Recent Changes (PR #82)
 
 **New API Endpoints:**
@@ -117,6 +140,7 @@ Only members and owners may create invite codes. Guests receive 403.
 ```
 
 ### POST /households/join
+**Rate limited:** 3 req/sec, burst 5 (brute-force protection on invite codes). Returns `429 Too Many Requests` when exceeded.
 ```json
 // Request
 { "code": "ABC123" }
@@ -192,6 +216,7 @@ Only members and owners may create invite codes. Guests receive 403.
 ## Recipes
 
 ### GET /recipes
+**Auth optional.** Provide `Authorization: Bearer <token>` to include household-specific recipes alongside global ones. Unauthenticated requests return only global recipes.
 ```json
 // Query parameters (all optional):
 // ?name=köttfärs    - Filter by recipe name (partial match)
@@ -204,7 +229,8 @@ Only members and owners may create invite codes. Guests receive 403.
       "id": "rec_001",
       "name": "Köttfärssås",
       "servings": 4,
-      "emoji": "🍝",        // optional — omitted when empty
+      "emoji": "🍝",            // optional — omitted when empty
+      "householdId": "hh_xyz",  // optional — present for household-specific recipes
       "tags": ["vardag", "barn"]
     }
   ]
@@ -219,6 +245,7 @@ Only members and owners may create invite codes. Guests receive 403.
   "name": "Köttfärssås",
   "servings": 4,
   "emoji": "🍝",            // optional — omitted when empty
+  "householdId": "hh_xyz",  // optional — present for household-specific recipes
   "ingredients": [
     { "name": "Köttfärs", "amount": 400, "unit": "g" },
     { "name": "Krossade tomater", "amount": 400, "unit": "g" }
@@ -311,6 +338,7 @@ Delete a recipe. **Auth required.**
 
 ### POST /recipes/parse
 Parse unstructured recipe text into structured data using AI. **Auth required.**
+**Rate limited:** 2 req/sec, burst 5 (AI API credit protection).
 ```json
 // Request
 {
@@ -347,6 +375,7 @@ Parse unstructured recipe text into structured data using AI. **Auth required.**
 
 ### POST /recipes/parse-and-save
 Parse recipe text and immediately save it to the database. **Auth required.**
+**Rate limited:** 2 req/sec, burst 5 (AI API credit protection).
 ```json
 // Request
 {
@@ -395,12 +424,13 @@ Parse recipe text and immediately save it to the database. **Auth required.**
 {
   "id": "menu_001",
   "days": [
-    { "date": "2025-01-20", "recipeId": "rec_001", "servings": 4 },
-    { "date": "2025-01-21", "recipeId": "rec_002", "servings": 4 },
+    { "date": "2025-01-20", "recipeId": "rec_001", "recipeName": "Köttfärssås", "emoji": "🍝", "servings": 4 },
+    { "date": "2025-01-21", "recipeId": "rec_002", "recipeName": "Laxpasta", "emoji": "🐟", "servings": 4 },
     { "date": "2025-01-22", "skip": true, "servings": 0 },
-    { "date": "2025-01-23", "recipeId": "rec_003", "servings": 6 }
+    { "date": "2025-01-23", "recipeId": "rec_003", "recipeName": "Kycklinggryta", "emoji": "🍗", "servings": 6 }
   ]
 }
+// Note: recipeName and emoji are optional — omitted for skip days and when not set on the recipe.
 
 // Error 400
 { "error": "invalid_days" }
@@ -428,12 +458,13 @@ Use this to replace the generated menu's day assignments without regenerating fr
 {
   "id": "menu_001",
   "days": [
-    { "date": "2026-02-24", "recipeId": "rec_001", "servings": 4 },
-    { "date": "2026-02-25", "recipeId": "rec_002", "servings": 4 },
+    { "date": "2026-02-24", "recipeId": "rec_001", "recipeName": "Köttfärssås", "emoji": "🍝", "servings": 4 },
+    { "date": "2026-02-25", "recipeId": "rec_002", "recipeName": "Laxpasta", "emoji": "🐟", "servings": 4 },
     { "date": "2026-02-26", "skip": true, "servings": 0 },
-    { "date": "2026-02-27", "recipeId": "rec_003", "servings": 6 }
+    { "date": "2026-02-27", "recipeId": "rec_003", "recipeName": "Kycklinggryta", "servings": 6 }
   ]
 }
+// Note: recipeName and emoji are optional — omitted for skip days and when not set on the recipe.
 
 // Error 404
 { "error": "no_active_menu" }
@@ -449,10 +480,11 @@ Use this to replace the generated menu's day assignments without regenerating fr
 {
   "id": "menu_001",
   "days": [
-    { "date": "2026-02-24", "recipeId": "rec_001", "servings": 4 },
+    { "date": "2026-02-24", "recipeId": "rec_001", "recipeName": "Köttfärssås", "emoji": "🍝", "servings": 4 },
     { "date": "2026-02-25", "skip": true, "servings": 0 }
   ]
 }
+// Note: recipeName and emoji are optional — omitted for skip days and when not set on the recipe.
 
 // Response 404 (ingen aktiv meny)
 { "error": "no_active_menu" }
@@ -508,6 +540,41 @@ Use this to replace the generated menu's day assignments without regenerating fr
 
 // Error 404
 { "error": "menu_not_found" }
+```
+
+---
+
+## Feedback
+
+**Auth required:** `Authorization: Bearer <token>`
+
+### POST /feedback
+Submit user feedback. Rate-limited to 5 submissions per user per hour.
+```json
+// Request
+{
+  "mood": "good",                     // required — "good" | "okay" | "bad"
+  "categories": ["recipes", "menu"],  // optional — valid values: "recipes" | "menu" | "shopping" | "design" | "other"
+  "comment": "Jättebra app!",         // optional — max 500 characters
+  "page": "/dashboard",               // optional — current page path
+  "viewportWidth": 1440,              // optional — screen width in pixels
+  "userAgent": "Mozilla/5.0 ..."      // optional — browser user agent string
+}
+
+// Response 201
+{ "id": "fb_abc123" }
+
+// Error 400 — invalid mood value
+{ "error": "invalid_mood" }
+
+// Error 400 — comment exceeds 500 characters
+{ "error": "comment_too_long" }
+
+// Error 400 — unknown category in categories array
+{ "error": "invalid_category" }
+
+// Error 429 — more than 5 submissions in the last hour
+{ "error": "feedback_rate_limited" }
 ```
 
 ---
@@ -622,6 +689,10 @@ Alla errors följer samma struktur:
 | `menu_not_found` | 404 | Angivet menuId hittades inte |
 | `no_recipes_available` | 400 | Inga recept att generera meny från |
 | `invalid_input` | 400 | Ogiltig indata till recipe parser |
+| `invalid_mood` | 400 | Ogiltigt mood-värde för feedback (måste vara "good", "okay" eller "bad") |
+| `comment_too_long` | 400 | Feedback-kommentar överstiger 500 tecken |
+| `invalid_category` | 400 | Okänd feedback-kategori |
+| `feedback_rate_limited` | 429 | Max 5 feedback-inlämningar per timme och användare |
 | `service_unavailable` | 502 | Extern tjänst (Tjek API) svarade inte |
 | `internal_error` | 500 | Oväntat serverfel |
 
@@ -679,3 +750,4 @@ The frontend uses Vue Router with the following routes:
 | GET /offers/search | ✅ | ✅ |
 | GET /offers/discounts | ✅ | ✅ |
 | GET /offers/stores | ✅ | ✅ |
+| POST /feedback | ✅ | ✅ |
