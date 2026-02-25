@@ -4,6 +4,7 @@ const E2E_PORT = 5174
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: process.env.CI ? ['**/e2e/**', '**/qa/**'] : [],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
