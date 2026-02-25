@@ -54,6 +54,17 @@ const mockFamilies: Record<string, string> = {
 
 const canSubmitCode = computed(() => joinCode.value.length >= 4)
 
+function passwordCharTypes(pw: string): number {
+  let upper = false, lower = false, digit = false, special = false
+  for (const ch of pw) {
+    if (/[A-Z]/.test(ch)) upper = true
+    else if (/[a-z]/.test(ch)) lower = true
+    else if (/[0-9]/.test(ch)) digit = true
+    else special = true
+  }
+  return [upper, lower, digit, special].filter(Boolean).length
+}
+
 const passwordsMatchCreate = computed(() =>
   createForm.value.password === createForm.value.passwordConfirm
 )
@@ -61,17 +72,24 @@ const passwordsMatchJoin = computed(() =>
   joinForm.value.password === joinForm.value.passwordConfirm
 )
 
+const passwordStrongEnoughCreate = computed(() =>
+  createForm.value.password.length >= 8 && passwordCharTypes(createForm.value.password) >= 3
+)
+const passwordStrongEnoughJoin = computed(() =>
+  joinForm.value.password.length >= 8 && passwordCharTypes(joinForm.value.password) >= 3
+)
+
 const canSubmitCreate = computed(() =>
   createForm.value.name.length >= 2 &&
   createForm.value.email.includes('@') &&
-  createForm.value.password.length >= 8 &&
+  passwordStrongEnoughCreate.value &&
   passwordsMatchCreate.value &&
   createForm.value.householdName.length >= 2
 )
 const canSubmitJoinMember = computed(() =>
   joinForm.value.name.length >= 2 &&
   joinForm.value.email.includes('@') &&
-  joinForm.value.password.length >= 8 &&
+  passwordStrongEnoughJoin.value &&
   passwordsMatchJoin.value
 )
 const canSubmitJoinGuest = computed(() => joinForm.value.name.length >= 2)
@@ -386,6 +404,9 @@ async function handleCreate() {
                         {{ showJoinPassword ? '🙈' : '👁️' }}
                       </button>
                     </div>
+                    <span v-if="joinForm.password.length > 0 && !passwordStrongEnoughJoin" class="field-hint">
+                      Minst 8 tecken med versaler, gemener och siffror
+                    </span>
                   </label>
 
                   <label class="form-label">
@@ -532,6 +553,9 @@ async function handleCreate() {
                         {{ showCreatePassword ? '🙈' : '👁️' }}
                       </button>
                     </div>
+                    <span v-if="createForm.password.length > 0 && !passwordStrongEnoughCreate" class="field-hint">
+                      Minst 8 tecken med versaler, gemener och siffror
+                    </span>
                   </label>
 
                   <label class="form-label">
@@ -1015,6 +1039,14 @@ async function handleCreate() {
   font-family: 'Nunito', sans-serif;
   font-size: 0.8rem;
   color: var(--error);
+  margin-top: 0.4rem;
+}
+
+.field-hint {
+  display: block;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #a0a0a0);
   margin-top: 0.4rem;
 }
 
