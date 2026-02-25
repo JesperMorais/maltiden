@@ -7,14 +7,14 @@ import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'
 import { isAxiosError } from 'axios'
 
-function getSwedishMenuError(e: unknown): string {
+function getSwedishMenuError(e: unknown, fallback: string): string {
   if (isAxiosError(e)) {
     const code = e.response?.data?.error as string | undefined
     if (code === 'no_recipes_available') return 'Inga recept tillgängliga — lägg till recept först'
     if (code === 'invalid_days') return 'Ogiltigt antal dagar'
     if (code === 'invalid_servings') return 'Ogiltigt antal portioner'
   }
-  return 'Kunde inte generera meny. Försök igen.'
+  return fallback
 }
 
 /**
@@ -260,7 +260,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       }
     } catch (e: unknown) {
       console.error('Failed to generate menu:', e)
-      error.value = getSwedishMenuError(e)
+      error.value = getSwedishMenuError(e, 'Kunde inte generera meny. Försök igen.')
       throw e
     } finally {
       isGenerating.value = false
@@ -310,7 +310,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       }
     } catch (e: unknown) {
       console.error('Failed to regenerate menu:', e)
-      error.value = getSwedishMenuError(e)
+      error.value = getSwedishMenuError(e, 'Kunde inte generera nya recept. Försök igen.')
       throw e
     } finally {
       isRegenerating.value = false
