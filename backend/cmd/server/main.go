@@ -12,6 +12,7 @@ import (
 
 	"maltiden/internal/api"
 	"maltiden/internal/storage/sqlite"
+	"maltiden/pkg/middleware"
 	"maltiden/pkg/utils"
 )
 
@@ -49,8 +50,9 @@ func main() {
 	// Create router (injects db and jwtService)
 	router := api.NewRouter(db, jwtService)
 
-	// Wrap with static file serving and SPA fallback
-	handler := withSPA("./static", router)
+	// Wrap with static file serving and SPA fallback,
+	// then apply security headers to ALL responses (API + static files)
+	handler := middleware.Security(withSPA("./static", router))
 
 	// Configure HTTP server with graceful shutdown and timeouts
 	srv := &http.Server{

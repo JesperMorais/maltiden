@@ -26,7 +26,8 @@ func Security(next http.Handler) http.Handler {
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 
 		// Content Security Policy — restrictive baseline for an SPA with API backend
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		// Allows Google Fonts (fonts.googleapis.com for CSS, fonts.gstatic.com for font files)
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
 		// HSTS — only in production behind TLS (Fly.io terminates TLS)
 		if isProduction {
