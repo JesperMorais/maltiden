@@ -5,6 +5,17 @@ import type { SaveMenuDay } from '@/api/menu.api'
 import { useDashboardStore } from './dashboard'
 import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'
+import { isAxiosError } from 'axios'
+
+function getSwedishMenuError(e: unknown): string {
+  if (isAxiosError(e)) {
+    const code = e.response?.data?.error as string | undefined
+    if (code === 'no_recipes_available') return 'Inga recept tillgängliga — lägg till recept först'
+    if (code === 'invalid_days') return 'Ogiltigt antal dagar'
+    if (code === 'invalid_servings') return 'Ogiltigt antal portioner'
+  }
+  return 'Kunde inte generera meny. Försök igen.'
+}
 
 /**
  * Menu Generator Store
@@ -249,7 +260,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       }
     } catch (e: unknown) {
       console.error('Failed to generate menu:', e)
-      error.value = 'Kunde inte generera meny. Försök igen.'
+      error.value = getSwedishMenuError(e)
       throw e
     } finally {
       isGenerating.value = false
@@ -299,7 +310,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       }
     } catch (e: unknown) {
       console.error('Failed to regenerate menu:', e)
-      error.value = 'Kunde inte generera nya recept. Försök igen.'
+      error.value = getSwedishMenuError(e)
       throw e
     } finally {
       isRegenerating.value = false
