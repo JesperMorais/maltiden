@@ -21,6 +21,7 @@ type dependencies struct {
 	menu        *handlers.MenuHandler
 	shopping    *handlers.ShoppingHandler
 	offers      *handlers.OffersHandler
+	feedback    *handlers.FeedbackHandler
 	health      *handlers.HealthHandler
 	userStorage *sqlite.UserStorage // needed for token version checks in auth middleware
 }
@@ -32,6 +33,7 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	recipeStorage := sqlite.NewRecipeStorage(db)
 	menuStorage := sqlite.NewMenuStorage(db)
 	shoppingStorage := sqlite.NewShoppingStorage(db)
+	feedbackStorage := sqlite.NewFeedbackStorage(db)
 
 	// Service layer
 	authService := services.NewAuthService(db, userStorage, householdStorage, jwtService)
@@ -40,6 +42,7 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	menuService := services.NewMenuService(menuStorage, recipeStorage)
 	shoppingService := services.NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 	tjekService := services.NewTjekService()
+	feedbackService := services.NewFeedbackService(feedbackStorage)
 
 	// Handler layer
 	return &dependencies{
@@ -49,6 +52,7 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 		menu:        handlers.NewMenuHandler(menuService),
 		shopping:    handlers.NewShoppingHandler(shoppingService, menuStorage),
 		offers:      handlers.NewOffersHandler(tjekService),
+		feedback:    handlers.NewFeedbackHandler(feedbackService),
 		health:      handlers.NewHealthHandler(db),
 		userStorage: userStorage,
 	}
@@ -143,6 +147,9 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	))
 	mux.Handle("PATCH /shopping-list/items/{id}", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.shopping.UpdateItem),
+	))
+	mux.Handle("POST /feedback", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.feedback.Create),
 	))
 
 	// Get CORS origins from environment or use development defaults
