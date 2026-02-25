@@ -190,8 +190,10 @@ def clean_ingredient_name(name: str) -> str:
     # Remove trailing "ev." or leading "ev "/"ev. "
     name = re.sub(r"^[Ee]v\.?\s+", "", name)
     name = re.sub(r"\s+ev\.?\s*$", "", name)
-    # Remove trailing unclosed parenthesis (artifact of à-stripping)
-    name = re.sub(r"\s*\(\s*$", "", name)
+    # Remove ", gärna ..." and " gärna ..." advisory notes
+    name = re.sub(r"[,\s]+gärna\b.*$", "", name, flags=re.IGNORECASE)
+    # Remove trailing unclosed parenthesis and any content (artifact of à-stripping)
+    name = re.sub(r"\s*\([^)]*$", "", name)
     # Remove trailing dash fragments from "eller" stripping: "Bland-, vego-" -> "Blandfärs"
     name = re.sub(r"[,\s]+\w+-$", "", name)
     # Remove trailing dash: "Nöt-" -> "Nötfärs" isn't possible, just strip the dash
