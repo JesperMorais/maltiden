@@ -4,6 +4,9 @@
  */
 
 :root {
+  /* Layout */
+  --header-height: 70px;
+
   /* Background colors */
   --bg-primary: #fffcf7;
   --bg-secondary: #fff8f0;

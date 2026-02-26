@@ -4,6 +4,7 @@ import { useLandingStore } from '@/stores/landing'
 import HeroSection from '@/components/landing/HeroSection.vue'
 import FeaturesSection from '@/components/landing/FeaturesSection.vue'
 import CtaSection from '@/components/landing/CtaSection.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 const landingStore = useLandingStore()
 
 onMounted(() => {
@@ -14,9 +15,9 @@ onMounted(() => {
 <template>
   <main class="landing-page">
     <!-- Loading state -->
-    <div v-if="landingStore.isLoading" class="loading-state">
+    <div v-if="landingStore.isLoading" class="loading-state" role="status" aria-label="Laddar sidan">
       <div class="loader">
-        <span class="loader-icon">🍳</span>
+        <span class="loader-icon" aria-hidden="true">🍳</span>
         <p class="loader-text">Laddar...</p>
       </div>
     </div>
@@ -27,9 +28,9 @@ onMounted(() => {
         <span class="error-icon">😅</span>
         <h2>Något gick fel</h2>
         <p>{{ landingStore.error }}</p>
-        <button class="retry-btn" @click="landingStore.fetchLandingData(true)">
+        <BaseButton variant="primary" size="md" @click="landingStore.fetchLandingData(true)">
           Försök igen
-        </button>
+        </BaseButton>
       </div>
     </div>
 
@@ -127,24 +128,6 @@ onMounted(() => {
   font-family: 'Nunito', sans-serif;
   color: var(--text-secondary);
   margin: 0 0 1.5rem;
-}
-
-.retry-btn {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--text-on-accent);
-  background: var(--accent);
-  border: none;
-  border-radius: 100px;
-  padding: 0.85em 2em;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.retry-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-accent);
 }
 
 @keyframes bounce {
