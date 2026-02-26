@@ -96,7 +96,7 @@ test.describe('Login page', () => {
 
   test('form labels are visible', async ({ page }) => {
     await expect(page.getByText('E-post')).toBeVisible()
-    await expect(page.getByText('Lösenord')).toBeVisible()
+    await expect(page.getByText('Lösenord', { exact: true })).toBeVisible()
   })
 
   test('theme toggle button exists', async ({ page }) => {
