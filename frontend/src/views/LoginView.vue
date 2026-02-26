@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BackLink from '@/components/common/BackLink.vue'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 import { useToast } from '@/composables/useToast'
 import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
+import BaseThemeToggle from '@/components/common/BaseThemeToggle.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -75,18 +77,8 @@ async function handleLogin() {
     <div class="login-container">
       <!-- Top bar with back link and theme toggle -->
       <div class="login-top-bar">
-        <RouterLink v-prefetch="'landing'" to="/" class="back-link">
-          <span class="back-arrow">←</span>
-          <span>Tillbaka</span>
-        </RouterLink>
-        <button
-          class="theme-toggle"
-          @click="themeStore.toggleDarkMode()"
-          :aria-label="themeStore.isDarkMode ? 'Byt till ljust läge' : 'Byt till mörkt läge'"
-        >
-          <svg v-if="themeStore.isDarkMode" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        </button>
+        <BackLink to="/" />
+        <BaseThemeToggle />
       </div>
 
       <!-- Login card -->
@@ -105,7 +97,7 @@ async function handleLogin() {
               autocomplete="email"
               placeholder="din@email.se"
               class="form-input"
-              :aria-describedby="error ? 'login-error' : undefined"
+              aria-describedby="login-error"
             />
           </label>
 
@@ -118,11 +110,15 @@ async function handleLogin() {
               autocomplete="current-password"
               placeholder="Ditt lösenord"
               class="form-input"
-              :aria-describedby="error ? 'login-error' : undefined"
+              aria-describedby="login-error"
             />
           </label>
 
-          <p v-if="error" id="login-error" role="alert" class="form-error">{{ error }}</p>
+          <p v-show="error" id="login-error" role="alert" class="form-error">{{ error }}</p>
+
+          <div class="forgot-password">
+            <a href="#" class="forgot-link" @click.prevent>Glömt lösenord?</a>
+          </div>
 
           <BaseButton
             type="submit"
@@ -216,55 +212,6 @@ async function handleLogin() {
   margin-bottom: 2rem;
 }
 
-/* Back link */
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-  text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 100px;
-  transition: all 0.3s ease;
-}
-
-.back-link:hover {
-  color: var(--accent);
-  background: var(--bg-hover);
-}
-
-.back-arrow {
-  transition: transform 0.3s ease;
-}
-
-.back-link:hover .back-arrow {
-  transform: translateX(-4px);
-}
-
-/* Theme toggle */
-.theme-toggle {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-hover);
-  border: 1px solid var(--border-color);
-  border-radius: 50%;
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: all 0.3s ease;
-}
-
-.theme-toggle:hover {
-  background: var(--border-color-hover);
-  color: var(--text-primary);
-  transform: scale(1.1);
-}
-
 /* Login card */
 .login-card {
   background: var(--bg-card);
@@ -346,6 +293,23 @@ async function handleLogin() {
   background: var(--error-bg);
   border-radius: 8px;
   text-align: center;
+}
+
+.forgot-password {
+  text-align: right;
+  margin: -0.5rem 0 0.5rem;
+}
+
+.forgot-link {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
 }
 
 .login-form .base-button {

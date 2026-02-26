@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import RecipeListPanel from '@/components/recipes/RecipeListPanel.vue'
 import AddRecipePanel from '@/components/recipes/AddRecipePanel.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
-
-const router = useRouter()
+import BackLink from '@/components/common/BackLink.vue'
 
 type Tab = 'list' | 'add'
 const activeTab = ref<Tab>('list')
@@ -27,10 +25,7 @@ function switchToList() {
     <!-- Header -->
     <header class="header">
       <div class="header-content">
-        <button class="back-link" @click="router.push({ name: 'dashboard' })">
-          <span class="back-arrow">&larr;</span>
-          <span>Dashboard</span>
-        </button>
+        <BackLink :to="{ name: 'dashboard' }" label="Dashboard" />
         <h1 class="title">Recept</h1>
         <p class="description">
           Hantera dina recept — bläddra, sök eller lägg till nya.
@@ -100,28 +95,9 @@ function switchToList() {
   margin: 0 auto;
 }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: none;
-  border: none;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0;
-  margin-bottom: 1rem;
-  transition: color 0.2s ease;
-}
-
-.back-link:hover {
-  color: var(--accent);
-}
-
-.back-arrow {
-  font-size: 1.1rem;
+.header-content :deep(.back-link) {
+  margin-bottom: 0.5rem;
+  margin-left: -1rem;
 }
 
 .title {
@@ -157,6 +133,7 @@ function switchToList() {
   font-weight: 700;
   font-size: 0.95rem;
   padding: 0.6rem 1.5rem;
+  min-height: 44px;
   border: none;
   border-radius: 11px;
   background: transparent;
