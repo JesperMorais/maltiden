@@ -163,16 +163,17 @@ test.describe('Onboarding page', () => {
     const form = page.locator('form.form-card').filter({ hasText: 'Skapa konto' })
     await expect(form).toBeVisible({ timeout: 5000 })
 
-    // Fill each field and verify value was set (fill() can miss v-model in headless CI)
+    // Use click + pressSequentially for all fields to reliably trigger Vue v-model in CI
     const nameInput = form.getByPlaceholder('Anna Andersson')
-    await nameInput.fill('Test User')
+    await nameInput.click()
+    await nameInput.pressSequentially('Test User')
     await expect(nameInput).toHaveValue('Test User')
 
     const emailInput = form.getByPlaceholder('anna@exempel.se')
-    await emailInput.fill('test@test.se')
+    await emailInput.click()
+    await emailInput.pressSequentially('test@test.se')
     await expect(emailInput).toHaveValue('test@test.se')
 
-    // Password inputs: use click + pressSequentially for reliable v-model triggers
     const pwInput = form.getByPlaceholder('Minst 8 tecken')
     await pwInput.click()
     await pwInput.pressSequentially('password123')
@@ -184,7 +185,8 @@ test.describe('Onboarding page', () => {
     await expect(pwConfirmInput).toHaveValue('password123')
 
     const householdInput = form.getByPlaceholder(/Familjen Andersson/)
-    await householdInput.fill('Testfamiljen')
+    await householdInput.click()
+    await householdInput.pressSequentially('Testfamiljen')
     await expect(householdInput).toHaveValue('Testfamiljen')
 
     await expect(page.getByRole('button', { name: 'Skapa konto' })).toBeEnabled({ timeout: 5000 })
@@ -196,11 +198,13 @@ test.describe('Onboarding page', () => {
     await expect(form).toBeVisible({ timeout: 5000 })
 
     const nameInput = form.getByPlaceholder('Anna Andersson')
-    await nameInput.fill('Test User')
+    await nameInput.click()
+    await nameInput.pressSequentially('Test User')
     await expect(nameInput).toHaveValue('Test User')
 
     const emailInput = form.getByPlaceholder('anna@exempel.se')
-    await emailInput.fill('test@test.se')
+    await emailInput.click()
+    await emailInput.pressSequentially('test@test.se')
     await expect(emailInput).toHaveValue('test@test.se')
 
     const pwInput = form.getByPlaceholder('Minst 8 tecken')
@@ -214,7 +218,8 @@ test.describe('Onboarding page', () => {
     await expect(pwConfirmInput).toHaveValue('password123')
 
     const householdInput = form.getByPlaceholder(/Familjen Andersson/)
-    await householdInput.fill('Testfamiljen')
+    await householdInput.click()
+    await householdInput.pressSequentially('Testfamiljen')
     await expect(householdInput).toHaveValue('Testfamiljen')
 
     await page.getByRole('button', { name: 'Skapa konto' }).click()
