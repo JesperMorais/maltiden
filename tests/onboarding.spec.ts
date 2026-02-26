@@ -160,32 +160,65 @@ test.describe('Onboarding page', () => {
 
   test('create household flow: submit enabled with valid form', async ({ page }) => {
     await page.getByText('Skapa nytt hushåll').click()
-    await page.waitForTimeout(800)
-
     const form = page.locator('form.form-card').filter({ hasText: 'Skapa konto' })
-    await form.getByPlaceholder('Anna Andersson').fill('Test User')
-    await form.getByPlaceholder('anna@exempel.se').fill('test@test.se')
-    await form.getByPlaceholder('Minst 8 tecken').fill('password123')
-    await form.getByPlaceholder('Skriv lösenordet igen').fill('password123')
-    await form.getByPlaceholder(/Familjen Andersson/).fill('Testfamiljen')
-    await page.waitForTimeout(200)
+    await expect(form).toBeVisible({ timeout: 5000 })
 
-    await expect(page.getByRole('button', { name: 'Skapa konto' })).toBeEnabled({ timeout: 3000 })
+    // Fill each field and verify value was set (fill() can miss v-model in headless CI)
+    const nameInput = form.getByPlaceholder('Anna Andersson')
+    await nameInput.fill('Test User')
+    await expect(nameInput).toHaveValue('Test User')
+
+    const emailInput = form.getByPlaceholder('anna@exempel.se')
+    await emailInput.fill('test@test.se')
+    await expect(emailInput).toHaveValue('test@test.se')
+
+    // Password inputs: use click + pressSequentially for reliable v-model triggers
+    const pwInput = form.getByPlaceholder('Minst 8 tecken')
+    await pwInput.click()
+    await pwInput.pressSequentially('password123')
+    await expect(pwInput).toHaveValue('password123')
+
+    const pwConfirmInput = form.getByPlaceholder('Skriv lösenordet igen')
+    await pwConfirmInput.click()
+    await pwConfirmInput.pressSequentially('password123')
+    await expect(pwConfirmInput).toHaveValue('password123')
+
+    const householdInput = form.getByPlaceholder(/Familjen Andersson/)
+    await householdInput.fill('Testfamiljen')
+    await expect(householdInput).toHaveValue('Testfamiljen')
+
+    await expect(page.getByRole('button', { name: 'Skapa konto' })).toBeEnabled({ timeout: 5000 })
   })
 
   test('create household flow: successful registration shows success', async ({ page }) => {
     await page.getByText('Skapa nytt hushåll').click()
-    await page.waitForTimeout(800)
-
     const form = page.locator('form.form-card').filter({ hasText: 'Skapa konto' })
-    await form.getByPlaceholder('Anna Andersson').fill('Test User')
-    await form.getByPlaceholder('anna@exempel.se').fill('test@test.se')
-    await form.getByPlaceholder('Minst 8 tecken').fill('password123')
-    await form.getByPlaceholder('Skriv lösenordet igen').fill('password123')
-    await form.getByPlaceholder(/Familjen Andersson/).fill('Testfamiljen')
+    await expect(form).toBeVisible({ timeout: 5000 })
+
+    const nameInput = form.getByPlaceholder('Anna Andersson')
+    await nameInput.fill('Test User')
+    await expect(nameInput).toHaveValue('Test User')
+
+    const emailInput = form.getByPlaceholder('anna@exempel.se')
+    await emailInput.fill('test@test.se')
+    await expect(emailInput).toHaveValue('test@test.se')
+
+    const pwInput = form.getByPlaceholder('Minst 8 tecken')
+    await pwInput.click()
+    await pwInput.pressSequentially('password123')
+    await expect(pwInput).toHaveValue('password123')
+
+    const pwConfirmInput = form.getByPlaceholder('Skriv lösenordet igen')
+    await pwConfirmInput.click()
+    await pwConfirmInput.pressSequentially('password123')
+    await expect(pwConfirmInput).toHaveValue('password123')
+
+    const householdInput = form.getByPlaceholder(/Familjen Andersson/)
+    await householdInput.fill('Testfamiljen')
+    await expect(householdInput).toHaveValue('Testfamiljen')
 
     await page.getByRole('button', { name: 'Skapa konto' }).click()
-    await expect(page.getByText('Konto skapat!')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('Konto skapat!')).toBeVisible({ timeout: 10000 })
   })
 
   test('change choice resets back to initial state', async ({ page }) => {
