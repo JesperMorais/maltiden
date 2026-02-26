@@ -162,6 +162,9 @@ test.describe('Onboarding page', () => {
     await page.getByText('Skapa nytt hushåll').click()
     const form = page.locator('form.form-card').filter({ hasText: 'Skapa konto' })
     await expect(form).toBeVisible({ timeout: 5000 })
+    // Wait for the form-slide CSS transition to finish before filling inputs
+    // Wait for form-slide CSS transition to complete (0.4s) before filling inputs
+    await expect(page.locator('.form-slide-enter-active')).toHaveCount(0, { timeout: 3000 })
 
     // Use click + pressSequentially for all fields to reliably trigger Vue v-model in CI
     const nameInput = form.getByPlaceholder('Anna Andersson')
@@ -196,6 +199,9 @@ test.describe('Onboarding page', () => {
     await page.getByText('Skapa nytt hushåll').click()
     const form = page.locator('form.form-card').filter({ hasText: 'Skapa konto' })
     await expect(form).toBeVisible({ timeout: 5000 })
+    // Wait for the form-slide CSS transition to finish before filling inputs
+    // Wait for form-slide CSS transition to complete (0.4s) before filling inputs
+    await expect(page.locator('.form-slide-enter-active')).toHaveCount(0, { timeout: 3000 })
 
     const nameInput = form.getByPlaceholder('Anna Andersson')
     await nameInput.click()
