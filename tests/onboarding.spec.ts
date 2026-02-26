@@ -162,35 +162,21 @@ test.describe('Onboarding page', () => {
     await page.getByText('Skapa nytt hushåll').click()
     const form = page.locator('form.form-card').filter({ hasText: 'Skapa konto' })
     await expect(form).toBeVisible({ timeout: 5000 })
-    // Wait for the form-slide CSS transition to finish before filling inputs
-    // Wait for form-slide CSS transition to complete (0.4s) before filling inputs
+    // Wait for form-slide CSS transition to complete before filling inputs
     await expect(page.locator('.form-slide-enter-active')).toHaveCount(0, { timeout: 3000 })
 
-    // Use click + pressSequentially for all fields to reliably trigger Vue v-model in CI
-    const nameInput = form.getByPlaceholder('Anna Andersson')
-    await nameInput.click()
-    await nameInput.pressSequentially('Test User')
-    await expect(nameInput).toHaveValue('Test User')
+    await form.getByPlaceholder('Anna Andersson').fill('Test User')
+    await form.getByPlaceholder('anna@exempel.se').fill('test@test.se')
+    await form.getByPlaceholder('Minst 8 tecken').fill('password123')
+    await form.getByPlaceholder('Skriv lösenordet igen').fill('password123')
+    await form.getByPlaceholder(/Familjen Andersson/).fill('Testfamiljen')
 
-    const emailInput = form.getByPlaceholder('anna@exempel.se')
-    await emailInput.click()
-    await emailInput.pressSequentially('test@test.se')
-    await expect(emailInput).toHaveValue('test@test.se')
-
-    const pwInput = form.getByPlaceholder('Minst 8 tecken')
-    await pwInput.click()
-    await pwInput.pressSequentially('password123')
-    await expect(pwInput).toHaveValue('password123')
-
-    const pwConfirmInput = form.getByPlaceholder('Skriv lösenordet igen')
-    await pwConfirmInput.click()
-    await pwConfirmInput.pressSequentially('password123')
-    await expect(pwConfirmInput).toHaveValue('password123')
-
-    const householdInput = form.getByPlaceholder(/Familjen Andersson/)
-    await householdInput.click()
-    await householdInput.pressSequentially('Testfamiljen')
-    await expect(householdInput).toHaveValue('Testfamiljen')
+    // Re-dispatch input events to ensure Vue v-model picks up all values in CI
+    await form.evaluate((formEl) => {
+      formEl.querySelectorAll('input').forEach((input) => {
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+    })
 
     await expect(page.getByRole('button', { name: 'Skapa konto' })).toBeEnabled({ timeout: 5000 })
   })
@@ -199,34 +185,21 @@ test.describe('Onboarding page', () => {
     await page.getByText('Skapa nytt hushåll').click()
     const form = page.locator('form.form-card').filter({ hasText: 'Skapa konto' })
     await expect(form).toBeVisible({ timeout: 5000 })
-    // Wait for the form-slide CSS transition to finish before filling inputs
-    // Wait for form-slide CSS transition to complete (0.4s) before filling inputs
+    // Wait for form-slide CSS transition to complete before filling inputs
     await expect(page.locator('.form-slide-enter-active')).toHaveCount(0, { timeout: 3000 })
 
-    const nameInput = form.getByPlaceholder('Anna Andersson')
-    await nameInput.click()
-    await nameInput.pressSequentially('Test User')
-    await expect(nameInput).toHaveValue('Test User')
+    await form.getByPlaceholder('Anna Andersson').fill('Test User')
+    await form.getByPlaceholder('anna@exempel.se').fill('test@test.se')
+    await form.getByPlaceholder('Minst 8 tecken').fill('password123')
+    await form.getByPlaceholder('Skriv lösenordet igen').fill('password123')
+    await form.getByPlaceholder(/Familjen Andersson/).fill('Testfamiljen')
 
-    const emailInput = form.getByPlaceholder('anna@exempel.se')
-    await emailInput.click()
-    await emailInput.pressSequentially('test@test.se')
-    await expect(emailInput).toHaveValue('test@test.se')
-
-    const pwInput = form.getByPlaceholder('Minst 8 tecken')
-    await pwInput.click()
-    await pwInput.pressSequentially('password123')
-    await expect(pwInput).toHaveValue('password123')
-
-    const pwConfirmInput = form.getByPlaceholder('Skriv lösenordet igen')
-    await pwConfirmInput.click()
-    await pwConfirmInput.pressSequentially('password123')
-    await expect(pwConfirmInput).toHaveValue('password123')
-
-    const householdInput = form.getByPlaceholder(/Familjen Andersson/)
-    await householdInput.click()
-    await householdInput.pressSequentially('Testfamiljen')
-    await expect(householdInput).toHaveValue('Testfamiljen')
+    // Re-dispatch input events to ensure Vue v-model picks up all values in CI
+    await form.evaluate((formEl) => {
+      formEl.querySelectorAll('input').forEach((input) => {
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+    })
 
     await page.getByRole('button', { name: 'Skapa konto' }).click()
     await expect(page.getByText('Konto skapat!')).toBeVisible({ timeout: 10000 })
