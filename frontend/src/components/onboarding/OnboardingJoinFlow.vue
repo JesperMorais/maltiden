@@ -117,7 +117,7 @@ async function handleJoinAsGuest() {
 </script>
 
 <template>
-  <div class=join-flow>
+  <div class="join-flow">
     <!-- Step 1: Enter code -->
     <div v-if="joinStep === 'code'" class="form-card">
       <label class="form-label">

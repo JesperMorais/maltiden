@@ -16,7 +16,6 @@ const createForm = ref({
   email: '',
   password: '',
   passwordConfirm: '',
-  householdName: '',
 })
 
 const showCreatePassword = ref(false)
@@ -52,8 +51,7 @@ const canSubmitCreate = computed(
     createForm.value.name.length >= 2 &&
     createForm.value.email.includes('@') &&
     passwordStrongEnoughCreate.value &&
-    passwordsMatchCreate.value &&
-    createForm.value.householdName.length >= 2,
+    passwordsMatchCreate.value,
 )
 
 async function handleCreate() {
@@ -159,18 +157,6 @@ async function handleCreate() {
       <span v-if="createForm.passwordConfirm && !passwordsMatchCreate" class="field-error">
         Lösenorden matchar inte
       </span>
-    </label>
-
-    <label class="form-label">
-      <span>Namn på hushållet</span>
-      <input
-        v-model="createForm.householdName"
-        type="text"
-        name="household-name"
-        autocomplete="off"
-        placeholder="T.ex. Familjen Andersson"
-        class="form-input"
-      />
     </label>
 
     <p v-if="createError" id="create-error" role="alert" class="form-error">{{ createError }}</p>
