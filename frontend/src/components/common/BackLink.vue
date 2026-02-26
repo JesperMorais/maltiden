@@ -4,17 +4,15 @@ import { RouterLink } from 'vue-router'
 interface Props {
   to: string | { name: string }
   label?: string
-  prefetch?: string
 }
 
 withDefaults(defineProps<Props>(), {
   label: 'Tillbaka',
-  prefetch: undefined,
 })
 </script>
 
 <template>
-  <RouterLink :to="to" :v-prefetch="prefetch" class="back-link">
+  <RouterLink :to="to" class="back-link">
     <span class="back-arrow">&larr;</span>
     <span>{{ label }}</span>
   </RouterLink>
