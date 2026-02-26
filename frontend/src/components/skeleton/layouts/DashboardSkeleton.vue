@@ -228,7 +228,7 @@ import SkeletonCircle from '../SkeletonCircle.vue'
   flex-direction: column;
   gap: 1rem;
   position: sticky;
-  top: calc(70px + 2rem);
+  top: calc(var(--header-height) + 2rem);
 }
 
 /* Shared widget styling — mirrors QuickActions/Household/Shopping */

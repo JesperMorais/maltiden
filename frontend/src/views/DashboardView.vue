@@ -234,9 +234,10 @@ function handleViewShoppingList() {
   font-weight: 700;
   font-size: clamp(1.25rem, 3vw, 1.75rem);
   color: var(--text-primary);
-  min-height: 2.5em;
+  height: 2.5em;
   display: flex;
   align-items: center;
+  overflow: hidden;
 }
 
 :deep(.greeting-text) {
@@ -268,7 +269,7 @@ function handleViewShoppingList() {
   flex-direction: column;
   gap: 1rem;
   position: sticky;
-  top: calc(70px + 2rem); /* Header height + padding */
+  top: calc(var(--header-height) + 2rem);
 }
 
 /* Responsive */
@@ -298,16 +299,14 @@ function handleViewShoppingList() {
   /* Scroll hint gradient for below-fold content */
   .sidebar::after {
     content: '';
-    position: fixed;
+    position: sticky;
     bottom: 0;
-    left: 0;
-    right: 0;
+    display: block;
     height: 48px;
+    margin-top: -48px;
     background: linear-gradient(to top, var(--bg-secondary) 0%, transparent 100%);
     pointer-events: none;
     z-index: 10;
-    opacity: 1;
-    transition: opacity 0.3s ease;
   }
 }
 </style>
