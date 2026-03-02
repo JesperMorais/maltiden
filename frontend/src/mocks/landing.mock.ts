@@ -54,12 +54,13 @@ export const mockLandingData: LandingPageData = {
   },
 
   cta: {
-    title: 'Vill du veta mer?',
-    description: 'Läs mer om hur Måltiden kan förenkla din vardag och hjälpa hela familjen att planera måltider tillsammans.',
+    title: 'Börja planera idag',
+    description:
+      'Skapa ett konto och få din första veckomeny på några minuter. Helt gratis, inga kreditkort.',
     primaryButton: {
-      text: 'Om Måltiden',
-      link: '/about'
-    }
+      text: 'Skapa konto gratis',
+      link: '/register',
+    },
   },
 
   meta: {

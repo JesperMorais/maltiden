@@ -1,5 +1,17 @@
 <script setup lang="ts">
+import { type Component, markRaw } from 'vue'
 import BaseCard from '@/components/common/BaseCard.vue'
+import {
+  CalendarCheck,
+  ShoppingCart,
+  Users,
+  Heart,
+  Calendar,
+  List,
+  Star,
+  Clock,
+  Sparkles,
+} from 'lucide-vue-next'
 
 interface Props {
   icon: string
@@ -9,23 +21,24 @@ interface Props {
 
 defineProps<Props>()
 
-// Map icon names to emojis for MVP (can be replaced with SVG icons later)
-const iconMap: Record<string, string> = {
-  'calendar-check': '📅',
-  'shopping-cart': '🛒',
-  'users': '👨‍👩‍👧‍👦',
-  'heart': '❤️',
-  'calendar': '📆',
-  'list': '📝',
-  'star': '⭐',
-  'clock': '⏰'
+const iconMap: Record<string, Component> = {
+  'calendar-check': markRaw(CalendarCheck),
+  'shopping-cart': markRaw(ShoppingCart),
+  users: markRaw(Users),
+  heart: markRaw(Heart),
+  calendar: markRaw(Calendar),
+  list: markRaw(List),
+  star: markRaw(Star),
+  clock: markRaw(Clock),
 }
+
+const fallbackIcon = markRaw(Sparkles)
 </script>
 
 <template>
   <BaseCard class="feature-card" padding="lg">
     <div class="icon-wrapper">
-      <span class="icon">{{ iconMap[icon] || '✨' }}</span>
+      <component :is="iconMap[icon] || fallbackIcon" class="icon" :size="32" :stroke-width="1.75" />
       <div class="icon-bg"></div>
     </div>
     <h3 class="feature-title">{{ title }}</h3>
@@ -56,7 +69,7 @@ const iconMap: Record<string, string> = {
 .icon {
   position: relative;
   z-index: 2;
-  font-size: 2.5rem;
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
