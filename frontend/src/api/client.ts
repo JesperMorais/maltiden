@@ -43,10 +43,14 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     // Handle 401 Unauthorized - token expired or invalid
-    if (error.response?.status === 401) {
+    // Skip for auth endpoints — their 401s mean "wrong credentials", not "session expired"
+    const requestUrl = error.config?.url ?? ''
+    const isAuthEndpoint = requestUrl.startsWith('/auth/')
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       tokenUtils.remove()
-      // Only redirect if not already on login page
-      if (!window.location.pathname.includes('/login')) {
+      // Only redirect if not already on login/register page
+      const path = window.location.pathname
+      if (!path.includes('/login') && !path.includes('/register')) {
         sessionStorage.setItem('session_expired', 'true')
         window.location.href = '/login'
       }
