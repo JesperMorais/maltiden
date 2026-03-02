@@ -376,7 +376,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: 1rem;
-  color: var(--accent);
+  color: var(--accent-text);
   width: 28px;
   height: 28px;
   display: flex;
@@ -409,7 +409,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
-  color: var(--accent);
+  color: var(--accent-text);
   background: none;
   border: 2px dashed var(--border-color);
   border-radius: 14px;
@@ -454,6 +454,31 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
   .unit-input {
     width: calc(50% - 1.25rem);
     flex: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .ingredient-row {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .ingredient-row .flex-1 {
+    flex: 1 1 100%;
+  }
+
+  .amount-input,
+  .unit-input {
+    width: calc(50% - 1rem);
+    flex: 1;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions > * {
+    width: 100%;
   }
 }
 </style>

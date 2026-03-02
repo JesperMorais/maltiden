@@ -62,6 +62,10 @@ defineEmits<{
   color: var(--text-primary);
   margin: 0;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .recipe-servings {
@@ -102,6 +106,22 @@ defineEmits<{
 
   .recipe-name {
     font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .recipe-card {
+    min-height: 150px;
+    gap: 0.35rem;
+  }
+
+  .recipe-emoji {
+    font-size: 2rem;
+  }
+
+  .recipe-tags {
+    max-height: 1.6rem;
+    overflow: hidden;
   }
 }
 </style>

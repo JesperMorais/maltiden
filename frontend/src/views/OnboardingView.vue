@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { UtensilsCrossed, UsersRound, Sparkles, PartyPopper } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
 import BackLink from '@/components/common/BackLink.vue'
@@ -48,14 +49,14 @@ function handleCreateSuccess() {
 
       <!-- Header -->
       <header class="onboarding-header">
-        <div class="logo-icon">🍽️</div>
+        <div class="logo-icon"><UtensilsCrossed :size="32" :stroke-width="1.75" /></div>
         <h1>Välkommen till Måltiden</h1>
         <p>Hur vill du komma igång?</p>
       </header>
 
       <!-- Success state -->
       <div v-if="submitSuccess" class="success-state">
-        <div class="success-icon">🎉</div>
+        <div class="success-icon"><PartyPopper :size="36" :stroke-width="1.75" /></div>
         <h2>{{ selectedChoice === 'join'
           ? `Välkommen till ${matchedFamily}!`
           : 'Konto skapat!'
@@ -91,7 +92,7 @@ function handleCreateSuccess() {
               padding="lg"
               @click="selectChoice('join')"
             >
-              <div class="choice-icon">👨‍👩‍👧‍👦</div>
+              <div class="choice-icon"><UsersRound :size="28" :stroke-width="1.75" /></div>
               <h2>Gå med i hushåll</h2>
               <p>Någon i din familj har redan skapat ett konto? Ange koden för att gå med.</p>
 
@@ -122,7 +123,7 @@ function handleCreateSuccess() {
               padding="lg"
               @click="selectChoice('create')"
             >
-              <div class="choice-icon">✨</div>
+              <div class="choice-icon"><Sparkles :size="28" :stroke-width="1.75" /></div>
               <h2>Skapa nytt hushåll</h2>
               <p>Starta ett nytt konto och bjud in din familj att planera måltider tillsammans.</p>
 
@@ -230,9 +231,15 @@ function handleCreateSuccess() {
 }
 
 .logo-icon {
-  font-size: 3.5rem;
-  margin-bottom: 1rem;
-  animation: float 3s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  margin: 0 auto 1rem;
 }
 
 .onboarding-header h1 {
@@ -258,9 +265,11 @@ function handleCreateSuccess() {
 }
 
 .success-icon {
-  font-size: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
   margin-bottom: 1.5rem;
-  animation: bounce 1s ease-in-out;
 }
 
 .success-state h2 {
@@ -325,8 +334,15 @@ function handleCreateSuccess() {
 }
 
 .choice-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  margin: 0 auto 1rem;
 }
 
 .choice-card h2 {
@@ -401,11 +417,6 @@ function handleCreateSuccess() {
 }
 
 /* Animations */
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
 @keyframes fade-in-up {
   from {
     opacity: 0;
@@ -415,11 +426,6 @@ function handleCreateSuccess() {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes bounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
 }
 
 /* Transitions */

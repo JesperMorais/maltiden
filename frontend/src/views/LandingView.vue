@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useLandingStore } from '@/stores/landing'
+import { useThemeStore } from '@/stores/theme'
 import HeroSection from '@/components/landing/HeroSection.vue'
 import FeaturesSection from '@/components/landing/FeaturesSection.vue'
 import CtaSection from '@/components/landing/CtaSection.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
 const landingStore = useLandingStore()
+const themeStore = useThemeStore()
+
+const waveLineColor = computed(() =>
+  themeStore.isDarkMode ? 'rgba(255, 138, 125, 0.15)' : 'rgba(255, 107, 91, 0.12)',
+)
 
 onMounted(() => {
   landingStore.fetchLandingData()
@@ -14,6 +21,22 @@ onMounted(() => {
 
 <template>
   <main class="landing-page">
+    <!-- Single wave background covering entire page (fixed = viewport-sized only, no jank) -->
+    <WavesBackground
+      :line-color="waveLineColor"
+      background-color="transparent"
+      :wave-speed-x="0.01"
+      :wave-speed-y="0.004"
+      :wave-amp-x="40"
+      :wave-amp-y="20"
+      :x-gap="12"
+      :y-gap="36"
+      :friction="0.92"
+      :tension="0.006"
+      :max-cursor-move="120"
+      :style="{ position: 'fixed', zIndex: 0, pointerEvents: 'none' }"
+    />
+
     <!-- Loading state -->
     <div v-if="landingStore.isLoading" class="loading-state" role="status" aria-label="Laddar sidan">
       <div class="loader">
@@ -63,9 +86,16 @@ onMounted(() => {
 
 <style scoped>
 .landing-page {
+  position: relative;
   min-height: 100vh;
-  background: var(--bg-secondary);
-  overflow-x: hidden;
+  background: linear-gradient(
+    180deg,
+    var(--bg-secondary) 0%,
+    var(--bg-primary) 30%,
+    var(--bg-secondary) 60%,
+    var(--bg-secondary) 100%
+  );
+  overflow: clip;
 }
 
 /* Loading state */

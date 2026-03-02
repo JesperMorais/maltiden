@@ -128,7 +128,13 @@ Rör ner äggblandningen."
 }
 
 .char-count.warning {
-  color: var(--accent);
+  color: var(--accent-text);
+}
+
+@media (max-width: 480px) {
+  .textarea {
+    min-height: 180px;
+  }
 }
 
 .form-error {
