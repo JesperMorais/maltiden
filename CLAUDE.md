@@ -8,14 +8,14 @@ Full-stack monorepo: **Go backend + Vue 3 frontend**, deployed on Fly.io.
 | Layer | Technology | Version |
 |-------|-----------|---------|
 | Backend | Go | 1.24 |
-| Database | SQLite (go-sqlite3, CGO) | 1.14.33 |
+| Database | SQLite (go-sqlite3, CGO) | 1.14.34 |
 | Auth | JWT (golang-jwt) + bcrypt | HS256, 7-day expiry |
 | Frontend | Vue 3 + TypeScript strict | 3.5.x / 5.9.x |
 | State | Pinia (Composition API) | 3.0.x |
 | HTTP client | Axios | 1.13.x |
 | Build | Vite | 7.3.x |
 | Lint/Format | ESLint + Prettier | semi: false, singleQuote: true, printWidth: 100 |
-| Animation | motion-v | 1.10.x |
+| Animation | motion-v | 2.0.x |
 | Testing | Vitest + @vue/test-utils + happy-dom | 4.0.x |
 | Node | ^20.19.0 \|\| >=22.12.0 | LTS |
 | AI | Claude API (Anthropic) | Recipe parsing |
@@ -37,7 +37,7 @@ maltiden/
 │   │   ├── claude/client.go            # Claude API HTTP client
 │   │   ├── middleware/{auth,cors,requestid,ratelimit}.go
 │   │   └── utils/{jwt,password}.go     # Token + bcrypt helpers
-│   └── migrations/                     # SQL migrations (001–007)
+│   └── migrations/                     # SQL migrations (001–012)
 ├── frontend/
 │   └── src/
 │       ├── api/                        # Axios client + typed API services
@@ -188,8 +188,8 @@ npm run test                      # Run tests (vitest)
 ## Database
 
 - **Engine:** SQLite with `go-sqlite3` (requires CGO)
-- **Migrations:** Sequential SQL files in `backend/migrations/` (001–007), auto-applied on startup
-- **Tables:** `users`, `households`, `household_members`, `invite_codes`, `recipes`, `menus`, `menu_days`, `shopping_items`
+- **Migrations:** Sequential SQL files in `backend/migrations/` (001–012), auto-applied on startup
+- **Tables:** `users`, `households`, `household_members`, `invite_codes`, `recipes`, `menus`, `menu_days`, `shopping_items`, `feedback`
 - **Note:** Ingredients and instructions are stored as JSON columns in the `recipes` table, not separate tables
 - **No ORM:** Direct `database/sql` with `QueryRow`, `Query`, `Exec`, manual `Scan`
 - **Indexes:** On `email`, `household_id`, and other frequently queried columns
@@ -206,7 +206,7 @@ See `docs/API.md` for full request/response contracts.
 
 ### Claude API (Recipe Parser)
 - Converts unstructured recipe text → structured JSON with ingredients, instructions, tags
-- Uses `claude-sonnet-4.5-20250929` with structured output
+- Uses `claude-sonnet-4-5-20250929` with structured output
 - Optional — app runs without `ANTHROPIC_API_KEY`
 - Full spec: `docs/RECIPE_PARSER_PIPELINE.md`
 
@@ -253,3 +253,43 @@ jq '.engines' frontend/package.json
 | `docs/RECIPE_PARSER_PIPELINE.md` | Claude integration spec (36KB, comprehensive) |
 | `docs/TJEK_API_INTEGRATION.md` | Grocery offers integration |
 | `docs/TODO.md` | Sprint planning and feature roadmap |
+
+## Frontend Aesthetics — Design System Rules
+
+Måltiden has an established, distinctive design system. Preserve and extend it — never override.
+
+### Established Design System — DO NOT CHANGE
+
+**Typography:**
+- Body/UI: **Nunito** (400, 600, 700, 800)
+- Display/headings: **Fraunces** (700, 800) — serif accent font
+- NEVER substitute with other fonts. Loaded via Google Fonts in `index.html`.
+
+**Color palette — warm cream + coral:**
+- Light: cream backgrounds (`#fffcf7`, `#fff8f0`), warm brown text (`#3d2c29`), coral accent (`#ff6b5b`)
+- Dark: deep brown backgrounds (`#1a1410`, `#2d2420`), warm light text (`#f5f0ed`), lighter coral (`#ff8a7d`)
+- Supporting: peach (`#ffb599`), soft yellow (`#ffd93d`), soft orange (`#ffab5e`)
+- ALL colors defined as CSS variables in `theme.css` — ALWAYS use `var(--token-name)`, never raw hex
+
+**Theme tokens:** Full variable system for backgrounds, text, borders, shadows, spacing (`--space-xs` through `--space-2xl`), radii (`--radius-sm` through `--radius-full`), and animation timing (`--ease-default`, `--duration-fast/normal/slow`).
+
+**Dark mode:** Fully implemented via `[data-theme="dark"]`. All new components must work in both themes using CSS variables.
+
+**Icons:** Lucide Vue (`lucide-vue-next`) — used across 20+ components. No emoji icons.
+
+### Creative Guidelines — Where to Be Creative
+
+- **Motion:** Use `motion-v` for Vue animations. Meaningful transitions — page enters, list staggering, state changes. Respect `prefers-reduced-motion` (handled globally). Use animation tokens for CSS transitions.
+- **Layout:** Bento grids, asymmetric arrangements, overlapping elements. Varied layouts per view.
+- **Micro-interactions:** Hover states, focus rings, button feedback, loading states. CSS transitions for simple, `motion-v` for complex choreography.
+- **Backgrounds:** Layer gradients using palette variables. Subtle patterns reinforcing cozy Scandinavian food aesthetic.
+
+### Anti-Patterns — NEVER Do These
+
+- Don't introduce new fonts or icon libraries
+- Don't use raw color values — always CSS variables
+- Don't ignore dark mode — all styles need both theme coverage via variables
+- Don't add purple gradients, glassmorphism, or generic "tech startup" aesthetics
+- Don't fight the warm, approachable Scandinavian food personality
+- Don't use Inter, Roboto, Space Grotesk, or system font stacks
+- Don't add Tailwind classes — scoped CSS with design tokens only
