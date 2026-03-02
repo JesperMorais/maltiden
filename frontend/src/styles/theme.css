@@ -6,6 +6,7 @@
 :root {
   /* Layout */
   --header-height: 70px;
+  --bottom-nav-height: 64px;
 
   /* Background colors */
   --bg-primary: #fffcf7;

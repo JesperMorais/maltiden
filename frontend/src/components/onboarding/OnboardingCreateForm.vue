@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { useUserStore } from '@/stores/user'
@@ -123,7 +124,7 @@ async function handleCreate() {
           :aria-label="showCreatePassword ? 'Dölj lösenord' : 'Visa lösenord'"
           @click="showCreatePassword = !showCreatePassword"
         >
-          {{ showCreatePassword ? '🙈' : '👁️' }}
+          <component :is="showCreatePassword ? EyeOff : Eye" :size="18" :stroke-width="2" />
         </button>
       </div>
       <span
@@ -151,7 +152,7 @@ async function handleCreate() {
           :aria-label="showCreatePasswordConfirm ? 'Dölj lösenord' : 'Visa lösenord'"
           @click="showCreatePasswordConfirm = !showCreatePasswordConfirm"
         >
-          {{ showCreatePasswordConfirm ? '🙈' : '👁️' }}
+          <component :is="showCreatePasswordConfirm ? EyeOff : Eye" :size="18" :stroke-width="2" />
         </button>
       </div>
       <span v-if="createForm.passwordConfirm && !passwordsMatchCreate" class="field-error">
@@ -241,7 +242,7 @@ async function handleCreate() {
   right: 0.75rem;
   background: none;
   border: none;
-  font-size: 1.25rem;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0.5rem;
   display: flex;
@@ -253,6 +254,7 @@ async function handleCreate() {
 
 .password-toggle:hover {
   opacity: 1;
+  color: var(--text-primary);
 }
 
 .form-card .base-button {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Eye, EyeOff, Home, Star, User, Lightbulb } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 
 type JoinStep = 'code' | 'welcome' | 'member-or-guest' | 'member-form' | 'guest-form'
@@ -148,7 +149,7 @@ async function handleJoinAsGuest() {
 
     <!-- Step 2: Welcome message -->
     <div v-else-if="joinStep === 'welcome'" class="welcome-step">
-      <div class="welcome-icon">🏠</div>
+      <div class="welcome-icon"><Home :size="36" :stroke-width="1.75" /></div>
       <h3>Välkommen till</h3>
       <h2 class="family-name">{{ matchedFamily }}</h2>
       <div class="loading-dots">
@@ -164,7 +165,7 @@ async function handleJoinAsGuest() {
 
       <div class="join-options">
         <button class="join-option" @click="selectJoinType('member')">
-          <div class="option-icon">⭐</div>
+          <div class="option-icon"><Star :size="24" :stroke-width="1.75" /></div>
           <div class="option-content">
             <h4>Bli medlem</h4>
             <p>Skapa ett konto med e-post</p>
@@ -173,7 +174,7 @@ async function handleJoinAsGuest() {
         </button>
 
         <button class="join-option guest" @click="selectJoinType('guest')">
-          <div class="option-icon">👤</div>
+          <div class="option-icon"><User :size="24" :stroke-width="1.75" /></div>
           <div class="option-content">
             <h4>Gå med som gäst</h4>
             <p>Bara ange ditt namn</p>
@@ -259,7 +260,7 @@ async function handleJoinAsGuest() {
             :aria-label="showJoinPassword ? 'Dölj lösenord' : 'Visa lösenord'"
             @click="showJoinPassword = !showJoinPassword"
           >
-            {{ showJoinPassword ? '🙈' : '👁️' }}
+            <component :is="showJoinPassword ? EyeOff : Eye" :size="18" :stroke-width="2" />
           </button>
         </div>
         <span
@@ -287,7 +288,7 @@ async function handleJoinAsGuest() {
             :aria-label="showJoinPasswordConfirm ? 'Dölj lösenord' : 'Visa lösenord'"
             @click="showJoinPasswordConfirm = !showJoinPasswordConfirm"
           >
-            {{ showJoinPasswordConfirm ? '🙈' : '👁️' }}
+            <component :is="showJoinPasswordConfirm ? EyeOff : Eye" :size="18" :stroke-width="2" />
           </button>
         </div>
         <span v-if="joinForm.passwordConfirm && !passwordsMatchJoin" class="field-error">
@@ -332,7 +333,8 @@ async function handleJoinAsGuest() {
       </label>
 
       <p class="guest-note">
-        💡 Du kan uppgradera till medlem när som helst för att få full tillgång.
+        <Lightbulb :size="16" :stroke-width="2" class="guest-note-icon" />
+        Du kan uppgradera till medlem när som helst för att få full tillgång.
       </p>
 
       <BaseButton
@@ -411,7 +413,7 @@ async function handleJoinAsGuest() {
   right: 0.75rem;
   background: none;
   border: none;
-  font-size: 1.25rem;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0.5rem;
   display: flex;
@@ -423,6 +425,7 @@ async function handleJoinAsGuest() {
 
 .password-toggle:hover {
   opacity: 1;
+  color: var(--text-primary);
 }
 
 .code-input {
@@ -491,9 +494,11 @@ async function handleJoinAsGuest() {
 }
 
 .welcome-icon {
-  font-size: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
   margin-bottom: 1rem;
-  animation: bounce 0.6s ease-out;
 }
 
 .welcome-step h3 {
@@ -577,7 +582,7 @@ async function handleJoinAsGuest() {
 }
 
 .option-icon {
-  font-size: 2rem;
+  color: var(--accent);
   flex-shrink: 0;
 }
 
@@ -693,6 +698,9 @@ async function handleJoinAsGuest() {
 }
 
 .guest-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
   font-family: 'Nunito', sans-serif;
   font-size: 0.85rem;
   color: var(--text-secondary);
@@ -700,6 +708,12 @@ async function handleJoinAsGuest() {
   padding: 0.75rem 1rem;
   border-radius: 10px;
   margin: 0 0 1.5rem;
+}
+
+.guest-note-icon {
+  flex-shrink: 0;
+  color: var(--accent);
+  margin-top: 0.1rem;
 }
 
 @keyframes fade-in-up {
@@ -711,11 +725,6 @@ async function handleJoinAsGuest() {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes bounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
 }
 
 /* Responsive */
