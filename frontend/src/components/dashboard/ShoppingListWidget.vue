@@ -31,8 +31,6 @@ const categoryColors = [
   '#8b7cf6',
   '#f472b6',
   '#38bdf8',
-  '#a78bfa',
-  '#fb923c',
 ]
 </script>
 
@@ -44,13 +42,30 @@ const categoryColors = [
         <div class="header-icon">
           <ShoppingCart :size="20" :stroke-width="2" />
         </div>
-        <div class="header-text">
-          <h3 class="widget-title">Inköpslista</h3>
-          <p v-if="shoppingList" class="widget-subtitle">
-            <CountUp :to="remainingItems" :duration="1.5" /> varor kvar av
-            <CountUp :to="shoppingList.totalItems" :duration="1.5" :delay="0.2" />
-          </p>
-          <p v-else class="widget-subtitle muted">Ingen lista ännu</p>
+        <h3 class="widget-title">Inköpslista</h3>
+      </div>
+
+      <!-- Stats row -->
+      <div v-if="shoppingList" class="stats-row">
+        <div class="stat-block">
+          <span class="stat-number">
+            <CountUp :to="remainingItems" :duration="1.5" />
+          </span>
+          <span class="stat-label">kvar</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-block">
+          <span class="stat-number">
+            <CountUp :to="shoppingList.checkedItems" :duration="1.5" :delay="0.2" />
+          </span>
+          <span class="stat-label">klart</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-block">
+          <span class="stat-number">
+            <CountUp :to="shoppingList.totalItems" :duration="1.5" :delay="0.3" />
+          </span>
+          <span class="stat-label">totalt</span>
         </div>
       </div>
 
@@ -67,7 +82,7 @@ const categoryColors = [
 
       <!-- Categories -->
       <div v-if="shoppingList && shoppingList.categories.length" class="categories-section">
-        <div class="categories-divider"></div>
+        <span class="categories-heading">Kategorier</span>
         <ul class="category-list">
           <li
             v-for="(cat, i) in shoppingList.categories"
@@ -75,23 +90,19 @@ const categoryColors = [
             class="category-item"
           >
             <span
-              class="category-dot"
+              class="category-badge"
               :style="{ background: categoryColors[i % categoryColors.length] }"
-            ></span>
+            >{{ cat.count }}</span>
             <span class="category-name">{{ cat.name }}</span>
-            <span class="category-count">{{ cat.count }}</span>
           </li>
         </ul>
       </div>
 
-      <!-- Empty categories placeholder -->
-      <div v-else-if="!shoppingList" class="empty-categories">
-        <Package :size="32" :stroke-width="1.5" class="empty-icon" />
+      <!-- Empty state -->
+      <div v-else-if="!shoppingList" class="empty-state">
+        <Package :size="28" :stroke-width="1.5" class="empty-icon" />
         <p class="empty-text">Generera en meny för att skapa en inköpslista</p>
       </div>
-
-      <!-- Spacer pushes CTA to bottom -->
-      <div class="spacer"></div>
 
       <!-- CTA -->
       <button class="view-list-cta">
@@ -111,9 +122,6 @@ const categoryColors = [
   transition: all 0.3s ease;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  min-height: 280px;
 }
 
 .shopping-widget:hover {
@@ -124,8 +132,8 @@ const categoryColors = [
 /* Header */
 .widget-header {
   display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.6rem;
   margin-bottom: 1rem;
 }
 
@@ -133,17 +141,12 @@ const categoryColors = [
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   background: var(--bg-hover);
-  border-radius: 10px;
+  border-radius: 9px;
   color: var(--success);
-}
-
-.header-text {
-  flex: 1;
-  min-width: 0;
 }
 
 .widget-title {
@@ -152,19 +155,47 @@ const categoryColors = [
   font-size: 0.95rem;
   color: var(--text-primary);
   margin: 0;
-  line-height: 1.3;
 }
 
-.widget-subtitle {
+/* Stats row */
+.stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 0.65rem 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.stat-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.stat-number {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.stat-label {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin: 0.15rem 0 0;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.widget-subtitle.muted {
-  color: var(--text-muted);
+.stat-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border-color);
 }
 
 /* Progress */
@@ -172,7 +203,7 @@ const categoryColors = [
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .progress-track {
@@ -201,13 +232,18 @@ const categoryColors = [
 
 /* Categories */
 .categories-section {
-  flex: 1;
+  margin-bottom: 0.75rem;
 }
 
-.categories-divider {
-  height: 1px;
-  background: var(--border-color);
-  margin-bottom: 0.75rem;
+.categories-heading {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: block;
+  margin-bottom: 0.5rem;
 }
 
 .category-list {
@@ -216,15 +252,15 @@ const categoryColors = [
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .category-item {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.35rem 0.5rem;
-  border-radius: 8px;
+  gap: 0.65rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 10px;
   transition: background 0.2s ease;
 }
 
@@ -232,37 +268,35 @@ const categoryColors = [
   background: var(--bg-hover);
 }
 
-.category-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.category-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
   flex-shrink: 0;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 0.72rem;
+  color: #fff;
 }
 
 .category-name {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: var(--text-primary);
   flex: 1;
 }
 
-.category-count {
-  font-family: 'Fraunces', serif;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
 /* Empty state */
-.empty-categories {
-  flex: 1;
+.empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 1.5rem 0;
+  gap: 0.5rem;
+  padding: 1.25rem 0;
 }
 
 .empty-icon {
@@ -279,12 +313,6 @@ const categoryColors = [
   margin: 0;
   max-width: 180px;
   line-height: 1.4;
-}
-
-/* Spacer */
-.spacer {
-  flex: 1;
-  min-height: 0.5rem;
 }
 
 /* CTA Button */
@@ -304,7 +332,6 @@ const categoryColors = [
   font-size: 0.82rem;
   color: var(--text-secondary);
   transition: all 0.25s ease;
-  margin-top: 0.75rem;
 }
 
 .view-list-cta:hover {
@@ -321,10 +348,10 @@ const categoryColors = [
   transform: translateX(3px);
 }
 
-/* Mobile: revert to compact row */
+/* Mobile: compact row */
 @media (max-width: 768px) {
   .shopping-widget {
-    min-height: 0;
+    display: flex;
     flex-direction: row;
     align-items: center;
     gap: 0.75rem;
@@ -337,15 +364,14 @@ const categoryColors = [
     min-width: 0;
   }
 
+  .stats-row,
   .progress-section,
   .categories-section,
-  .empty-categories,
-  .spacer {
+  .empty-state {
     display: none;
   }
 
   .view-list-cta {
-    margin-top: 0;
     width: auto;
     padding: 0.5rem 0.75rem;
     flex-shrink: 0;
