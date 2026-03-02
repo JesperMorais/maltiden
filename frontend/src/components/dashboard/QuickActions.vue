@@ -170,4 +170,36 @@ function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-memb
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
+
+@media (max-width: 768px) {
+  .actions-list {
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.5rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .action-button {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: 72px;
+    padding: 0.6rem 0.5rem;
+    gap: 0.35rem;
+  }
+
+  .action-button:hover {
+    transform: none;
+  }
+
+  .action-desc {
+    display: none;
+  }
+
+  .action-label {
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+}
 </style>
