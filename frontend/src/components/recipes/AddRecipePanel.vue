@@ -8,6 +8,7 @@ import RecipeParseSuccess from '@/components/recipe-parser/RecipeParseSuccess.vu
 import ClickSpark from '@/components/vue-bits/ClickSpark.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
 import ProgressBar from '@/components/common/ProgressBar.vue'
+import { ChefHat } from 'lucide-vue-next'
 import { useProgressBar } from '@/composables/useProgressBar'
 import { useToast } from '@/composables/useToast'
 
@@ -226,7 +227,7 @@ function handleViewRecipes() {
     <!-- Loading overlay -->
     <div v-if="isParsing" class="loading-overlay">
       <div class="loading-spinner">
-        <div class="spinner-emoji">🧑‍🍳</div>
+        <ChefHat :size="48" :stroke-width="1.5" class="spinner-icon" />
         <p class="loading-text">Claude tolkar ditt recept...</p>
         <ProgressBar :progress="parseProgress" :active="parseActive" />
       </div>
@@ -348,8 +349,8 @@ function handleViewRecipes() {
   width: 280px;
 }
 
-.spinner-emoji {
-  font-size: 4rem;
+.spinner-icon {
+  color: var(--accent);
   animation: spin 1.5s ease-in-out infinite;
 }
 

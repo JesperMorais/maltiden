@@ -12,6 +12,7 @@ import {
   BookOpen,
   Clock,
   Users as UsersIcon,
+  UtensilsCrossed,
 } from 'lucide-vue-next'
 
 interface Props {
@@ -99,7 +100,7 @@ onUnmounted(stopTimer)
     <!-- Navigation -->
     <nav class="hero-nav">
       <RouterLink to="/" class="nav-logo">
-        <span class="logo-icon">🍽️</span>
+        <UtensilsCrossed :size="22" :stroke-width="2" class="logo-icon" />
         <span class="logo-text">Måltiden</span>
       </RouterLink>
       <div class="nav-actions">
@@ -301,7 +302,7 @@ onUnmounted(stopTimer)
 }
 
 .nav-logo .logo-icon {
-  font-size: 1.75rem;
+  color: var(--accent);
 }
 
 .nav-logo .logo-text {
