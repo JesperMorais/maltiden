@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BackLink from '@/components/common/BackLink.vue'
+import { UtensilsCrossed } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 import { useToast } from '@/composables/useToast'
@@ -83,7 +84,9 @@ async function handleLogin() {
 
       <!-- Login card -->
       <div class="login-card">
-        <div class="logo-icon">🍽️</div>
+        <div class="logo-icon">
+          <UtensilsCrossed :size="40" :stroke-width="1.75" />
+        </div>
         <h1>Välkommen tillbaka</h1>
         <p>Logga in på ditt Måltiden-konto</p>
 
@@ -222,9 +225,8 @@ async function handleLogin() {
 }
 
 .logo-icon {
-  font-size: 3rem;
+  color: var(--accent);
   margin-bottom: 1rem;
-  animation: float 3s ease-in-out infinite;
 }
 
 .login-card h1 {
@@ -340,12 +342,6 @@ async function handleLogin() {
 
 .login-footer a:hover {
   text-decoration: underline;
-}
-
-/* Animation */
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
 }
 
 /* Responsive */
