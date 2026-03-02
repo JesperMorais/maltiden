@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
-import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
+import {
+  Sparkles,
+  CalendarCheck,
+  ShoppingCart,
+  Check,
+  BookOpen,
+  Clock,
+  Users as UsersIcon,
+} from 'lucide-vue-next'
 
 interface Props {
   title: string
@@ -23,9 +31,67 @@ function goToDashboard() {
   router.push('/dashboard')
 }
 
-const waveLineColor = computed(() =>
-  themeStore.isDarkMode ? 'rgba(255, 138, 125, 0.15)' : 'rgba(255, 107, 91, 0.12)',
-)
+const previewDays = [
+  { day: 'Mån', meal: 'Pasta carbonara' },
+  { day: 'Tis', meal: 'Kycklingwok' },
+  { day: 'Ons', meal: 'Laxfilé med dill' },
+  { day: 'Tor', meal: 'Tacos' },
+]
+
+const previewItems = [
+  { name: 'Pasta 500g', checked: true },
+  { name: 'Kycklingfilé', checked: false },
+  { name: 'Lax 400g', checked: false },
+  { name: 'Grädde 3dl', checked: false },
+]
+
+const previewRecipe = {
+  title: 'Pasta carbonara',
+  time: '25 min',
+  servings: '4 port',
+  ingredients: ['Spaghetti 400g', 'Bacon 150g', 'Ägg 3st', 'Parmesan 100g'],
+  tags: ['Snabb', 'Klassiker'],
+}
+
+// Cycling card stack
+const CARD_COUNT = 3
+const activeCard = ref(0)
+let timer: ReturnType<typeof setInterval> | undefined
+let paused = false
+
+function nextCard() {
+  activeCard.value = (activeCard.value + 1) % CARD_COUNT
+}
+
+function startTimer() {
+  stopTimer()
+  timer = setInterval(() => {
+    if (!paused) nextCard()
+  }, 4000)
+}
+
+function stopTimer() {
+  if (timer) {
+    clearInterval(timer)
+    timer = undefined
+  }
+}
+
+function onPreviewClick() {
+  nextCard()
+  startTimer()
+}
+
+function onPreviewEnter() {
+  paused = true
+}
+
+function onPreviewLeave() {
+  paused = false
+}
+
+onMounted(startTimer)
+onUnmounted(stopTimer)
 </script>
 
 <template>
@@ -49,96 +115,148 @@ const waveLineColor = computed(() =>
       </div>
     </nav>
 
-    <!-- Interactive wave background -->
-    <WavesBackground
-      :line-color="waveLineColor"
-      background-color="transparent"
-      :wave-speed-x="0.01"
-      :wave-speed-y="0.004"
-      :wave-amp-x="40"
-      :wave-amp-y="20"
-      :x-gap="12"
-      :y-gap="36"
-      :friction="0.92"
-      :tension="0.006"
-      :max-cursor-move="120"
-    />
-
-    <!-- Decorative background elements -->
+    <!-- Decorative background blobs (reduced) -->
     <div class="hero-bg">
       <div class="blob blob-1"></div>
       <div class="blob blob-2"></div>
-      <div class="blob blob-3"></div>
-      <div class="grain"></div>
     </div>
 
-    <!-- Floating food illustrations -->
-    <div class="floating-elements" aria-hidden="true">
-      <span class="float-item float-1">🥕</span>
-      <span class="float-item float-2">🍅</span>
-      <span class="float-item float-3">🥦</span>
-      <span class="float-item float-4">🧅</span>
-      <span class="float-item float-5">🍋</span>
-    </div>
+    <div class="hero-inner">
+      <div class="hero-content">
+        <div class="badge">
+          <Sparkles :size="16" :stroke-width="2" class="badge-icon" />
+          <span>Smartare matplanering</span>
+        </div>
 
-    <div class="hero-content">
-      <div class="badge">
-        <span class="badge-icon">✨</span>
-        <span>Smartare matplanering</span>
-      </div>
+        <h1 class="hero-title">{{ title }}</h1>
 
-      <h1 class="hero-title">{{ title }}</h1>
+        <p class="hero-subtitle">{{ subtitle }}</p>
 
-      <p class="hero-subtitle">{{ subtitle }}</p>
+        <div class="hero-actions">
+          <!-- Logged in: Go to dashboard -->
+          <template v-if="userStore.isAuthenticated">
+            <BaseButton variant="primary" size="lg" @click="goToDashboard">
+              Gå till Dashboard
+              <span class="btn-arrow">→</span>
+            </BaseButton>
+            <p class="logged-in-text">
+              Inloggad som <strong>{{ userStore.userName }}</strong>
+            </p>
+          </template>
 
-      <div class="hero-actions">
-        <!-- Logged in: Go to dashboard -->
-        <template v-if="userStore.isAuthenticated">
-          <BaseButton variant="primary" size="lg" @click="goToDashboard">
-            Gå till Dashboard
-            <span class="btn-arrow">→</span>
-          </BaseButton>
-          <p class="logged-in-text">
-            Inloggad som <strong>{{ userStore.userName }}</strong>
-          </p>
-        </template>
+          <!-- Not logged in: Register + Login -->
+          <template v-else>
+            <div class="auth-buttons">
+              <RouterLink v-prefetch="'register'" :to="ctaButtonLink" class="cta-link">
+                <BaseButton variant="primary" size="lg">
+                  {{ ctaButtonText }}
+                  <span class="btn-arrow">→</span>
+                </BaseButton>
+              </RouterLink>
 
-        <!-- Not logged in: Register + Login -->
-        <template v-else>
-          <div class="auth-buttons">
-            <RouterLink v-prefetch="'register'" :to="ctaButtonLink" class="cta-link">
-              <BaseButton variant="primary" size="lg">
-                {{ ctaButtonText }}
-                <span class="btn-arrow">→</span>
-              </BaseButton>
-            </RouterLink>
-
-            <RouterLink v-prefetch="'login'" to="/login" class="login-link">
-              Redan medlem? <span>Logga in</span>
-            </RouterLink>
-          </div>
-        </template>
-
-        <div class="trust-badges">
-          <div class="trust-item">
-            <span class="trust-icon">🏠</span>
-            <span>1000+ hushåll</span>
-          </div>
-          <div class="trust-item">
-            <span class="trust-icon">⭐</span>
-            <span>4.9 betyg</span>
-          </div>
+              <RouterLink v-prefetch="'login'" to="/login" class="login-link">
+                Redan medlem? <span>Logga in</span>
+              </RouterLink>
+            </div>
+          </template>
         </div>
       </div>
-    </div>
 
-    <!-- Decorative plate illustration -->
-    <div class="hero-illustration">
-      <div class="plate">
-        <div class="plate-inner">
-          <span class="plate-emoji">🍽️</span>
+      <!-- App preview — cycling card stack -->
+      <div
+        class="hero-preview"
+        aria-hidden="true"
+        @click="onPreviewClick"
+        @mouseenter="onPreviewEnter"
+        @mouseleave="onPreviewLeave"
+      >
+        <div class="preview-stack">
+          <!-- Card 0: Weekly menu -->
+          <div
+            class="preview-card"
+            :class="{
+              'stack-front': activeCard === 0,
+              'stack-mid': activeCard === 2,
+              'stack-back': activeCard === 1,
+            }"
+          >
+            <div class="preview-header">
+              <CalendarCheck :size="16" :stroke-width="2" class="preview-header-icon" />
+              <span class="preview-title">Veckans meny</span>
+            </div>
+            <ul class="preview-menu">
+              <li v-for="item in previewDays" :key="item.day" class="preview-day">
+                <span class="preview-day-label">{{ item.day }}</span>
+                <span class="preview-meal">{{ item.meal }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Card 1: Shopping list -->
+          <div
+            class="preview-card"
+            :class="{
+              'stack-front': activeCard === 1,
+              'stack-mid': activeCard === 0,
+              'stack-back': activeCard === 2,
+            }"
+          >
+            <div class="preview-header">
+              <ShoppingCart :size="16" :stroke-width="2" class="preview-header-icon" />
+              <span class="preview-title">Inköpslista</span>
+              <span class="preview-count">{{ previewItems.length }} varor</span>
+            </div>
+            <ul class="preview-list">
+              <li
+                v-for="item in previewItems"
+                :key="item.name"
+                class="preview-list-item"
+                :class="{ checked: item.checked }"
+              >
+                <span class="preview-checkbox">
+                  <Check v-if="item.checked" :size="12" :stroke-width="3" />
+                </span>
+                <span class="preview-item-name">{{ item.name }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Recipe -->
+          <div
+            class="preview-card"
+            :class="{
+              'stack-front': activeCard === 2,
+              'stack-mid': activeCard === 1,
+              'stack-back': activeCard === 0,
+            }"
+          >
+            <div class="preview-header">
+              <BookOpen :size="16" :stroke-width="2" class="preview-header-icon" />
+              <span class="preview-title">{{ previewRecipe.title }}</span>
+            </div>
+            <div class="recipe-meta">
+              <span class="recipe-badge"><Clock :size="12" :stroke-width="2" /> {{ previewRecipe.time }}</span>
+              <span class="recipe-badge"><UsersIcon :size="12" :stroke-width="2" /> {{ previewRecipe.servings }}</span>
+            </div>
+            <ul class="recipe-ingredients">
+              <li v-for="ing in previewRecipe.ingredients" :key="ing">{{ ing }}</li>
+            </ul>
+            <div class="recipe-tags">
+              <span v-for="tag in previewRecipe.tags" :key="tag" class="recipe-tag">{{ tag }}</span>
+            </div>
+          </div>
         </div>
-        <div class="plate-shadow"></div>
+
+        <!-- Dots indicator -->
+        <div class="preview-dots">
+          <button
+            v-for="i in CARD_COUNT"
+            :key="i"
+            class="preview-dot"
+            :class="{ active: activeCard === i - 1 }"
+            @click.stop="activeCard = i - 1; startTimer()"
+          />
+        </div>
       </div>
     </div>
   </section>
@@ -153,13 +271,8 @@ const waveLineColor = computed(() =>
   position: relative;
   overflow: visible;
   padding: 2rem;
-  padding-bottom: 10rem;
-  background: linear-gradient(
-    165deg,
-    var(--bg-secondary) 0%,
-    var(--bg-primary) 50%,
-    var(--bg-secondary) 100%
-  );
+  padding-bottom: 2rem;
+  background: transparent;
 }
 
 /* Navigation */
@@ -240,19 +353,7 @@ const waveLineColor = computed(() =>
   transform: scale(1.1);
 }
 
-/* Curved bottom transition */
-.hero::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 150px;
-  background: var(--bg-secondary);
-  clip-path: ellipse(75% 100% at 50% 100%);
-}
-
-/* Background decorations */
+/* Background decorations — reduced opacity, no center blob */
 .hero-bg {
   position: absolute;
   inset: 0;
@@ -263,7 +364,7 @@ const waveLineColor = computed(() =>
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
-  opacity: 0.6;
+  opacity: 0.3;
 }
 
 .blob-1 {
@@ -284,48 +385,20 @@ const waveLineColor = computed(() =>
   animation: float-slow 25s ease-in-out infinite reverse;
 }
 
-.blob-3 {
-  width: 300px;
-  height: 300px;
-  background: var(--accent-light);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  opacity: 0.3;
-  animation: pulse 8s ease-in-out infinite;
+/* Split layout wrapper */
+.hero-inner {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3rem;
+  max-width: 1200px;
+  width: 100%;
 }
-
-.grain {
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  opacity: 0.03;
-}
-
-/* Floating food elements */
-.floating-elements {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.float-item {
-  position: absolute;
-  font-size: 2.5rem;
-  animation: float 6s ease-in-out infinite;
-  filter: drop-shadow(0 4px 8px var(--shadow-sm));
-}
-
-.float-1 { top: 15%; left: 10%; animation-delay: 0s; }
-.float-2 { top: 25%; right: 15%; animation-delay: 1s; font-size: 2rem; }
-.float-3 { bottom: 30%; left: 8%; animation-delay: 2s; }
-.float-4 { bottom: 20%; right: 10%; animation-delay: 1.5s; font-size: 2rem; }
-.float-5 { top: 40%; left: 20%; animation-delay: 0.5s; font-size: 1.8rem; }
 
 /* Content */
 .hero-content {
-  position: relative;
-  z-index: 10;
   text-align: center;
   max-width: 700px;
 }
@@ -335,7 +408,7 @@ const waveLineColor = computed(() =>
   align-items: center;
   gap: 0.5rem;
   background: var(--bg-hover);
-  color: var(--accent);
+  color: var(--accent-text);
   padding: 0.5rem 1rem;
   border-radius: 100px;
   font-family: 'Nunito', sans-serif;
@@ -346,7 +419,7 @@ const waveLineColor = computed(() =>
 }
 
 .badge-icon {
-  animation: sparkle 2s ease-in-out infinite;
+  color: var(--accent);
 }
 
 .hero-title {
@@ -374,7 +447,7 @@ const waveLineColor = computed(() =>
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2rem;
+  gap: 1rem;
   animation: fade-in-up 0.8s ease-out 0.3s backwards;
 }
 
@@ -407,7 +480,7 @@ const waveLineColor = computed(() =>
 }
 
 .login-link span {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 700;
 }
 
@@ -430,87 +503,257 @@ const waveLineColor = computed(() =>
   color: var(--accent);
 }
 
-.trust-badges {
-  display: flex;
-  gap: 2rem;
-  flex-wrap: wrap;
-  justify-content: center;
+/* App preview — cycling card stack */
+.hero-preview {
+  animation: fade-in-up 0.8s ease-out 0.4s backwards;
+  width: 100%;
+  max-width: 380px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.trust-item {
+.preview-stack {
+  position: relative;
+  perspective: 900px;
+  min-height: 260px;
+}
+
+.preview-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 1.25rem;
+  box-shadow: var(--shadow-lg);
+  position: absolute;
+  inset: 0;
+  transition:
+    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.4s ease,
+    box-shadow 0.4s ease;
+}
+
+/* Front card: fully visible */
+.stack-front {
+  z-index: 3;
+  transform: rotate(0deg) translateY(0);
+  opacity: 1;
+}
+
+/* Middle card: peeking behind, shifted right + down */
+.stack-mid {
+  z-index: 2;
+  transform: rotate(3deg) translate(8%, 6%);
+  opacity: 0.7;
+}
+
+/* Back card: further behind */
+.stack-back {
+  z-index: 1;
+  transform: rotate(6deg) translate(16%, 12%);
+  opacity: 0.45;
+}
+
+/* Hover lifts the front card */
+.hero-preview:hover .stack-front {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 48px rgba(61, 44, 41, 0.22);
+}
+
+/* Dots — pill indicator */
+.preview-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.375rem;
+  margin-top: 1.25rem;
+}
+
+.preview-dot {
+  height: 6px;
+  width: 6px;
+  border-radius: 100px;
+  border: none;
+  background: var(--border-color-hover);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.preview-dot.active {
+  width: 24px;
+  background: var(--accent);
+}
+
+.preview-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  margin-bottom: 0.875rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.preview-header-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.preview-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.preview-count {
+  margin-left: auto;
   font-family: 'Nunito', sans-serif;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+  color: var(--text-muted);
 }
 
-.trust-icon {
-  font-size: 1.2rem;
+/* Menu card rows */
+.preview-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-/* Hero illustration */
-.hero-illustration {
-  position: absolute;
-  bottom: 5%;
-  right: 5%;
-  z-index: 5;
-  display: none;
+.preview-day {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  background: var(--bg-hover);
 }
 
-@media (min-width: 1024px) {
-  .hero-illustration {
-    display: block;
-  }
+.preview-day-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--accent-text);
+  min-width: 2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
-.plate {
-  position: relative;
-  animation: float 4s ease-in-out infinite;
+.preview-meal {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  color: var(--text-primary);
 }
 
-.plate-inner {
-  width: 180px;
-  height: 180px;
-  background: linear-gradient(165deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
-  border-radius: 50%;
+/* Shopping list rows */
+.preview-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.preview-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: 8px;
+}
+
+.preview-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 2px solid var(--border-color-hover);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-lg);
+  flex-shrink: 0;
+  color: var(--text-on-accent);
 }
 
-.plate-emoji {
-  font-size: 4rem;
-  animation: wiggle 3s ease-in-out infinite;
+.preview-list-item.checked .preview-checkbox {
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
-.plate-shadow {
-  position: absolute;
-  bottom: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 140px;
-  height: 20px;
-  background: radial-gradient(ellipse, rgba(61, 44, 41, 0.15) 0%, transparent 70%);
+.preview-item-name {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+.preview-list-item.checked .preview-item-name {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* Recipe card */
+.recipe-meta {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.recipe-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.recipe-ingredients {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.recipe-ingredients li {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.recipe-ingredients li:last-child {
+  border-bottom: none;
+}
+
+.recipe-tags {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.recipe-tag {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--accent-text);
+  background: var(--bg-hover);
+  padding: 0.2rem 0.5rem;
+  border-radius: 100px;
 }
 
 /* Animations */
-@keyframes float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-15px) rotate(3deg); }
-}
-
 @keyframes float-slow {
   0%, 100% { transform: translate(0, 0); }
   50% { transform: translate(30px, 20px); }
-}
-
-@keyframes pulse {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
-  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.4; }
 }
 
 @keyframes fade-in-up {
@@ -524,31 +767,77 @@ const waveLineColor = computed(() =>
   }
 }
 
-@keyframes sparkle {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  50% { transform: scale(1.2) rotate(10deg); }
-}
+/* Desktop: split layout */
+@media (min-width: 1024px) {
+  .hero-inner {
+    flex-direction: row;
+    align-items: center;
+    gap: 4rem;
+  }
 
-@keyframes wiggle {
-  0%, 100% { transform: rotate(-5deg); }
-  50% { transform: rotate(5deg); }
+  .hero-content {
+    flex: 1 1 60%;
+    text-align: left;
+  }
+
+  .hero-subtitle {
+    margin-inline: 0;
+  }
+
+  .hero-actions {
+    align-items: flex-start;
+  }
+
+  .hero-preview {
+    flex: 0 0 auto;
+    max-width: 400px;
+  }
 }
 
 /* Responsive */
 @media (max-width: 768px) {
   .hero {
-    min-height: auto;
+    min-height: 100svh;
     padding: 4rem 1.5rem;
+    background: transparent;
   }
 
-  .float-item {
-    font-size: 1.5rem;
+  .hero-preview {
+    max-width: 320px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    padding: 3rem 1rem 2rem;
   }
 
-  .floating-elements .float-3,
-  .floating-elements .float-4,
-  .floating-elements .float-5 {
+  .hero-content {
+    padding-top: 1.5rem;
+  }
+
+  .badge {
+    margin-bottom: 1rem;
+  }
+
+  .hero-nav {
+    padding: 1rem;
+  }
+
+  .nav-link {
     display: none;
+  }
+
+  .hero-preview {
+    max-width: 300px;
+  }
+
+  .preview-stack {
+    min-height: 230px;
+  }
+
+  .preview-card {
+    padding: 1rem;
   }
 }
 </style>
