@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import type { User, UserRole } from '@/api/types/dashboard.types'
 import { tokenUtils } from '@/utils/token'
 import * as authApi from '@/api/auth.api'
+import { markAuthSuccess } from '@/api/client'
 import { isAxiosError } from 'axios'
 
 function getSwedishAuthError(e: unknown, fallback: string): string {
@@ -100,11 +101,12 @@ export const useUserStore = defineStore('user', () => {
     try {
       const response = await authApi.login(email, password)
       tokenUtils.set(response.token)
+      markAuthSuccess()
       setUser({
         id: response.user.id,
         name: response.user.name,
         email: response.user.email,
-        role: 'member' // Default role, will be updated when fetching household
+        role: 'member', // Default role, will be updated when fetching household
       })
       return true
     } catch (e) {
@@ -125,11 +127,12 @@ export const useUserStore = defineStore('user', () => {
     try {
       const response = await authApi.register(name, email, password)
       tokenUtils.set(response.token)
+      markAuthSuccess()
       setUser({
         id: response.user.id,
         name: response.user.name,
         email: response.user.email,
-        role: 'member'
+        role: 'member',
       })
       return true
     } catch (e) {

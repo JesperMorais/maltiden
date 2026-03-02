@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import axios from 'axios'
 import MockAdapter from 'axios-mock-adapter'
 
 // We need to test the interceptor logic, so we import the configured client
 // and mock the HTTP layer underneath it.
 let apiClient: typeof import('../client').default
+let markAuthSuccess: typeof import('../client').markAuthSuccess
 let mock: MockAdapter
 
 // Mock tokenUtils
@@ -19,14 +19,12 @@ vi.mock('@/utils/token', () => ({
 }))
 
 // Capture window.location.href assignments
-const locationSpy = { href: '' }
 const originalLocation = window.location
 
 beforeEach(async () => {
   // Reset mocks
   vi.clearAllMocks()
   sessionStorage.clear()
-  locationSpy.href = ''
 
   // Mock window.location (non-configurable in happy-dom, so use defineProperty)
   Object.defineProperty(window, 'location', {
@@ -37,6 +35,7 @@ beforeEach(async () => {
   // Fresh import to get a clean axios instance with interceptors
   const mod = await import('../client')
   apiClient = mod.default
+  markAuthSuccess = mod.markAuthSuccess
 
   // Attach mock adapter
   mock = new MockAdapter(apiClient)
@@ -82,6 +81,25 @@ describe('API client 401 response interceptor', () => {
     expect(mockTokenUtils.remove).toHaveBeenCalled()
     expect(sessionStorage.getItem('session_expired')).toBe('true')
     expect(window.location.href).toBe('/login')
+  })
+
+  it('does NOT redirect on 401 shortly after login (prevents redirect loop)', async () => {
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { pathname: '/dashboard', href: '' },
+    })
+    mock.onGet('/households/me').reply(401, { error: 'unauthorized' })
+
+    // Simulate a fresh login
+    markAuthSuccess()
+
+    await expect(apiClient.get('/households/me')).rejects.toThrow()
+
+    // Token should still be removed (cleanup is correct)
+    expect(mockTokenUtils.remove).toHaveBeenCalled()
+    // But NO redirect — prevents loop
+    expect(sessionStorage.getItem('session_expired')).toBeNull()
+    expect(window.location.href).toBe('')
   })
 
   it('does NOT redirect on 401 from /auth/login (wrong credentials)', async () => {
@@ -159,12 +177,12 @@ describe('API client 401 response interceptor', () => {
   })
 
   it('handles network errors without crashing', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     mock.onGet('/health').networkError()
 
     await expect(apiClient.get('/health')).rejects.toThrow()
 
-    expect(consoleSpy).toHaveBeenCalledWith('Network error - API may be unavailable')
+    expect(consoleSpy).toHaveBeenCalledWith('[Auth] Network error — API may be unavailable')
     expect(mockTokenUtils.remove).not.toHaveBeenCalled()
     consoleSpy.mockRestore()
   })
