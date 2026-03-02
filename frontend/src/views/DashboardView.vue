@@ -147,6 +147,16 @@ function handleViewShoppingList() {
                 @day-click="handleDayClick"
               />
             </FadeContent>
+
+            <FadeContent :duration="600" :delay="250">
+              <HouseholdWidget
+                :members="dashboardStore.householdMembers"
+                :invite-code="dashboardStore.inviteCode"
+                horizontal
+                @show-invite="handleShowInvite"
+                @remove-member="handleRemoveMember"
+              />
+            </FadeContent>
           </div>
 
           <!-- Sidebar -->
@@ -161,15 +171,6 @@ function handleViewShoppingList() {
             </FadeContent>
 
             <FadeContent :duration="600" :delay="300">
-              <HouseholdWidget
-                :members="dashboardStore.householdMembers"
-                :invite-code="dashboardStore.inviteCode"
-                @show-invite="handleShowInvite"
-                @remove-member="handleRemoveMember"
-              />
-            </FadeContent>
-
-            <FadeContent :duration="600" :delay="400">
               <ShoppingListWidget
                 :shopping-list="dashboardStore.shoppingList"
                 @view-list="handleViewShoppingList"
@@ -287,26 +288,38 @@ function handleViewShoppingList() {
 }
 
 @media (max-width: 768px) {
+  .dashboard-greeting {
+    padding: 0.75rem 0.75rem 0.25rem;
+    font-size: 1.1rem;
+    height: 2em;
+  }
+
   .dashboard-content {
-    padding: 1rem;
+    padding: 0.75rem;
   }
 
+  .dashboard-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .main-area,
   .sidebar {
-    grid-template-columns: 1fr;
-    position: relative;
+    display: contents;
   }
 
-  /* Scroll hint gradient for below-fold content */
-  .sidebar::after {
-    content: '';
-    position: sticky;
-    bottom: 0;
-    display: block;
-    height: 48px;
-    margin-top: -48px;
-    background: linear-gradient(to top, var(--bg-secondary) 0%, transparent 100%);
-    pointer-events: none;
-    z-index: 10;
+  .main-area :deep(> div),
+  .sidebar :deep(> div) {
+    opacity: 1 !important;
+    filter: none !important;
+    width: 100%;
   }
+
+  /* Interleave: TodaysMeal(1) → QuickActions(2) → WeeklyMenu(3) → ShoppingList(4) */
+  .main-area > :first-child { order: 1; }
+  .sidebar > :nth-child(1) { order: 2; }
+  .main-area > :nth-child(2) { order: 3; }
+  .sidebar > :nth-child(2) { order: 4; }
 }
 </style>
