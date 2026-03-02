@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import type { MenuDay } from '@/api/types/dashboard.types'
 import { usePlanningPreferencesStore, type DayIndex } from '@/stores/planningPreferences'
 import { useClickOutside } from '@/composables/useClickOutside'
-import { UtensilsCrossed } from 'lucide-vue-next'
+import { UtensilsCrossed, Coffee, Plus, Users } from 'lucide-vue-next'
 import DayPickerPopover from './DayPickerPopover.vue'
 
 interface Props {
@@ -32,6 +32,11 @@ const filteredMenu = computed(() =>
 const gridColumns = computed(() => filteredMenu.value.length)
 
 const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
+
+function dateNumber(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  return String(d.getDate())
+}
 </script>
 
 <template>
@@ -75,16 +80,34 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
         }"
         @click="emit('day-click', day)"
       >
-        <span class="day-name">{{ day.dayShort }}</span>
-        <div class="day-meal">
-          <span v-if="day.meal && day.meal.emoji" class="meal-emoji">{{ day.meal.emoji }}</span>
-          <UtensilsCrossed v-else-if="day.meal" :size="18" :stroke-width="1.75" class="meal-icon" />
-          <span v-else-if="day.isSkipped" class="skipped-icon">✕</span>
-          <span v-else class="empty-icon">+</span>
+        <!-- Day header -->
+        <div class="day-header">
+          <span class="day-name">{{ day.dayShort }}</span>
+          <span class="day-date">{{ dateNumber(day.date) }}</span>
         </div>
-        <span v-if="day.meal" class="meal-name-mobile">{{ day.meal.name }}</span>
-        <span v-else-if="day.isSkipped" class="status-mobile">Ledig</span>
-        <span v-else class="status-mobile add-hint">Planera</span>
+
+        <!-- Meal visual -->
+        <div class="day-visual">
+          <span v-if="day.meal && day.meal.emoji" class="meal-emoji">{{ day.meal.emoji }}</span>
+          <UtensilsCrossed v-else-if="day.meal" :size="24" :stroke-width="1.75" class="meal-icon" />
+          <Coffee v-else-if="day.isSkipped" :size="22" :stroke-width="1.75" class="skipped-icon" />
+          <Plus v-else :size="22" :stroke-width="2" class="empty-icon" />
+        </div>
+
+        <!-- Meal info -->
+        <div class="day-info">
+          <span v-if="day.meal" class="meal-name">{{ day.meal.name }}</span>
+          <span v-else-if="day.isSkipped" class="meal-status">Ledig dag</span>
+          <span v-else class="meal-status add-hint">Planera</span>
+        </div>
+
+        <!-- Portions -->
+        <div v-if="day.meal" class="day-meta">
+          <Users :size="12" :stroke-width="2" />
+          <span>{{ day.meal.portions }}</span>
+        </div>
+
+        <!-- Today glow ring -->
         <div v-if="day.isToday" class="today-indicator"></div>
       </button>
     </TransitionGroup>
@@ -155,7 +178,7 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
   transform: rotate(180deg);
 }
 
-/* Dropdown animation (matches DashboardHeader) */
+/* Dropdown animation */
 .dropdown-enter-active {
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -170,13 +193,14 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
   transform: translateY(-8px) scale(0.95);
 }
 
+/* Grid */
 .days-grid {
   display: grid;
   gap: 0.5rem;
   overflow: hidden;
 }
 
-/* Day list TransitionGroup animations */
+/* TransitionGroup animations */
 .day-list-enter-active {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -204,18 +228,20 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
   transition: transform 0.3s ease;
 }
 
+/* ═══ Day Card ═══ */
 .day-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 0.5rem;
+  gap: 0.35rem;
+  padding: 0.85rem 0.5rem 0.75rem;
   background: var(--bg-card);
   border: 2px solid transparent;
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
+  min-height: 170px;
 }
 
 .day-card:hover {
@@ -224,59 +250,81 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
   box-shadow: var(--shadow-sm);
 }
 
+/* Today state */
 .day-card.today {
   background: var(--bg-hover);
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-focus-ring);
 }
 
 .day-card.today:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 0 0 3px var(--accent-focus-ring), var(--shadow-md);
 }
 
+/* Skipped state */
 .day-card.skipped {
-  opacity: 0.5;
-  background-image: repeating-linear-gradient(
-    -45deg,
-    transparent,
-    transparent 4px,
-    var(--border-color) 4px,
-    var(--border-color) 5px
-  );
+  opacity: 0.55;
 }
 
 .day-card.skipped:hover {
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
+/* Empty / no meal state */
 .day-card.no-meal {
   border-style: dashed;
   border-color: var(--border-color);
 }
 
+/* ═══ Day Header ═══ */
+.day-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
 .day-name {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  font-size: 0.7rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .day-card.today .day-name {
   color: var(--accent-text);
 }
 
-.day-meal {
-  width: 40px;
-  height: 40px;
+.day-date {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.day-card.today .day-date {
+  color: var(--accent-text);
+}
+
+.day-card.skipped .day-date {
+  opacity: 0.6;
+}
+
+/* ═══ Meal Visual ═══ */
+.day-visual {
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 0.15rem 0;
 }
 
 .meal-emoji {
-  font-size: 1.75rem;
+  font-size: 2rem;
   line-height: 1;
   transition: transform 0.3s ease;
 }
@@ -295,19 +343,13 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
 }
 
 .skipped-icon {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 800;
-  font-size: 1rem;
-  color: var(--text-secondary);
-  opacity: 0.4;
+  color: var(--text-muted);
+  opacity: 0.5;
 }
 
 .empty-icon {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 800;
-  font-size: 1.25rem;
   color: var(--accent-text);
-  opacity: 0.4;
+  opacity: 0.35;
   transition: all 0.3s ease;
 }
 
@@ -316,9 +358,61 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
   transform: scale(1.2);
 }
 
+/* ═══ Meal Info ═══ */
+.day-info {
+  text-align: center;
+  min-height: 2.4em;
+  display: flex;
+  align-items: center;
+  padding: 0 0.25rem;
+}
+
+.meal-name {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.meal-status {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.meal-status.add-hint {
+  color: var(--accent-text);
+  opacity: 0.55;
+}
+
+.day-card:hover .meal-status.add-hint {
+  opacity: 1;
+}
+
+/* ═══ Meta / Portions ═══ */
+.day-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-full);
+}
+
+/* ═══ Today Indicator ═══ */
 .today-indicator {
   position: absolute;
-  bottom: 4px;
+  bottom: 6px;
   left: 50%;
   transform: translateX(-50%);
   width: 6px;
@@ -327,13 +421,7 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
   background: var(--accent);
 }
 
-/* Hide mobile-only elements on desktop */
-.meal-name-mobile,
-.status-mobile {
-  display: none;
-}
-
-/* Responsive — vertical list with meal names */
+/* ═══ Responsive — vertical list ═══ */
 @media (max-width: 640px) {
   .weekly-menu {
     padding: 1rem;
@@ -353,8 +441,8 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
   .day-card {
     flex-direction: row;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.45rem 0.75rem;
+    gap: 0.65rem;
+    padding: 0.5rem 0.75rem;
     border-radius: 12px;
     min-height: 0;
   }
@@ -363,49 +451,58 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
     transform: none;
   }
 
-  .day-name {
-    font-size: 0.7rem;
-    min-width: 28px;
-    text-align: center;
+  .day-card.today {
+    box-shadow: none;
   }
 
-  .day-meal {
+  .day-header {
+    flex-direction: row;
+    gap: 0.35rem;
+    min-width: 52px;
+  }
+
+  .day-name {
+    font-size: 0.65rem;
+  }
+
+  .day-date {
+    font-size: 0.85rem;
+  }
+
+  .day-visual {
     width: 32px;
     height: 32px;
     flex-shrink: 0;
+    margin: 0;
   }
 
   .meal-emoji {
     font-size: 1.35rem;
   }
 
-  .meal-name-mobile {
-    display: block;
+  .day-info {
     flex: 1;
     min-width: 0;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 600;
+    min-height: 0;
+    text-align: left;
+    padding: 0;
+  }
+
+  .meal-name {
     font-size: 0.85rem;
-    color: var(--text-primary);
+    -webkit-line-clamp: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-align: left;
-  }
-
-  .status-mobile {
     display: block;
-    flex: 1;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 600;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    text-align: left;
   }
 
-  .status-mobile.add-hint {
-    color: var(--accent-text);
-    opacity: 0.6;
+  .meal-status {
+    font-size: 0.8rem;
+  }
+
+  .day-meta {
+    flex-shrink: 0;
   }
 
   .today-indicator {
