@@ -5,7 +5,7 @@ import { useUserStore } from '@/stores/user'
 import { useDashboardStore } from '@/stores/dashboard'
 import { updateMemberStatus } from '@/api/household.api'
 import { useToast } from '@/composables/useToast'
-import { Settings, AlertTriangle, Link, Package, UserPlus } from 'lucide-vue-next'
+import { Settings, AlertTriangle, Link, Sandwich, UserPlus } from 'lucide-vue-next'
 
 interface Props {
   members: HouseholdMember[]
@@ -89,7 +89,7 @@ function cancelRemove() {
       <div class="header-left">
         <h3 class="widget-title">Hushållet</h3>
         <div v-if="horizontal && lunchBoxCount > 0" class="lunchbox-pill">
-          <Package :size="14" />
+          <Sandwich :size="14" />
           <span>{{ lunchBoxCount }} {{ lunchBoxCount > 1 ? 'matlådor' : 'matlåda' }}</span>
         </div>
       </div>
@@ -152,7 +152,7 @@ function cancelRemove() {
 
     <!-- Vertical-only lunchbox summary -->
     <div v-if="!horizontal && lunchBoxCount > 0" class="lunchbox-summary">
-      <span class="lunchbox-icon"><Package :size="18" /></span>
+      <span class="lunchbox-icon"><Sandwich :size="18" /></span>
       <span class="lunchbox-text">{{ lunchBoxCount }} {{ lunchBoxCount > 1 ? 'matlådor' : 'matlåda' }} imorgon</span>
     </div>
 
@@ -169,7 +169,7 @@ function cancelRemove() {
             {{ member.name.charAt(0).toUpperCase() }}
           </div>
           <div v-if="member.wantsLunchBox && member.isEatingToday" class="lunchbox-indicator">
-            <Package :size="10" />
+            <Sandwich :size="10" />
           </div>
         </div>
         <div class="member-info">
@@ -203,7 +203,7 @@ function cancelRemove() {
             :aria-label="member.wantsLunchBox ? `Ta bort matlåda för ${member.name}` : `Lägg till matlåda för ${member.name}`"
             @click="toggleLunchBox(member, $event)"
           >
-            <Package :size="16" />
+            Matlåda
           </button>
         </div>
         <span v-if="member.role === 'owner'" class="owner-badge">Ägare</span>
@@ -297,6 +297,7 @@ function cancelRemove() {
   border: none;
   border-radius: 8px;
   cursor: pointer;
+  color: var(--text-secondary);
   font-size: 1rem;
   transition: all 0.2s ease;
   opacity: 0.6;
@@ -404,6 +405,7 @@ function cancelRemove() {
 
 .lunchbox-icon {
   font-size: 1.1rem;
+  color: var(--warning-dark);
 }
 
 .lunchbox-text {
@@ -557,31 +559,35 @@ function cancelRemove() {
 }
 
 .lunchbox-toggle {
-  width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
+  padding: 0 0.65rem;
+  background: var(--bg-hover);
   border: 1.5px solid var(--border-color);
   border-radius: 10px;
-  font-size: 1rem;
   cursor: pointer;
-  opacity: 0.35;
+  color: var(--text-secondary);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.72rem;
+  white-space: nowrap;
   transition: all 0.2s ease;
   flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
 }
 
 .lunchbox-toggle:hover {
-  opacity: 0.7;
   border-color: var(--border-color-hover);
+  color: var(--text-primary);
 }
 
 .lunchbox-toggle.active {
   opacity: 1;
   background: var(--warning-bg);
   border-color: #edc53f;
+  color: var(--warning-dark);
 }
 
 .owner-badge {
@@ -749,20 +755,21 @@ function cancelRemove() {
   justify-content: center;
 }
 
-.horizontal .member-item .eating-toggle,
-.horizontal .member-item .lunchbox-toggle {
+.horizontal .member-item .eating-toggle {
   width: 30px;
   height: 30px;
   border-radius: 8px;
 }
 
-.horizontal .member-item .eating-toggle-icon {
-  font-size: 0.65rem;
+.horizontal .member-item .lunchbox-toggle {
+  height: 30px;
+  border-radius: 8px;
+  font-size: 0.6rem;
+  padding: 0 0.45rem;
 }
 
-.horizontal .member-item .lunchbox-toggle :deep(svg) {
-  width: 13px;
-  height: 13px;
+.horizontal .member-item .eating-toggle-icon {
+  font-size: 0.65rem;
 }
 
 .horizontal .owner-badge,

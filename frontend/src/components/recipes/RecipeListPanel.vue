@@ -265,4 +265,10 @@ onMounted(fetchRecipes)
     gap: 1rem;
   }
 }
+
+@media (max-width: 480px) {
+  .recipe-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

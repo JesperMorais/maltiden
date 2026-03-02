@@ -2,7 +2,9 @@
 
 Svensk receptapp för veckoplanering och smarta inköpslistor.
 
-**Status:** MVP-redo för soft launch — alla kritiska (K1–K5) och viktiga (V1–V5) uppgifter klara. 20 seed-recept, dagliga backups. Kvar: Philips QA-genomgång. Se `docs/TODO.md`.
+**Status:** MVP-redo för soft launch — alla kritiska (K1–K5) och viktiga (V1–V5) uppgifter klara. 20 seed-recept, dagliga backups. Kvar: mobilpolish (M1–M6) och Philips QA-genomgång. Se `docs/TODO.md`.
+
+**Primär plattform: mobil.** Betafamiljerna (2–5 st) använder appen i telefonen — vid matlagning, i mataffären, vid middagsplanering i soffan. Responsiv design optimerad för 375px–414px (iPhone SE/12/13/14) som primärt mål, desktop som sekundärt.
 
 ## Team
 - **David** – Lead backend (Go)
@@ -92,8 +94,7 @@ migrations/                 # SQL-migreringar
 8. Sessionshantering — tydligt meddelande vid JWT-utgång
 
 **Kvar innan lansering (se `docs/TODO.md`):**
-- Databasbackup (V4)
-- Seed-recept (V5)
+- Mobilpolish M1–M6 (CSS-justeringar för 375px–414px)
 - QA-genomgång (Philip)
 
 ## Post-MVP

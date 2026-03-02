@@ -702,13 +702,11 @@ onUnmounted(() => {
 }
 
 /* Mobile responsive */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .feedback-trigger {
-    bottom: 20px;
+    bottom: calc(var(--bottom-nav-height) + 16px);
     right: 16px;
     padding: 10px 12px;
-    /* padding for iOS safe area */
-    padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
   }
 
   .trigger-label {
@@ -717,6 +715,7 @@ onUnmounted(() => {
 
   .feedback-overlay {
     padding: 0;
+    padding-bottom: var(--bottom-nav-height);
     align-items: flex-end;
     justify-content: stretch;
   }
