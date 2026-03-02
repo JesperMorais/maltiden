@@ -256,7 +256,6 @@ function handleViewShoppingList() {
   display: grid;
   grid-template-columns: 1fr 320px;
   gap: 2rem;
-  align-items: start;
 }
 
 .main-area {
@@ -269,8 +268,25 @@ function handleViewShoppingList() {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  position: sticky;
-  top: calc(var(--header-height) + 2rem);
+}
+
+/* Let the ShoppingListWidget FadeContent wrapper + its children grow to fill sidebar */
+.sidebar > :last-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar > :last-child :deep(.shopping-spotlight) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar > :last-child :deep(.shopping-widget) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Responsive */
@@ -284,6 +300,11 @@ function handleViewShoppingList() {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
+  }
+
+  .sidebar > :last-child {
+    flex: unset;
+    display: block;
   }
 }
 
