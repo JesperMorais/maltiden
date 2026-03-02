@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { UserRole } from '@/api/types/dashboard.types'
 import { Home, Settings, LogOut, UtensilsCrossed } from 'lucide-vue-next'
+import { useClickOutside } from '@/composables/useClickOutside'
 
 interface Props {
   householdName: string
@@ -18,6 +19,11 @@ const emit = defineEmits<{
 }>()
 
 const isDropdownOpen = ref(false)
+const userMenuRef = ref<HTMLElement | null>(null)
+
+useClickOutside(userMenuRef, () => {
+  isDropdownOpen.value = false
+})
 
 function toggleDropdown() {
   isDropdownOpen.value = !isDropdownOpen.value
@@ -54,7 +60,7 @@ function handleSettings() {
       </div>
 
       <!-- User menu -->
-      <div class="user-menu" v-click-outside="closeDropdown">
+      <div ref="userMenuRef" class="user-menu">
         <button class="user-button" @click="toggleDropdown">
           <div class="avatar">
             <span>{{ userName.charAt(0).toUpperCase() }}</span>
