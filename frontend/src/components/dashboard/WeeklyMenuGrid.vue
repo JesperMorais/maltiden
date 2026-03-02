@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { MenuDay } from '@/api/types/dashboard.types'
 import { usePlanningPreferencesStore, type DayIndex } from '@/stores/planningPreferences'
 import { useClickOutside } from '@/composables/useClickOutside'
+import { UtensilsCrossed } from 'lucide-vue-next'
 import DayPickerPopover from './DayPickerPopover.vue'
 
 interface Props {
@@ -76,10 +77,14 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
       >
         <span class="day-name">{{ day.dayShort }}</span>
         <div class="day-meal">
-          <span v-if="day.meal" class="meal-emoji">{{ day.meal.emoji || '🍽️' }}</span>
+          <span v-if="day.meal && day.meal.emoji" class="meal-emoji">{{ day.meal.emoji }}</span>
+          <UtensilsCrossed v-else-if="day.meal" :size="18" :stroke-width="1.75" class="meal-icon" />
           <span v-else-if="day.isSkipped" class="skipped-icon">✕</span>
           <span v-else class="empty-icon">+</span>
         </div>
+        <span v-if="day.meal" class="meal-name-mobile">{{ day.meal.name }}</span>
+        <span v-else-if="day.isSkipped" class="status-mobile">Ledig</span>
+        <span v-else class="status-mobile add-hint">Planera</span>
         <div v-if="day.isToday" class="today-indicator"></div>
       </button>
     </TransitionGroup>
@@ -280,6 +285,15 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
   transform: scale(1.15) rotate(5deg);
 }
 
+.meal-icon {
+  color: var(--text-secondary);
+  transition: transform 0.3s ease;
+}
+
+.day-card:hover .meal-icon {
+  transform: scale(1.15) rotate(5deg);
+}
+
 .skipped-icon {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
@@ -292,7 +306,7 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 1.25rem;
-  color: var(--accent);
+  color: var(--accent-text);
   opacity: 0.4;
   transition: all 0.3s ease;
 }
@@ -313,35 +327,91 @@ const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
   background: var(--accent);
 }
 
-/* Responsive */
+/* Hide mobile-only elements on desktop */
+.meal-name-mobile,
+.status-mobile {
+  display: none;
+}
+
+/* Responsive — vertical list with meal names */
 @media (max-width: 640px) {
+  .weekly-menu {
+    padding: 1rem;
+  }
+
+  .menu-header {
+    margin-bottom: 0.75rem;
+  }
+
   .days-grid {
-    gap: 0.35rem;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x proximity;
-    padding-bottom: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    overflow-x: visible;
   }
 
   .day-card {
-    padding: 0.6rem 0.35rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.75rem;
     border-radius: 12px;
-    min-width: 52px;
-    min-height: 80px;
-    scroll-snap-align: start;
+    min-height: 0;
+  }
+
+  .day-card:hover {
+    transform: none;
   }
 
   .day-name {
     font-size: 0.7rem;
+    min-width: 28px;
+    text-align: center;
   }
 
   .day-meal {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
   }
 
   .meal-emoji {
     font-size: 1.35rem;
+  }
+
+  .meal-name-mobile {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+  }
+
+  .status-mobile {
+    display: block;
+    flex: 1;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-align: left;
+  }
+
+  .status-mobile.add-hint {
+    color: var(--accent-text);
+    opacity: 0.6;
+  }
+
+  .today-indicator {
+    position: static;
+    transform: none;
+    flex-shrink: 0;
   }
 }
 </style>
