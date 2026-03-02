@@ -5,14 +5,17 @@ import { useUserStore } from '@/stores/user'
 import { useDashboardStore } from '@/stores/dashboard'
 import { updateMemberStatus } from '@/api/household.api'
 import { useToast } from '@/composables/useToast'
-import { Settings, AlertTriangle, Link, Package } from 'lucide-vue-next'
+import { Settings, AlertTriangle, Link, Package, UserPlus } from 'lucide-vue-next'
 
 interface Props {
   members: HouseholdMember[]
   inviteCode: string
+  horizontal?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  horizontal: false,
+})
 
 const emit = defineEmits<{
   'show-invite': []
@@ -81,9 +84,15 @@ function cancelRemove() {
 </script>
 
 <template>
-  <section class="household-widget">
+  <section class="household-widget" :class="{ horizontal: props.horizontal }">
     <header class="widget-header">
-      <h3 class="widget-title">Hushållet</h3>
+      <div class="header-left">
+        <h3 class="widget-title">Hushållet</h3>
+        <div v-if="horizontal && lunchBoxCount > 0" class="lunchbox-pill">
+          <Package :size="14" />
+          <span>{{ lunchBoxCount }} {{ lunchBoxCount > 1 ? 'matlådor' : 'matlåda' }}</span>
+        </div>
+      </div>
       <div class="header-actions">
         <span class="member-count">{{ members.length }} personer</span>
         <button
@@ -121,7 +130,7 @@ function cancelRemove() {
       </div>
     </Transition>
 
-    <!-- Confirmation dialog (teleported to body for proper z-index) -->
+    <!-- Confirmation dialog -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="confirmRemove" class="confirm-overlay" @click.self="cancelRemove">
@@ -141,10 +150,10 @@ function cancelRemove() {
       </Transition>
     </Teleport>
 
-    <!-- Lunch box summary -->
-    <div v-if="lunchBoxCount > 0" class="lunchbox-summary">
+    <!-- Vertical-only lunchbox summary -->
+    <div v-if="!horizontal && lunchBoxCount > 0" class="lunchbox-summary">
       <span class="lunchbox-icon"><Package :size="18" /></span>
-      <span class="lunchbox-text">{{ lunchBoxCount }} matlåda{{ lunchBoxCount > 1 ? 'or' : '' }} imorgon</span>
+      <span class="lunchbox-text">{{ lunchBoxCount }} {{ lunchBoxCount > 1 ? 'matlådor' : 'matlåda' }} imorgon</span>
     </div>
 
     <div class="members-list">
@@ -154,8 +163,14 @@ function cancelRemove() {
         class="member-item"
         :class="{ 'not-eating': !member.isEatingToday }"
       >
-        <div class="member-avatar" :class="member.role">
-          {{ member.name.charAt(0).toUpperCase() }}
+        <!-- Avatar with status ring -->
+        <div class="avatar-wrapper" :class="{ eating: member.isEatingToday }">
+          <div class="member-avatar" :class="member.role">
+            {{ member.name.charAt(0).toUpperCase() }}
+          </div>
+          <div v-if="member.wantsLunchBox && member.isEatingToday" class="lunchbox-indicator">
+            <Package :size="10" />
+          </div>
         </div>
         <div class="member-info">
           <span class="member-name">{{ member.name }}</span>
@@ -170,31 +185,42 @@ function cancelRemove() {
             </template>
           </span>
         </div>
-        <button
-          v-if="userStore.isMember"
-          class="eating-toggle"
-          :class="{ active: member.isEatingToday }"
-          :aria-label="`${member.name}: ${member.isEatingToday ? 'äter idag' : 'äter inte idag'}. Klicka för att ändra.`"
-          @click="toggleEating(member)"
-        >
-          <span class="eating-toggle-icon">{{ member.isEatingToday ? '✓' : '✕' }}</span>
-        </button>
-        <button
-          v-if="member.isEatingToday && userStore.isMember"
-          class="lunchbox-toggle"
-          :class="{ active: member.wantsLunchBox }"
-          :title="member.wantsLunchBox ? 'Ta bort matlåda' : 'Lägg till matlåda'"
-          :aria-label="member.wantsLunchBox ? `Ta bort matlåda för ${member.name}` : `Lägg till matlåda för ${member.name}`"
-          @click="toggleLunchBox(member, $event)"
-        >
-          <Package :size="16" />
-        </button>
+        <div class="member-actions">
+          <button
+            v-if="userStore.isMember"
+            class="eating-toggle"
+            :class="{ active: member.isEatingToday }"
+            :aria-label="`${member.name}: ${member.isEatingToday ? 'äter idag' : 'äter inte idag'}. Klicka för att ändra.`"
+            @click="toggleEating(member)"
+          >
+            <span class="eating-toggle-icon">{{ member.isEatingToday ? '✓' : '✕' }}</span>
+          </button>
+          <button
+            v-if="member.isEatingToday && userStore.isMember"
+            class="lunchbox-toggle"
+            :class="{ active: member.wantsLunchBox }"
+            :title="member.wantsLunchBox ? 'Ta bort matlåda' : 'Lägg till matlåda'"
+            :aria-label="member.wantsLunchBox ? `Ta bort matlåda för ${member.name}` : `Lägg till matlåda för ${member.name}`"
+            @click="toggleLunchBox(member, $event)"
+          >
+            <Package :size="16" />
+          </button>
+        </div>
         <span v-if="member.role === 'owner'" class="owner-badge">Ägare</span>
         <span v-else-if="member.role === 'guest'" class="guest-badge">Gäst</span>
       </div>
+
+      <!-- Invite as last item in the row (horizontal only) -->
+      <button v-if="horizontal" class="invite-avatar" @click="emit('show-invite')" aria-label="Bjud in fler">
+        <div class="invite-circle">
+          <UserPlus :size="20" />
+        </div>
+        <span class="invite-label">Bjud in</span>
+      </button>
     </div>
 
-    <button class="invite-button" @click="emit('show-invite')">
+    <!-- Vertical-only invite button -->
+    <button v-if="!horizontal" class="invite-button" @click="emit('show-invite')">
       <span class="invite-icon"><Link :size="16" /></span>
       <span>Bjud in fler</span>
     </button>
@@ -218,12 +244,31 @@ function cancelRemove() {
   margin-bottom: 1rem;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .widget-title {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 0.9rem;
   color: var(--text-primary);
   margin: 0;
+}
+
+.lunchbox-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  background: linear-gradient(135deg, var(--warning-surface) 0%, var(--warning-surface-end) 100%);
+  border-radius: 100px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+  color: var(--warning-dark);
 }
 
 .header-actions {
@@ -311,9 +356,17 @@ function cancelRemove() {
 }
 
 .remove-member-btn .member-initial {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
   font-size: 0.7rem;
+  color: var(--text-on-accent);
+  flex-shrink: 0;
 }
 
 .remove-member-btn .member-name {
@@ -338,7 +391,7 @@ function cancelRemove() {
   opacity: 1;
 }
 
-/* Lunch box summary */
+/* Lunch box summary (vertical only) */
 .lunchbox-summary {
   display: flex;
   align-items: center;
@@ -360,6 +413,35 @@ function cancelRemove() {
   color: var(--warning-dark);
 }
 
+/* ═══ Avatar wrapper with status ring ═══ */
+.avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.avatar-wrapper.eating {
+  border-color: var(--success);
+}
+
+.lunchbox-indicator {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--warning);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-primary);
+  border: 2px solid var(--bg-card);
+}
+
 /* Members list */
 .members-list {
   display: flex;
@@ -378,16 +460,16 @@ function cancelRemove() {
   transition: all 0.2s ease;
 }
 
-.member-item.not-eating .member-avatar {
+.member-item.not-eating .avatar-wrapper {
   opacity: 0.5;
 }
 
 .member-item.not-eating .member-name {
-  color: #6b5e5a;
+  color: var(--text-muted);
 }
 
 .member-item.not-eating .member-status {
-  color: #7a6e69;
+  color: var(--text-muted);
 }
 
 .member-avatar {
@@ -467,9 +549,16 @@ function cancelRemove() {
   transform: rotate(45deg);
 }
 
+/* Action buttons wrapper */
+.member-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .lunchbox-toggle {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -520,14 +609,14 @@ function cancelRemove() {
 }
 
 .eating-toggle {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: 1.5px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
@@ -573,7 +662,6 @@ function cancelRemove() {
 }
 
 .invite-button:hover {
-  background: var(--bg-hover);
   border-color: var(--accent);
 }
 
@@ -591,6 +679,169 @@ function cancelRemove() {
 .dropdown-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+/* ═══ Horizontal layout ═══ */
+.household-widget.horizontal {
+  border-radius: 24px;
+  padding: 1.25rem 1.5rem;
+}
+
+.horizontal .widget-header {
+  margin-bottom: 0.75rem;
+}
+
+.horizontal .members-list {
+  flex-direction: row;
+  gap: 0.5rem;
+  margin-bottom: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  align-items: stretch;
+}
+
+.horizontal .members-list::-webkit-scrollbar {
+  display: none;
+}
+
+.horizontal .member-item {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+  padding: 0.75rem 0.5rem 0.6rem;
+  border-radius: 16px;
+  min-width: 0;
+  flex: 1;
+}
+
+.horizontal .avatar-wrapper {
+  padding: 3px;
+  border-width: 2.5px;
+}
+
+.horizontal .member-avatar {
+  width: 42px;
+  height: 42px;
+  font-size: 1rem;
+}
+
+.horizontal .member-info {
+  flex: none;
+  min-width: 0;
+  width: 100%;
+}
+
+.horizontal .member-name {
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.horizontal .member-status {
+  justify-content: center;
+  font-size: 0.65rem;
+}
+
+.horizontal .member-actions {
+  justify-content: center;
+}
+
+.horizontal .member-item .eating-toggle,
+.horizontal .member-item .lunchbox-toggle {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.horizontal .member-item .eating-toggle-icon {
+  font-size: 0.65rem;
+}
+
+.horizontal .member-item .lunchbox-toggle :deep(svg) {
+  width: 13px;
+  height: 13px;
+}
+
+.horizontal .owner-badge,
+.horizontal .guest-badge {
+  font-size: 0.6rem;
+  padding: 0.1rem 0.35rem;
+}
+
+/* Invite circle — lives inside the members row */
+.invite-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 72px;
+  padding: 0.75rem 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.invite-avatar:hover .invite-circle {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.invite-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 2px dashed var(--border-color-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-text);
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.invite-avatar:hover .invite-circle {
+  opacity: 1;
+}
+
+.invite-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.7rem;
+  color: var(--accent-text);
+  opacity: 0.6;
+}
+
+.invite-avatar:hover .invite-label {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .household-widget.horizontal {
+    padding: 1rem;
+  }
+
+  .horizontal .member-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
+  }
+
+  .invite-circle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .invite-circle :deep(svg) {
+    width: 16px;
+    height: 16px;
+  }
 }
 </style>
 
