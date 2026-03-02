@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { UserRole } from '@/api/types/dashboard.types'
-import { Home, Settings, LogOut } from 'lucide-vue-next'
+import { Home, Settings, LogOut, UtensilsCrossed } from 'lucide-vue-next'
 
 interface Props {
   householdName: string
@@ -43,7 +43,7 @@ function handleSettings() {
     <div class="header-content">
       <!-- Logo (link to landing) -->
       <RouterLink v-prefetch="'landing'" to="/" class="logo">
-        <span class="logo-icon">🍽️</span>
+        <UtensilsCrossed :size="20" :stroke-width="2" class="logo-icon" />
         <span class="logo-text">Måltiden</span>
       </RouterLink>
 
@@ -122,7 +122,7 @@ function handleSettings() {
 }
 
 .logo-icon {
-  font-size: 1.75rem;
+  color: var(--accent);
 }
 
 .logo-text {
@@ -322,6 +322,9 @@ function handleSettings() {
 
   .user-button {
     padding: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    justify-content: center;
   }
 }
 </style>

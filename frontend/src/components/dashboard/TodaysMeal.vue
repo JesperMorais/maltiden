@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Meal } from '@/api/types/dashboard.types'
+import { UtensilsCrossed, Coffee, HelpCircle } from 'lucide-vue-next'
 
 interface Props {
   meal: Meal | null
@@ -32,7 +33,9 @@ const emit = defineEmits<{
       <!-- Day off state -->
       <template v-if="isDayOff">
         <div class="empty-state day-off-state">
-          <div class="day-off-icon">😌</div>
+          <div class="day-off-icon">
+            <Coffee :size="32" :stroke-width="1.75" />
+          </div>
           <h2 class="empty-title">Ledig dag</h2>
           <p class="empty-text">Ingen matlagning planerad idag</p>
         </div>
@@ -40,7 +43,9 @@ const emit = defineEmits<{
 
       <!-- Has meal -->
       <template v-else-if="meal">
-        <div class="meal-emoji">{{ meal.emoji || '🍽️' }}</div>
+        <div class="meal-emoji">
+          <UtensilsCrossed :size="32" :stroke-width="1.75" />
+        </div>
         <h2 class="meal-name">{{ meal.name }}</h2>
         <p class="meal-portions">{{ meal.portions }} portioner</p>
         <div class="meal-action">
@@ -53,20 +58,13 @@ const emit = defineEmits<{
       <template v-else>
         <div class="empty-state">
           <div class="empty-icon">
-            <span class="plate">🍽️</span>
-            <span class="question">?</span>
+            <UtensilsCrossed :size="28" :stroke-width="1.75" class="plate-icon" />
+            <HelpCircle :size="16" :stroke-width="2" class="question-icon" />
           </div>
           <h2 class="empty-title">Ingen måltid planerad</h2>
           <p class="empty-text">Klicka för att lägga till något gott!</p>
         </div>
       </template>
-    </div>
-
-    <!-- Decorative food items -->
-    <div class="floating-foods" v-if="meal">
-      <span class="food food-1">🥬</span>
-      <span class="food food-2">🧄</span>
-      <span class="food food-3">🍅</span>
     </div>
   </article>
 </template>
@@ -171,12 +169,6 @@ const emit = defineEmits<{
   height: 8px;
   border-radius: 50%;
   background: var(--accent);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
 }
 
 .meal-label span:last-child {
@@ -189,16 +181,8 @@ const emit = defineEmits<{
 }
 
 .meal-emoji {
-  font-size: 5rem;
-  line-height: 1;
   margin-bottom: 1rem;
-  animation: float 3s ease-in-out infinite;
-  filter: drop-shadow(0 8px 16px rgba(61, 44, 41, 0.1));
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0) rotate(-2deg); }
-  50% { transform: translateY(-8px) rotate(2deg); }
+  color: var(--text-primary);
 }
 
 .meal-name {
@@ -252,30 +236,23 @@ const emit = defineEmits<{
 
 .empty-icon {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 1.5rem;
 }
 
-.empty-icon .plate {
-  font-size: 4rem;
+.empty-icon .plate-icon {
+  color: var(--text-secondary);
   opacity: 0.4;
 }
 
-.empty-icon .question {
+.empty-icon .question-icon {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-family: 'Fraunces', serif;
-  font-weight: 800;
-  font-size: 2rem;
   color: var(--accent);
-  animation: bounce 2s ease-in-out infinite;
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translate(-50%, -50%); }
-  50% { transform: translate(-50%, -60%); }
 }
 
 .empty-title {
@@ -295,65 +272,82 @@ const emit = defineEmits<{
 
 /* Day off state */
 .day-off-icon {
-  font-size: 4rem;
-  line-height: 1;
   margin-bottom: 1rem;
-  animation: float 3s ease-in-out infinite;
-}
-
-/* Floating foods */
-.floating-foods {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.food {
-  position: absolute;
-  font-size: 1.5rem;
-  opacity: 0.6;
-  animation: float-food 4s ease-in-out infinite;
-}
-
-.food-1 {
-  top: 15%;
-  left: 10%;
-  animation-delay: 0s;
-}
-
-.food-2 {
-  bottom: 20%;
-  right: 15%;
-  animation-delay: 1s;
-  font-size: 1.25rem;
-}
-
-.food-3 {
-  top: 30%;
-  right: 10%;
-  animation-delay: 0.5s;
-}
-
-@keyframes float-food {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(10deg); }
+  color: var(--text-secondary);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
   .todays-meal {
-    padding: 2rem 1.5rem;
-    min-height: 280px;
-    border-radius: 24px;
+    padding: 1rem;
+    min-height: 0;
+    border-radius: 20px;
+  }
+
+  .meal-bg {
+    display: none;
+  }
+
+  .meal-content {
+    position: static;            /* Let .meal-label anchor to .todays-meal */
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    text-align: left;
+    min-height: 0;
+    gap: 0.15rem 1rem;
+  }
+
+  .meal-label {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    margin-bottom: 0;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.7rem;
   }
 
   .meal-emoji {
-    font-size: 4rem;
+    grid-column: 1;
+    grid-row: 1 / -1;
+    align-self: center;
+    margin-bottom: 0;
   }
 
-  .floating-foods {
-    display: none;
+  .meal-name {
+    grid-column: 2;
+    font-size: 1.25rem;
+    margin: 0;
+  }
+
+  .meal-portions {
+    grid-column: 2;
+    font-size: 0.85rem;
+    margin: 0 0 0.25rem;
+  }
+
+  .meal-action {
+    grid-column: 2;
+    justify-self: start;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  /* Empty/day-off states use full width with horizontal layout */
+  .empty-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .empty-icon {
+    margin-bottom: 0;
+  }
+
+  .day-off-icon {
+    margin-bottom: 0;
   }
 }
 </style>
