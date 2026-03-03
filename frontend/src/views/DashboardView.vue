@@ -248,6 +248,7 @@ function handleViewShoppingList() {
   display: flex;
   align-items: center;
   overflow: hidden;
+  contain: layout style;
 }
 
 :deep(.greeting-text) {

@@ -17,7 +17,7 @@ const emit = defineEmits<{
   <div class="empty-state">
     <div class="empty-state-icon">
       <slot name="icon">
-        <span v-if="icon" class="icon-text">{{ icon }}</span>
+        <span v-if="icon" class="icon-text" aria-hidden="true">{{ icon }}</span>
       </slot>
     </div>
     <h2 class="empty-state-title">{{ title }}</h2>
@@ -71,7 +71,7 @@ const emit = defineEmits<{
   font-weight: 700;
   font-size: 1rem;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .empty-state-action:hover {

@@ -22,7 +22,7 @@ const emit = defineEmits<{
 
 <template>
   <div class="error-state" role="alert">
-    <span class="error-state-icon">{{ icon ?? '😅' }}</span>
+    <span class="error-state-icon" aria-hidden="true">{{ icon ?? '😅' }}</span>
     <h2 class="error-state-title">{{ title }}</h2>
     <p v-if="description" class="error-state-description">{{ description }}</p>
     <button v-if="showRetry" class="error-state-retry" @click="emit('retry')">
