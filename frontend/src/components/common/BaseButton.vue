@@ -41,7 +41,7 @@ withDefaults(defineProps<Props>(), {
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -133,7 +133,7 @@ withDefaults(defineProps<Props>(), {
 
 /* States */
 .disabled {
-  opacity: 0.7;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none !important;
 }
