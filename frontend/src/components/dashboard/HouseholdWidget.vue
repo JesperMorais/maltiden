@@ -11,10 +11,12 @@ interface Props {
   members: HouseholdMember[]
   inviteCode: string
   horizontal?: boolean
+  selectedDate?: string | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   horizontal: false,
+  selectedDate: null,
 })
 
 const emit = defineEmits<{
@@ -29,10 +31,29 @@ const toast = useToast()
 const showSettings = ref(false)
 const confirmRemove = ref<HouseholdMember | null>(null)
 
+const isViewingDay = computed(() => props.selectedDate !== null)
+
+const dayLabel = computed(() => {
+  if (!props.selectedDate) return null
+  const dayNames = ['söndag', 'måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag']
+  const d = new Date(props.selectedDate + 'T12:00:00')
+  return dayNames[d.getDay()]!
+})
+
+function isMemberEating(member: HouseholdMember): boolean {
+  if (props.selectedDate) {
+    return dashboardStore.isMemberEatingDay(props.selectedDate, member.id)
+  }
+  return member.isEatingToday
+}
+
 // Count members wanting lunch box
-const lunchBoxCount = computed(() =>
-  props.members.filter(m => m.wantsLunchBox && m.isEatingToday).length
-)
+const lunchBoxCount = computed(() => {
+  if (props.selectedDate) {
+    return dashboardStore.getDayLunchBoxCount(props.selectedDate)
+  }
+  return props.members.filter(m => m.wantsLunchBox && m.isEatingToday).length
+})
 
 function toggleSettings() {
   showSettings.value = !showSettings.value
@@ -43,6 +64,11 @@ function toggleSettings() {
  * Updates local state immediately, calls API in background, reverts on error.
  */
 function toggleEating(member: HouseholdMember) {
+  if (props.selectedDate) {
+    dashboardStore.toggleMemberDay(props.selectedDate, member.id)
+    return
+  }
+
   const newValue = !member.isEatingToday
   dashboardStore.updateMemberLocally(member.id, { isEatingToday: newValue })
 
@@ -161,27 +187,27 @@ function cancelRemove() {
         v-for="member in members"
         :key="member.id"
         class="member-item"
-        :class="{ 'not-eating': !member.isEatingToday }"
+        :class="{ 'not-eating': !isMemberEating(member) }"
       >
         <!-- Avatar with status ring -->
-        <div class="avatar-wrapper" :class="{ eating: member.isEatingToday }">
+        <div class="avatar-wrapper" :class="{ eating: isMemberEating(member) }">
           <div class="member-avatar" :class="member.role">
             {{ member.name.charAt(0).toUpperCase() }}
           </div>
-          <div v-if="member.wantsLunchBox && member.isEatingToday" class="lunchbox-indicator">
+          <div v-if="!isViewingDay && member.wantsLunchBox && member.isEatingToday" class="lunchbox-indicator">
             <Sandwich :size="10" />
           </div>
         </div>
         <div class="member-info">
           <span class="member-name">{{ member.name }}</span>
           <span class="member-status">
-            <template v-if="member.isEatingToday">
+            <template v-if="isMemberEating(member)">
               <span class="status-dot eating"></span>
-              Äter idag
+              {{ isViewingDay ? `Äter ${dayLabel}` : 'Äter idag' }}
             </template>
             <template v-else>
               <span class="status-dot"></span>
-              Äter inte idag
+              {{ isViewingDay ? `Äter inte ${dayLabel}` : 'Äter inte idag' }}
             </template>
           </span>
         </div>
@@ -189,14 +215,14 @@ function cancelRemove() {
           <button
             v-if="userStore.isMember"
             class="eating-toggle"
-            :class="{ active: member.isEatingToday }"
-            :aria-label="`${member.name}: ${member.isEatingToday ? 'äter idag' : 'äter inte idag'}. Klicka för att ändra.`"
+            :class="{ active: isMemberEating(member) }"
+            :aria-label="`${member.name}: ${isMemberEating(member) ? 'äter' : 'äter inte'}. Klicka för att ändra.`"
             @click="toggleEating(member)"
           >
-            <span class="eating-toggle-icon">{{ member.isEatingToday ? '✓' : '✕' }}</span>
+            <span class="eating-toggle-icon">{{ isMemberEating(member) ? '✓' : '✕' }}</span>
           </button>
           <button
-            v-if="member.isEatingToday && userStore.isMember"
+            v-if="!isViewingDay && isMemberEating(member) && userStore.isMember"
             class="lunchbox-toggle"
             :class="{ active: member.wantsLunchBox }"
             :title="member.wantsLunchBox ? 'Ta bort matlåda' : 'Lägg till matlåda'"
