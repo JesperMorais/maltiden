@@ -95,9 +95,9 @@ describe('API client 401 response interceptor', () => {
 
     await expect(apiClient.get('/households/me')).rejects.toThrow()
 
-    // Token should still be removed (cleanup is correct)
-    expect(mockTokenUtils.remove).toHaveBeenCalled()
-    // But NO redirect — prevents loop
+    // Token is kept (not removed) — the 401 might be a timing issue right after login
+    expect(mockTokenUtils.remove).not.toHaveBeenCalled()
+    // No redirect — prevents loop
     expect(sessionStorage.getItem('session_expired')).toBeNull()
     expect(window.location.href).toBe('')
   })
@@ -131,6 +131,10 @@ describe('API client 401 response interceptor', () => {
   })
 
   it('does NOT redirect when already on /login page', async () => {
+    // Advance Date.now past the 10s anti-loop guard (may leak from prior markAuthSuccess)
+    const realNow = Date.now()
+    vi.spyOn(Date, 'now').mockReturnValue(realNow + 15_000)
+
     Object.defineProperty(window, 'location', {
       writable: true,
       value: { pathname: '/login', href: '' },
@@ -142,9 +146,15 @@ describe('API client 401 response interceptor', () => {
     expect(mockTokenUtils.remove).toHaveBeenCalled()
     expect(sessionStorage.getItem('session_expired')).toBeNull()
     expect(window.location.href).toBe('')
+
+    vi.restoreAllMocks()
   })
 
   it('does NOT redirect when already on /register page', async () => {
+    // Advance Date.now past the 10s anti-loop guard (may leak from prior markAuthSuccess)
+    const realNow = Date.now()
+    vi.spyOn(Date, 'now').mockReturnValue(realNow + 15_000)
+
     Object.defineProperty(window, 'location', {
       writable: true,
       value: { pathname: '/register', href: '' },
@@ -156,6 +166,8 @@ describe('API client 401 response interceptor', () => {
     expect(mockTokenUtils.remove).toHaveBeenCalled()
     expect(sessionStorage.getItem('session_expired')).toBeNull()
     expect(window.location.href).toBe('')
+
+    vi.restoreAllMocks()
   })
 
   it('does NOT touch token or redirect on non-401 errors', async () => {

@@ -2,9 +2,11 @@
 import { ref, computed } from 'vue'
 import type { MenuDay } from '@/api/types/dashboard.types'
 import { usePlanningPreferencesStore, type DayIndex } from '@/stores/planningPreferences'
+import { useDashboardStore } from '@/stores/dashboard'
 import { useClickOutside } from '@/composables/useClickOutside'
 import { UtensilsCrossed, Coffee, Plus, Users } from 'lucide-vue-next'
 import DayPickerPopover from './DayPickerPopover.vue'
+import DayActionPopover from './DayActionPopover.vue'
 
 interface Props {
   weeklyMenu: MenuDay[]
@@ -13,16 +15,22 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  'day-click': [day: MenuDay]
+  'view-recipe': [day: MenuDay]
 }>()
 
 const prefsStore = usePlanningPreferencesStore()
+const dashboardStore = useDashboardStore()
 
 const isPickerOpen = ref(false)
 const headerRef = ref<HTMLElement | null>(null)
+const sectionRef = ref<HTMLElement | null>(null)
 
 useClickOutside(headerRef, () => {
   isPickerOpen.value = false
+})
+
+useClickOutside(sectionRef, () => {
+  dashboardStore.setSelectedDate(null)
 })
 
 const filteredMenu = computed(() =>
@@ -33,14 +41,39 @@ const gridColumns = computed(() => filteredMenu.value.length)
 
 const badgeLabel = computed(() => `${prefsStore.activeDayCount} dagar`)
 
+const selectedDay = computed(() =>
+  filteredMenu.value.find((d) => d.date === dashboardStore.selectedDate) ?? null
+)
+
 function dateNumber(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
   return String(d.getDate())
 }
+
+function selectDay(day: MenuDay) {
+  if (!day.meal) return
+  dashboardStore.setSelectedDate(dashboardStore.selectedDate === day.date ? null : day.date)
+}
+
+function handleViewRecipe() {
+  if (selectedDay.value) {
+    emit('view-recipe', selectedDay.value)
+  }
+}
+
+function handleLunchboxUpdate(count: number) {
+  if (!selectedDay.value?.meal) return
+  dashboardStore.setDayLunchBoxCount(selectedDay.value.date, count)
+  dashboardStore.updateDayServings(
+    selectedDay.value.date,
+    dashboardStore.getMembersEatingDay(selectedDay.value.date).length,
+    count,
+  )
+}
 </script>
 
 <template>
-  <section class="weekly-menu">
+  <section ref="sectionRef" class="weekly-menu">
     <header class="menu-header">
       <h3 class="menu-title">Veckans meny</h3>
       <div ref="headerRef" class="days-badge-wrapper">
@@ -69,16 +102,21 @@ function dateNumber(dateStr: string): string {
       class="days-grid"
       :style="{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }"
     >
-      <button
+      <div
         v-for="day in filteredMenu"
         :key="day.date"
+        role="button"
+        tabindex="0"
         class="day-card"
         :class="{
           today: day.isToday,
           skipped: day.isSkipped,
-          'no-meal': !day.meal && !day.isSkipped
+          'no-meal': !day.meal && !day.isSkipped,
+          selected: dashboardStore.selectedDate === day.date
         }"
-        @click="emit('day-click', day)"
+        @click="selectDay(day)"
+        @keydown.enter="selectDay(day)"
+        @keydown.space.prevent="selectDay(day)"
       >
         <!-- Day header -->
         <div class="day-header">
@@ -101,15 +139,32 @@ function dateNumber(dateStr: string): string {
           <span v-else class="meal-status add-hint">Planera</span>
         </div>
 
-        <!-- Portions -->
+        <!-- Portions (base + matlådor) -->
         <div v-if="day.meal" class="day-meta">
           <Users :size="12" :stroke-width="2" />
-          <span>{{ day.meal.portions }}</span>
+          <span>{{ dashboardStore.getMembersEatingDay(day.date).length + dashboardStore.getDayLunchBoxCount(day.date) }}</span>
         </div>
 
         <!-- Today glow ring -->
         <div v-if="day.isToday" class="today-indicator"></div>
-      </button>
+
+        <!-- Action popover -->
+        <Transition name="popover">
+          <DayActionPopover
+            v-if="dashboardStore.selectedDate === day.date && day.meal"
+            :day="day"
+            :lunch-box-count="dashboardStore.getDayLunchBoxCount(day.date)"
+            :max-lunch-boxes="dashboardStore.getMembersEatingDay(day.date).length"
+            :members="dashboardStore.householdMembers"
+            :members-eating-day="dashboardStore.getMembersEatingDay(day.date)"
+            :is-real-data="dashboardStore.isUsingRealData"
+            @view-recipe="handleViewRecipe"
+            @update-lunchbox="handleLunchboxUpdate"
+            @toggle-member="(memberId: string) => dashboardStore.toggleMemberDay(day.date, memberId)"
+            @close="dashboardStore.setSelectedDate(null)"
+          />
+        </Transition>
+      </div>
     </TransitionGroup>
   </section>
 </template>
@@ -197,7 +252,7 @@ function dateNumber(dateStr: string): string {
 .days-grid {
   display: grid;
   gap: 0.5rem;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* TransitionGroup animations */
@@ -242,6 +297,7 @@ function dateNumber(dateStr: string): string {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
   min-height: 170px;
+  outline: none;
 }
 
 .day-card:hover {
@@ -250,7 +306,11 @@ function dateNumber(dateStr: string): string {
   box-shadow: var(--shadow-sm);
 }
 
-/* Today state */
+.day-card:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-focus-ring);
+}
+
+/* Today state — warm ambient glow (passive) */
 .day-card.today {
   background: var(--bg-hover);
   border-color: var(--accent);
@@ -259,6 +319,29 @@ function dateNumber(dateStr: string): string {
 
 .day-card.today:hover {
   box-shadow: 0 0 0 3px var(--accent-focus-ring), var(--shadow-md);
+}
+
+/* Selected state — strong editing indicator (active) */
+.day-card.selected {
+  border-color: var(--text-primary);
+  border-width: 2.5px;
+  background: var(--bg-hover);
+  box-shadow: inset 0 3px 0 0 var(--accent);
+  transform: translateY(-2px);
+}
+
+.day-card.selected:hover {
+  box-shadow: inset 0 3px 0 0 var(--accent), var(--shadow-md);
+}
+
+/* Both today AND selected */
+.day-card.today.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-focus-ring), inset 0 3px 0 0 var(--text-primary);
+}
+
+.day-card.today.selected:hover {
+  box-shadow: 0 0 0 3px var(--accent-focus-ring), inset 0 3px 0 0 var(--text-primary), var(--shadow-md);
 }
 
 /* Skipped state */
@@ -421,6 +504,28 @@ function dateNumber(dateStr: string): string {
   background: var(--accent);
 }
 
+/* ═══ Popover transition ═══ */
+.popover-enter-active {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.popover-leave-active {
+  transition: all 0.15s ease;
+}
+
+.popover-enter-from,
+.popover-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(4px) scale(0.95);
+}
+
+/* Position the popover above the card */
+.day-card :deep(.popover) {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 /* ═══ Responsive — vertical list ═══ */
 @media (max-width: 640px) {
   .weekly-menu {
@@ -451,8 +556,16 @@ function dateNumber(dateStr: string): string {
     transform: none;
   }
 
+  .day-card.selected {
+    transform: none;
+  }
+
   .day-card.today {
     box-shadow: none;
+  }
+
+  .day-card.today.selected {
+    box-shadow: inset 0 3px 0 0 var(--text-primary);
   }
 
   .day-header {
@@ -509,6 +622,19 @@ function dateNumber(dateStr: string): string {
     position: static;
     transform: none;
     flex-shrink: 0;
+  }
+
+  /* Popover: full-width below card on mobile */
+  .day-card :deep(.popover) {
+    left: 0;
+    right: 0;
+    transform: none;
+    min-width: unset;
+  }
+
+  .popover-enter-from,
+  .popover-leave-to {
+    transform: translateY(4px) scale(0.95);
   }
 }
 </style>
