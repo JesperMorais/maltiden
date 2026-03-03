@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useUserStore } from '@/stores/user'
@@ -36,13 +36,20 @@ const showSettings = ref(false)
 const showInvite = ref(false)
 const selectedRecipeId = ref<string | null>(null)
 
+const todayExtraPortions = computed(() => {
+  const today = dashboardStore.todayFromMenu
+  if (!today) return 0
+  return dashboardStore.getDayLunchBoxCount(today.date)
+})
+
 onMounted(() => {
   dashboardStore.fetchDashboard()
-  userStore.initFromToken()
+  dashboardStore.initLunchBoxDays()
+  dashboardStore.initDayMemberExclusions()
   prefsStore.initPreferences()
 })
 
-function handleDayClick(day: MenuDay) {
+function handleViewRecipe(day: MenuDay) {
   selectedRecipeId.value = day.meal?.id ?? null
 }
 
@@ -137,6 +144,7 @@ function handleViewShoppingList() {
               <TodaysMeal
                 :meal="dashboardStore.todaysMeal"
                 :is-day-off="!prefsStore.isTodayActive"
+                :extra-portions="todayExtraPortions"
                 @click="handleMealClick"
               />
             </FadeContent>
@@ -144,7 +152,7 @@ function handleViewShoppingList() {
             <FadeContent :duration="800" :delay="150" :blur="true">
               <WeeklyMenuGrid
                 :weekly-menu="dashboardStore.weeklyMenu"
-                @day-click="handleDayClick"
+                @view-recipe="handleViewRecipe"
               />
             </FadeContent>
 
@@ -152,6 +160,7 @@ function handleViewShoppingList() {
               <HouseholdWidget
                 :members="dashboardStore.householdMembers"
                 :invite-code="dashboardStore.inviteCode"
+                :selected-date="dashboardStore.selectedDate"
                 horizontal
                 @show-invite="handleShowInvite"
                 @remove-member="handleRemoveMember"
