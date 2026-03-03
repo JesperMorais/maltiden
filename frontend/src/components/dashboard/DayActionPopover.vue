@@ -248,7 +248,7 @@ onUnmounted(() => {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 0.7rem;
-  color: #fff;
+  color: var(--text-on-accent);
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 0;

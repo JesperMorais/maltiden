@@ -129,7 +129,7 @@ const icons: Record<string, string> = {
 
 .icon-warning {
   background: var(--warning);
-  color: #92400e;
+  color: var(--warning-dark);
 }
 
 .icon-info {
