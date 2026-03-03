@@ -32,6 +32,7 @@ function navigate(to: string) {
       :key="tab.name"
       class="nav-tab"
       :class="{ active: activeTab === tab.name }"
+      :aria-label="`Gå till ${tab.label}`"
       :aria-current="activeTab === tab.name ? 'page' : undefined"
       @click="navigate(tab.to)"
     >
