@@ -48,7 +48,7 @@ onMounted(() => {
     <!-- Error state -->
     <div v-else-if="landingStore.error" class="error-state">
       <div class="error-content">
-        <span class="error-icon">😅</span>
+        <span class="error-icon" aria-hidden="true">😅</span>
         <h2>Något gick fel</h2>
         <p>{{ landingStore.error }}</p>
         <BaseButton variant="primary" size="md" @click="landingStore.fetchLandingData(true)">
