@@ -558,7 +558,7 @@ onUnmounted(stopTimer)
 /* Hover lifts the front card */
 .hero-preview:hover .stack-front {
   transform: translateY(-4px);
-  box-shadow: 0 20px 48px rgba(61, 44, 41, 0.22);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Dots — pill indicator */
