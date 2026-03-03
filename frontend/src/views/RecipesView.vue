@@ -54,9 +54,8 @@ function switchToList() {
     <!-- Main content -->
     <main class="content">
       <div class="content-container">
-        <FadeContent :duration="500" :blur="true">
+        <FadeContent v-show="activeTab === 'list'" :duration="500" :blur="true">
           <RecipeListPanel
-            v-show="activeTab === 'list'"
             ref="recipeListRef"
             @navigate-to-add="switchToAdd"
           />
