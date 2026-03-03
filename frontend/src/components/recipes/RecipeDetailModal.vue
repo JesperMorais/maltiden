@@ -626,13 +626,13 @@ function handleClose() {
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: #e53e3e;
+  background: var(--error);
   border: none;
   color: var(--text-on-accent);
 }
 
 .btn-delete:hover:not(:disabled) {
-  background: #c53030;
+  background: var(--error-dark);
   transform: translateY(-1px);
 }
 
