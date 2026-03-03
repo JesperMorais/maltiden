@@ -92,6 +92,15 @@
   --shadow-accent-hover: 0 6px 16px rgba(255, 107, 91, 0.4);
   --shadow-success: 0 6px 20px rgba(72, 187, 120, 0.35);
 
+  /* Category colors — for shopping list badges, charts, etc. */
+  --category-purple: #8b7cf6;
+  --category-pink: #f472b6;
+  --category-blue: #38bdf8;
+
+  /* Avatar gradients */
+  --avatar-david: linear-gradient(135deg, #4a90d9 0%, #7ab8ff 100%);
+  --avatar-david-shadow: rgba(74, 144, 217, 0.3);
+
   /* Role badges */
   --role-owner-bg: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
   --role-owner-text: #9a4217; /* WCAG AA: 5.79:1 on #FCEDE1 */
@@ -163,6 +172,15 @@
   --accent-bg-subtle: rgba(255, 138, 125, 0.15);
   --shadow-accent-hover: 0 6px 16px rgba(255, 138, 125, 0.3);
   --shadow-success: 0 6px 20px rgba(104, 211, 145, 0.25);
+
+  /* Category colors — adjusted for dark mode */
+  --category-purple: #a78bfa;
+  --category-pink: #f9a8d4;
+  --category-blue: #7dd3fc;
+
+  /* Avatar gradients */
+  --avatar-david: linear-gradient(135deg, #5a9de0 0%, #8bc4ff 100%);
+  --avatar-david-shadow: rgba(90, 157, 224, 0.3);
 
   /* Role badges */
   --role-owner-bg: linear-gradient(135deg, #fbd38d 0%, #f6ad55 100%);

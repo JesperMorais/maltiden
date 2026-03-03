@@ -28,9 +28,9 @@ const categoryColors = [
   'var(--success)',
   'var(--accent)',
   'var(--warning)',
-  '#8b7cf6',
-  '#f472b6',
-  '#38bdf8',
+  'var(--category-purple)',
+  'var(--category-pink)',
+  'var(--category-blue)',
 ]
 </script>
 
@@ -216,7 +216,7 @@ const categoryColors = [
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--success) 0%, #68d391 100%);
+  background: linear-gradient(90deg, var(--success-dark) 0%, var(--success) 100%);
   border-radius: 100px;
   transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

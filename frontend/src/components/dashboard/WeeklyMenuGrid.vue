@@ -107,6 +107,7 @@ function handleLunchboxUpdate(count: number) {
         :key="day.date"
         role="button"
         tabindex="0"
+        :aria-label="`${day.dayShort}: ${day.meal?.name ?? (day.isSkipped ? 'Ledig dag' : 'Inte planerad')}`"
         class="day-card"
         :class="{
           today: day.isToday,
@@ -126,7 +127,7 @@ function handleLunchboxUpdate(count: number) {
 
         <!-- Meal visual -->
         <div class="day-visual">
-          <span v-if="day.meal && day.meal.emoji" class="meal-emoji">{{ day.meal.emoji }}</span>
+          <span v-if="day.meal && day.meal.emoji" class="meal-emoji" aria-hidden="true">{{ day.meal.emoji }}</span>
           <UtensilsCrossed v-else-if="day.meal" :size="24" :stroke-width="1.75" class="meal-icon" />
           <Coffee v-else-if="day.isSkipped" :size="22" :stroke-width="1.75" class="skipped-icon" />
           <Plus v-else :size="22" :stroke-width="2" class="empty-icon" />

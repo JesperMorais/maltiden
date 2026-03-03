@@ -423,13 +423,13 @@ import FadeContent from '@/components/vue-bits/FadeContent.vue'
 }
 
 .member-initial-david {
-  background: linear-gradient(135deg, #4a90d9 0%, #7ab8ff 100%);
-  box-shadow: 0 8px 24px rgba(74, 144, 217, 0.3);
+  background: var(--avatar-david);
+  box-shadow: 0 8px 24px var(--avatar-david-shadow);
 }
 
 .member-initial-jesper {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--peach) 100%);
-  box-shadow: 0 8px 24px rgba(255, 107, 91, 0.3);
+  background: var(--accent-gradient);
+  box-shadow: var(--shadow-accent);
 }
 
 .member-name {
