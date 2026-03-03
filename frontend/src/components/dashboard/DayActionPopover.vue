@@ -51,7 +51,7 @@ onUnmounted(() => {
 
     <!-- Meal identity -->
     <div class="popover-header">
-      <span v-if="day.meal?.emoji" class="meal-emoji">{{ day.meal.emoji }}</span>
+      <span v-if="day.meal?.emoji" class="meal-emoji" aria-hidden="true">{{ day.meal.emoji }}</span>
       <UtensilsCrossed v-else :size="20" class="meal-emoji-icon" />
       <span class="meal-name">{{ day.meal?.name }}</span>
     </div>
