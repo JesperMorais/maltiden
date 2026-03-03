@@ -612,7 +612,7 @@ function cancelRemove() {
 .lunchbox-toggle.active {
   opacity: 1;
   background: var(--warning-bg);
-  border-color: #edc53f;
+  border-color: var(--yellow-soft);
   color: var(--warning-dark);
 }
 
@@ -955,13 +955,13 @@ function cancelRemove() {
 }
 
 .btn-confirm {
-  background: #e53e3e;
+  background: var(--error);
   border: none;
   color: var(--text-on-accent);
 }
 
 .btn-confirm:hover {
-  background: #c53030;
+  background: var(--error-dark);
   transform: translateY(-1px);
 }
 

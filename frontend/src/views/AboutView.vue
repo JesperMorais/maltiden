@@ -418,7 +418,7 @@ import FadeContent from '@/components/vue-bits/FadeContent.vue'
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: 2.25rem;
-  color: white;
+  color: var(--text-on-accent);
   letter-spacing: -0.02em;
 }
 

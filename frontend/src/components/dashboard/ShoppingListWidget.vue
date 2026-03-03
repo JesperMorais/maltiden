@@ -279,7 +279,7 @@ const categoryColors = [
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 0.72rem;
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 .category-name {
