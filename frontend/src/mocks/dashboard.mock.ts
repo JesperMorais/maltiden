@@ -8,13 +8,13 @@ function generateWeekDays(): MenuDay[] {
   const daysShort = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
 
   const meals = [
-    { id: '1', name: 'Pasta Carbonara', emoji: '🍝', portions: 4 },
-    { id: '2', name: 'Kycklingwok', emoji: '🥡', portions: 4 },
-    { id: '3', name: 'Köttfärssås', emoji: '🍖', portions: 4 },
-    { id: '4', name: 'Fiskgratäng', emoji: '🐟', portions: 4 },
-    { id: '5', name: 'Tacos', emoji: '🌮', portions: 4 },
+    { id: 'rec_1', name: 'Pasta Carbonara', emoji: '🍝', portions: 4 },
+    { id: 'rec_2', name: 'Kycklingwok', emoji: '🥡', portions: 4 },
+    { id: 'rec_3', name: 'Köttfärssås', emoji: '🍖', portions: 4 },
+    { id: 'rec_4', name: 'Fiskgratäng', emoji: '🐟', portions: 4 },
+    { id: 'rec_5', name: 'Tacos', emoji: '🌮', portions: 4 },
     null, // Lördag - äter ute
-    { id: '6', name: 'Söndagsstek', emoji: '🥘', portions: 4 }
+    { id: 'rec_6', name: 'Söndagsstek', emoji: '🥘', portions: 4 }
   ]
 
   const today = new Date()

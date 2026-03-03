@@ -1,11 +1,13 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { DashboardData, Meal, MenuDay, Household, ShoppingListSummary } from '@/api/types/dashboard.types'
+import type { DashboardData, Meal, MenuDay, Household, HouseholdMember, ShoppingListSummary } from '@/api/types/dashboard.types'
 import { mockDashboardData } from '@/mocks/dashboard.mock'
 import { useUserStore } from './user'
 import apiClient from '@/api/client'
-import { getCurrentMenu } from '@/api/menu.api'
-import type { Menu } from '@/api/menu.api'
+import { getCurrentMenu, saveMenu } from '@/api/menu.api'
+import type { Menu, SaveMenuDay } from '@/api/menu.api'
+import { getShoppingList } from '@/api/shopping.api'
+import type { ShoppingList } from '@/api/shopping.api'
 
 /**
  * Dashboard Store
@@ -21,6 +23,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   const currentMenuId = ref<string | null>(null)
+  const selectedDate = ref<string | null>(null)
 
   // Computed - Today's Meal
   const todaysMeal = computed<Meal | null>(() => dashboardData.value?.todaysMeal ?? null)
@@ -50,6 +53,19 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (!shoppingList.value) return 0
     return shoppingList.value.totalItems - shoppingList.value.checkedItems
   })
+
+  function setSelectedDate(date: string | null) {
+    selectedDate.value = date
+  }
+
+  const displayDate = computed(() => {
+    if (selectedDate.value) return selectedDate.value
+    return new Date().toISOString().split('T')[0]!
+  })
+
+  const membersForDisplayDate = computed(() =>
+    householdMembers.value.filter((m) => isMemberEatingDay(displayDate.value, m.id))
+  )
 
   /**
    * Transform API menu into dashboard MenuDay[] format
@@ -93,6 +109,30 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return { weeklyMenu, todaysMeal }
   }
 
+  function toShoppingSummary(list: ShoppingList): ShoppingListSummary {
+    let totalItems = 0
+    let checkedItems = 0
+    const categories: { name: string; count: number }[] = []
+    for (const cat of list.categories) {
+      totalItems += cat.items.length
+      checkedItems += cat.items.filter((i) => i.checked).length
+      categories.push({ name: cat.name, count: cat.items.length })
+    }
+    return { totalItems, checkedItems, categories }
+  }
+
+  async function refreshShoppingList() {
+    if (!currentMenuId.value || !isUsingRealData.value) return
+    try {
+      const list = await getShoppingList(currentMenuId.value)
+      if (dashboardData.value) {
+        dashboardData.value.shoppingList = toShoppingSummary(list)
+      }
+    } catch (e) {
+      console.warn('Could not refresh shopping list:', e)
+    }
+  }
+
   // Actions
   async function fetchDashboard(forceRefresh = false): Promise<void> {
     if (dashboardData.value && !forceRefresh) {
@@ -104,7 +144,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
     try {
       // Fetch real household data from backend
-      const { data: householdData } = await apiClient.get('/households/me')
+      const { data: householdData } = await apiClient.get('/households/me', {
+        skipAuthRedirect: true,
+      })
 
       // Fetch current menu from backend
       let weeklyMenu: MenuDay[] = []
@@ -147,9 +189,15 @@ export const useDashboardStore = defineStore('dashboard', () => {
           categories: [],
         },
       }
+
+      // Populate shopping list with real data if we have a menu
+      if (currentMenuId.value) {
+        refreshShoppingList()
+      }
     } catch (e) {
       // If backend fails, fall back to full mock data
-      console.warn('Using mock dashboard data:', e)
+      const msg = e instanceof Error ? e.message : String(e)
+      console.warn('Using mock dashboard data —', msg)
       dashboardData.value = mockDashboardData
       // Set menuId so shopping list can load in mock mode
       currentMenuId.value = 'menu_current'
@@ -183,6 +231,115 @@ export const useDashboardStore = defineStore('dashboard', () => {
     Object.assign(member, update)
   }
 
+  // Per-day lunchbox count state
+  const dayLunchBox = ref<Record<string, number>>({})
+
+  function getDayLunchBoxCount(date: string): number {
+    const val = dayLunchBox.value[date]
+    return typeof val === 'number' ? val : 0
+  }
+
+  function setDayLunchBoxCount(date: string, count: number) {
+    dayLunchBox.value[date] = Math.max(0, count)
+    localStorage.setItem('maltiden_day_lunchbox', JSON.stringify(dayLunchBox.value))
+  }
+
+  function initLunchBoxDays() {
+    const stored = localStorage.getItem('maltiden_day_lunchbox')
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Record<string, unknown>
+        const cleaned: Record<string, number> = {}
+        for (const [key, val] of Object.entries(parsed)) {
+          cleaned[key] = typeof val === 'number' ? val : 0
+        }
+        dayLunchBox.value = cleaned
+      } catch {
+        dayLunchBox.value = {}
+      }
+    }
+  }
+
+  // Per-day member exclusions (who is NOT eating on a given date)
+  const dayMemberExclusions = ref<Record<string, string[]>>({})
+
+  function initDayMemberExclusions() {
+    const stored = localStorage.getItem('maltiden_day_member_exclusions')
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Record<string, unknown>
+        const cleaned: Record<string, string[]> = {}
+        for (const [key, val] of Object.entries(parsed)) {
+          if (Array.isArray(val)) {
+            cleaned[key] = val.filter((v): v is string => typeof v === 'string')
+          }
+        }
+        dayMemberExclusions.value = cleaned
+      } catch {
+        dayMemberExclusions.value = {}
+      }
+    }
+  }
+
+  function isMemberEatingDay(date: string, memberId: string): boolean {
+    const exclusions = dayMemberExclusions.value[date]
+    if (!exclusions) return true
+    return !exclusions.includes(memberId)
+  }
+
+  function toggleMemberDay(date: string, memberId: string) {
+    const current = dayMemberExclusions.value[date] ?? []
+    const idx = current.indexOf(memberId)
+    if (idx >= 0) {
+      current.splice(idx, 1)
+    } else {
+      current.push(memberId)
+    }
+    dayMemberExclusions.value[date] = current
+    localStorage.setItem('maltiden_day_member_exclusions', JSON.stringify(dayMemberExclusions.value))
+
+    // Clamp lunchbox count if it exceeds new member count
+    const eatingCount = getMembersEatingDay(date).length
+    const currentLunchBoxes = getDayLunchBoxCount(date)
+    if (currentLunchBoxes > eatingCount) {
+      setDayLunchBoxCount(date, eatingCount)
+    }
+
+    // Persist new servings and refresh shopping list
+    updateDayServings(date, eatingCount, getDayLunchBoxCount(date))
+  }
+
+  function getMembersEatingDay(date: string): HouseholdMember[] {
+    return householdMembers.value.filter((m) => isMemberEatingDay(date, m.id))
+  }
+
+  // Whether the dashboard loaded from the real API (not mock fallback)
+  const isUsingRealData = computed(() =>
+    currentMenuId.value !== null && currentMenuId.value !== 'menu_current',
+  )
+
+  async function updateDayServings(date: string, baseServings: number, lunchBoxCount: number) {
+    // Never mutate meal.portions — components compute total from base + lunchBoxCount
+    // Only call API if we have real backend data (not mock fallback)
+    if (!isUsingRealData.value) return
+
+    const totalServings = baseServings + lunchBoxCount
+    const menu = weeklyMenu.value
+    const days: SaveMenuDay[] = menu.map((day) => ({
+      date: day.date,
+      recipeId: day.meal?.id,
+      servings: day.date === date ? totalServings : (day.meal?.portions ?? 4),
+      skip: day.isSkipped,
+    }))
+
+    try {
+      await saveMenu(days)
+      refreshShoppingList()
+    } catch (e) {
+      console.warn('Could not save menu servings:', e)
+    }
+  }
+
   function clearError() {
     error.value = null
   }
@@ -210,10 +367,35 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
     // Menu
     menuId,
+    currentMenuId,
+
+    // Selected date
+    selectedDate,
+    setSelectedDate,
+    displayDate,
+    membersForDisplayDate,
 
     // Shopping
     shoppingList,
     shoppingItemsRemaining,
+    refreshShoppingList,
+
+    // Day Lunchbox
+    dayLunchBox,
+    getDayLunchBoxCount,
+    setDayLunchBoxCount,
+    initLunchBoxDays,
+    updateDayServings,
+
+    // Day Member Exclusions
+    dayMemberExclusions,
+    initDayMemberExclusions,
+    isMemberEatingDay,
+    toggleMemberDay,
+    getMembersEatingDay,
+
+    // Data source
+    isUsingRealData,
 
     // Actions
     fetchDashboard,
