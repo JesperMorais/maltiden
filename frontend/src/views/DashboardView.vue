@@ -244,7 +244,7 @@ function handleViewShoppingList() {
   font-weight: 700;
   font-size: clamp(1.25rem, 3vw, 1.75rem);
   color: var(--text-primary);
-  height: 2.5em;
+  min-height: 3em;
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -301,7 +301,7 @@ function handleViewShoppingList() {
   .dashboard-greeting {
     padding: 0.75rem 0.75rem 0.25rem;
     font-size: 1.1rem;
-    height: 2em;
+    min-height: 2.5em;
   }
 
   .dashboard-content {
