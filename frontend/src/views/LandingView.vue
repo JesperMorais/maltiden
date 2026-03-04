@@ -7,6 +7,7 @@ import FeaturesSection from '@/components/landing/FeaturesSection.vue'
 import CtaSection from '@/components/landing/CtaSection.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
+import { Loader2, AlertTriangle } from 'lucide-vue-next'
 const landingStore = useLandingStore()
 const themeStore = useThemeStore()
 
@@ -40,7 +41,7 @@ onMounted(() => {
     <!-- Loading state -->
     <div v-if="landingStore.isLoading" class="loading-state" role="status" aria-label="Laddar sidan">
       <div class="loader">
-        <span class="loader-icon" aria-hidden="true">🍳</span>
+        <Loader2 :size="40" class="loader-icon" aria-hidden="true" />
         <p class="loader-text">Laddar...</p>
       </div>
     </div>
@@ -48,7 +49,7 @@ onMounted(() => {
     <!-- Error state -->
     <div v-else-if="landingStore.error" class="error-state">
       <div class="error-content">
-        <span class="error-icon" aria-hidden="true">😅</span>
+        <AlertTriangle :size="40" class="error-icon" aria-hidden="true" />
         <h2>Något gick fel</h2>
         <p>{{ landingStore.error }}</p>
         <BaseButton variant="primary" size="md" @click="landingStore.fetchLandingData(true)">
@@ -112,9 +113,9 @@ onMounted(() => {
 }
 
 .loader-icon {
-  font-size: 4rem;
   display: block;
-  animation: bounce 1s ease-in-out infinite;
+  color: var(--accent);
+  animation: spin 1.5s linear infinite;
 }
 
 .loader-text {
@@ -141,8 +142,8 @@ onMounted(() => {
 }
 
 .error-icon {
-  font-size: 4rem;
   display: block;
+  color: var(--text-muted);
   margin-bottom: 1rem;
 }
 
@@ -160,8 +161,8 @@ onMounted(() => {
   margin: 0 0 1.5rem;
 }
 
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>
