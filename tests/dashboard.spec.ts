@@ -104,7 +104,8 @@ test.describe('Dashboard', () => {
   })
 
   test('shows invite button in household widget', async ({ page }) => {
-    await expect(page.getByText('Bjud in fler')).toBeVisible({ timeout: 5000 })
+    // In horizontal layout, the invite button shows as an avatar circle with label 'Bjud in'
+    await expect(page.getByLabel('Bjud in fler')).toBeVisible({ timeout: 5000 })
   })
 
   test('shows shopping list widget', async ({ page }) => {
@@ -112,7 +113,9 @@ test.describe('Dashboard', () => {
   })
 
   test('shopping list widget shows items count', async ({ page }) => {
-    await expect(page.getByText(/varor kvar/)).toBeVisible({ timeout: 5000 })
+    // Shopping list widget shows stats: remaining "kvar", checked "klart", total "totalt"
+    await expect(page.getByText('kvar')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('totalt')).toBeVisible()
   })
 
   test('shopping list widget has progress bar', async ({ page }) => {
