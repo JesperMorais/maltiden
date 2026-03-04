@@ -69,6 +69,15 @@ func (s *RecipeService) Update(id string, householdID string, req domain.UpdateR
 	if len(req.Instructions) == 0 {
 		return nil, domain.ErrInstructionsRequired
 	}
+	// Tags: max 20 tags, each tag max 50 chars
+	if len(req.Tags) > 20 {
+		return nil, domain.ErrTooManyTags
+	}
+	for _, tag := range req.Tags {
+		if len(tag) > 50 {
+			return nil, domain.ErrTagTooLong
+		}
+	}
 
 	// Update fields on existing recipe
 	existing.Name = req.Name
@@ -131,6 +140,15 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 	}
 	if len(req.Instructions) == 0 {
 		return nil, domain.ErrInstructionsRequired
+	}
+	// Tags: max 20 tags, each tag max 50 chars
+	if len(req.Tags) > 20 {
+		return nil, domain.ErrTooManyTags
+	}
+	for _, tag := range req.Tags {
+		if len(tag) > 50 {
+			return nil, domain.ErrTagTooLong
+		}
 	}
 
 	recipe := &domain.Recipe{
