@@ -57,7 +57,7 @@ const emit = defineEmits<{
           <UtensilsCrossed :size="32" :stroke-width="1.75" />
         </div>
         <h2 class="meal-name">{{ meal.name }}</h2>
-        <p class="meal-portions">{{ meal.portions + props.extraPortions }} portioner</p>
+        <p class="meal-portions">{{ meal.portions }} portioner</p>
         <div class="meal-action">
           <span>Se recept</span>
           <span class="arrow">→</span>
