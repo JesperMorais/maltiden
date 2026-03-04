@@ -83,6 +83,7 @@ onUnmounted(() => {
             { eating: eatingIds.has(member.id), 'not-eating': !eatingIds.has(member.id) },
           ]"
           :title="member.name"
+          :aria-label="`${member.name} – ${eatingIds.has(member.id) ? 'äter' : 'äter inte'}`"
           @click="emit('toggle-member', member.id)"
         >
           {{ memberInitial(member.name) }}
@@ -102,6 +103,7 @@ onUnmounted(() => {
       <div class="lunchbox-counter">
         <button
           class="counter-btn"
+          aria-label="Minska matlådor"
           :disabled="lunchBoxCount <= 0"
           @click="emit('update-lunchbox', lunchBoxCount - 1)"
         >
@@ -110,6 +112,7 @@ onUnmounted(() => {
         <span class="counter-value">{{ lunchBoxCount }}</span>
         <button
           class="counter-btn"
+          aria-label="Öka matlådor"
           :disabled="lunchBoxCount >= maxLunchBoxes"
           @click="emit('update-lunchbox', lunchBoxCount + 1)"
         >

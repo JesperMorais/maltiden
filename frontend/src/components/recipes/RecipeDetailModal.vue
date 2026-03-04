@@ -298,7 +298,7 @@ function handleClose() {
           <div v-if="showDayPicker && currentMenu" class="day-picker-section">
             <div class="day-picker-header">
               <span class="day-picker-title">Välj dag</span>
-              <button class="day-picker-close" @click="showDayPicker = false">&times;</button>
+              <button class="day-picker-close" aria-label="Stäng" @click="showDayPicker = false">&times;</button>
             </div>
             <div class="day-picker-grid">
               <button
