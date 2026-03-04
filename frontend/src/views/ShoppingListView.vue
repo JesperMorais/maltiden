@@ -291,7 +291,7 @@ onMounted(async () => {
   gap: 0.75rem;
   padding: 0.75rem 0;
   cursor: pointer;
-  border-bottom: 1px solid var(--border-color-light, rgba(0, 0, 0, 0.05));
+  border-bottom: 1px solid var(--border-color-light);
   min-height: 48px;
   -webkit-tap-highlight-color: transparent;
 }
