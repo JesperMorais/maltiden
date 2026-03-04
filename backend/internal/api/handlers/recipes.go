@@ -93,6 +93,10 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusBadRequest, "name_too_long")
 		case errors.Is(err, domain.ErrTooManyIngredients):
 			WriteError(w, http.StatusBadRequest, "too_many_ingredients")
+		case errors.Is(err, domain.ErrTooManyTags):
+			WriteError(w, http.StatusBadRequest, "too_many_tags")
+		case errors.Is(err, domain.ErrTagTooLong):
+			WriteError(w, http.StatusBadRequest, "tag_too_long")
 		default:
 			log.Printf("ERROR [UpdateRecipe] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
@@ -151,6 +155,10 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusBadRequest, "name_too_long")
 		case errors.Is(err, domain.ErrTooManyIngredients):
 			WriteError(w, http.StatusBadRequest, "too_many_ingredients")
+		case errors.Is(err, domain.ErrTooManyTags):
+			WriteError(w, http.StatusBadRequest, "too_many_tags")
+		case errors.Is(err, domain.ErrTagTooLong):
+			WriteError(w, http.StatusBadRequest, "tag_too_long")
 		default:
 			log.Printf("ERROR [CreateRecipe] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
