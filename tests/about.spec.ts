@@ -65,34 +65,40 @@ test.describe('About page', () => {
 
     await expect(page.getByText('David')).toBeVisible({ timeout: 5000 })
     await expect(page.getByText('Jesper')).toBeVisible()
-    await expect(page.getByText('Philip')).toBeVisible()
   })
 
   test('shows team member roles', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2))
     await page.waitForTimeout(500)
 
-    await expect(page.getByText('Backend-utvecklare')).toBeVisible({ timeout: 5000 })
-    await expect(page.getByText('Frontend-utvecklare')).toBeVisible()
-    await expect(page.getByText('Testare')).toBeVisible()
+    // Both team members have the role 'Utvecklare'
+    const roles = page.locator('.member-role')
+    await expect(roles.first()).toBeVisible({ timeout: 5000 })
+    const count = await roles.count()
+    expect(count).toBe(2)
+    await expect(roles.first()).toHaveText('Utvecklare')
+    await expect(roles.nth(1)).toHaveText('Utvecklare')
   })
 
-  test('shows team member descriptions', async ({ page }) => {
+  test('shows team member names with initials', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2))
     await page.waitForTimeout(500)
 
-    await expect(page.getByText(/fungerar smidigt bakom kulisserna/)).toBeVisible({ timeout: 5000 })
-    await expect(page.getByText(/användarvänliga upplevelsen/)).toBeVisible()
-    await expect(page.getByText(/fungerar perfekt och felfritt/)).toBeVisible()
+    // Team cards show member initials (D and J) instead of descriptions
+    const initials = page.locator('.member-initial')
+    await expect(initials.first()).toBeVisible({ timeout: 5000 })
+    const count = await initials.count()
+    expect(count).toBe(2)
   })
 
   test('shows team member avatars', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2))
     await page.waitForTimeout(500)
 
-    const avatars = page.locator('.avatar-image')
+    const avatars = page.locator('.member-initial')
+    await expect(avatars.first()).toBeVisible({ timeout: 5000 })
     const count = await avatars.count()
-    expect(count).toBe(3)
+    expect(count).toBe(2)
   })
 
   test('shows CTA section at bottom', async ({ page }) => {
@@ -110,12 +116,12 @@ test.describe('About page', () => {
     await expect(page).toHaveURL(/\/register/)
   })
 
-  test('team footer text is visible', async ({ page }) => {
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight * 0.7))
+  test('CTA section subtitle is visible', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
     await page.waitForTimeout(500)
 
     await expect(
-      page.getByText(/Tillsammans gör vi måltidsplanering roligare/),
+      page.getByText(/Gör måltidsplaneringen enklare för hela familjen/),
     ).toBeVisible({ timeout: 5000 })
   })
 

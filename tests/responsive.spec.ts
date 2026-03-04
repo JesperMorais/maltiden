@@ -30,13 +30,12 @@ test.describe('Responsive design - mobile viewport', () => {
     await expect(page.locator('.dashboard-content')).toBeVisible()
   })
 
-  test('dashboard sidebar stacks below main content on mobile', async ({ page }) => {
+  test('dashboard sidebar content is accessible on mobile', async ({ page }) => {
     await login(page)
-    const sidebar = page.locator('.sidebar')
-    if (await sidebar.isVisible({ timeout: 5000 }).catch(() => false)) {
-      const sidebarPosition = await sidebar.evaluate((el) => getComputedStyle(el).position)
-      expect(sidebarPosition).toBe('relative')
-    }
+    // On mobile (375px), .sidebar uses display:contents so it dissolves into the layout.
+    // Verify the sidebar children (quick actions, shopping list) are visible instead.
+    await expect(page.getByText('Snabbåtgärder')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('Inköpslista')).toBeVisible()
   })
 
   test('about page renders on mobile', async ({ page }) => {
@@ -51,7 +50,8 @@ test.describe('Responsive design - mobile viewport', () => {
 
   test('recipes page renders on mobile', async ({ page }) => {
     await login(page)
-    await page.getByRole('button', { name: /Recept.*Hantera/ }).click()
+    // Use the mobile bottom nav button to navigate (preserves Vue Router state)
+    await page.getByRole('button', { name: 'Gå till Recept' }).click()
     await expect(page).toHaveURL(/\/recipes/)
     await expect(page.getByRole('heading', { name: 'Recept' })).toBeVisible({ timeout: 5000 })
   })

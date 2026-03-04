@@ -31,9 +31,12 @@ test.describe('Cross-page navigation', () => {
 
   test('landing → about → landing', async ({ page }) => {
     await page.goto('/')
-    await page.getByText('Om oss').click()
+    // Wait for landing page to load (HeroSection renders after async data fetch)
+    const omOssLink = page.getByText('Om oss')
+    await expect(omOssLink).toBeVisible({ timeout: 5000 })
+    await omOssLink.click()
     await expect(page).toHaveURL(/\/about/)
-    await expect(page.getByText('Om Måltiden')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole('heading', { name: 'Om Måltiden', exact: true })).toBeVisible({ timeout: 5000 })
 
     await page.getByRole('link', { name: /Tillbaka/ }).click()
     await expect(page).toHaveURL('/')
