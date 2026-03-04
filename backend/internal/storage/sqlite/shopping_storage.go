@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"maltiden/internal/domain"
 	"time"
 )
 
@@ -77,4 +78,83 @@ func (s *ShoppingStorage) GetCheckedItems(menuID string) (map[string]bool, error
 	}
 
 	return result, rows.Err()
+}
+
+func (s *ShoppingStorage) SetCustomItemChecked(id string, checked bool) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	checkedInt := 0
+	if checked {
+		checkedInt = 1
+	}
+
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE custom_shopping_items SET checked = ? WHERE id = ?`,
+		checkedInt, id,
+	)
+	return err
+}
+
+func (s *ShoppingStorage) CreateCustomItem(item *domain.CustomShoppingItem) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO custom_shopping_items (id, menu_id, household_id, name, unit, amount, checked)
+		VALUES (?, ?, ?, ?, ?, ?, 0)
+	`, item.ID, item.MenuID, item.HouseholdID, item.Name, item.Unit, item.Amount)
+
+	return err
+}
+
+func (s *ShoppingStorage) DeleteCustomItem(id, householdID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := s.db.ExecContext(ctx,
+		`DELETE FROM custom_shopping_items WHERE id = ? AND household_id = ?`,
+		id, householdID,
+	)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+func (s *ShoppingStorage) GetCustomItems(menuID string) ([]domain.CustomShoppingItem, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, menu_id, household_id, name, unit, amount, checked
+		 FROM custom_shopping_items WHERE menu_id = ? ORDER BY created_at`,
+		menuID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []domain.CustomShoppingItem
+	for rows.Next() {
+		var item domain.CustomShoppingItem
+		var checked int
+		if err := rows.Scan(&item.ID, &item.MenuID, &item.HouseholdID, &item.Name, &item.Unit, &item.Amount, &checked); err != nil {
+			return nil, err
+		}
+		item.Checked = checked == 1
+		items = append(items, item)
+	}
+
+	return items, rows.Err()
 }

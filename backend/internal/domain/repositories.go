@@ -60,4 +60,8 @@ type MenuRepository interface {
 type ShoppingRepository interface {
 	GetCheckedItems(menuID string) (map[string]bool, error)
 	SetChecked(menuID, itemID string, checked bool) error
+	CreateCustomItem(item *CustomShoppingItem) error
+	DeleteCustomItem(id, householdID string) error
+	GetCustomItems(menuID string) ([]CustomShoppingItem, error)
+	SetCustomItemChecked(id string, checked bool) error
 }
