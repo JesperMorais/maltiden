@@ -25,6 +25,10 @@ let lastAuthSuccessTime = 0
 export function markAuthSuccess() {
   lastAuthSuccessTime = Date.now()
 }
+/** Reset auth timing state — only exported for tests */
+export function resetAuthState() {
+  lastAuthSuccessTime = 0
+}
 
 /**
  * Configured Axios instance with interceptors

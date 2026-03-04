@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, BookOpen, ShoppingCart, User } from 'lucide-vue-next'
+import { LayoutDashboard, BookOpen, ShoppingCart } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,7 +10,6 @@ const tabs = [
   { name: 'dashboard', label: 'Hem', icon: LayoutDashboard, to: '/dashboard' },
   { name: 'recipes', label: 'Recept', icon: BookOpen, to: '/recipes' },
   { name: 'shopping-list', label: 'Handla', icon: ShoppingCart, to: '/shopping-list' },
-  { name: 'profile', label: 'Profil', icon: User, to: '/dashboard' },
 ] as const
 
 const activeTab = computed(() => {
