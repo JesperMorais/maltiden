@@ -35,10 +35,6 @@ Thumbs.db
 .serena/
 .swarm/
 .claude-flow/
-.claude/agents/
-.claude/commands/
-.claude/helpers/
-.claude/skills/
 .mcp.json
 
 # Root-level node
