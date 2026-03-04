@@ -137,7 +137,6 @@ test.describe('Onboarding page', () => {
     await expect(page.getByPlaceholder('anna@exempel.se').first()).toBeVisible()
     await expect(page.getByPlaceholder('Minst 8 tecken').first()).toBeVisible()
     await expect(page.getByPlaceholder('Skriv lösenordet igen').first()).toBeVisible()
-    await expect(page.getByPlaceholder(/Familjen Andersson/).first()).toBeVisible()
   })
 
   test('create household flow: submit button disabled with empty form', async ({ page }) => {
@@ -171,9 +170,8 @@ test.describe('Onboarding page', () => {
 
     await form.getByPlaceholder('Anna Andersson').fill('Test User')
     await form.getByPlaceholder('anna@exempel.se').fill('test@test.se')
-    await form.getByPlaceholder('Minst 8 tecken').fill('password123')
-    await form.getByPlaceholder('Skriv lösenordet igen').fill('password123')
-    await form.getByPlaceholder(/Familjen Andersson/).fill('Testfamiljen')
+    await form.getByPlaceholder('Minst 8 tecken').fill('Password123!')
+    await form.getByPlaceholder('Skriv lösenordet igen').fill('Password123!')
 
     // Re-dispatch input events to ensure Vue v-model picks up all values in CI
     await form.evaluate((formEl) => {
@@ -195,9 +193,8 @@ test.describe('Onboarding page', () => {
 
     await form.getByPlaceholder('Anna Andersson').fill('Test User')
     await form.getByPlaceholder('anna@exempel.se').fill('test@test.se')
-    await form.getByPlaceholder('Minst 8 tecken').fill('password123')
-    await form.getByPlaceholder('Skriv lösenordet igen').fill('password123')
-    await form.getByPlaceholder(/Familjen Andersson/).fill('Testfamiljen')
+    await form.getByPlaceholder('Minst 8 tecken').fill('Password123!')
+    await form.getByPlaceholder('Skriv lösenordet igen').fill('Password123!')
 
     // Re-dispatch input events to ensure Vue v-model picks up all values in CI
     await form.evaluate((formEl) => {
