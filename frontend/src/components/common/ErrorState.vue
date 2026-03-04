@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { AlertTriangle } from 'lucide-vue-next'
+
 interface Props {
-  icon?: string
   title?: string
   description?: string
   retryLabel?: string
@@ -8,7 +9,6 @@ interface Props {
 }
 
 withDefaults(defineProps<Props>(), {
-  icon: undefined,
   title: 'Något gick fel',
   description: undefined,
   retryLabel: 'Försök igen',
@@ -22,7 +22,9 @@ const emit = defineEmits<{
 
 <template>
   <div class="error-state" role="alert">
-    <span class="error-state-icon" aria-hidden="true">{{ icon ?? '😅' }}</span>
+    <div class="error-state-icon" aria-hidden="true">
+      <slot name="icon"><AlertTriangle :size="48" color="var(--text-muted)" /></slot>
+    </div>
     <h2 class="error-state-title">{{ title }}</h2>
     <p v-if="description" class="error-state-description">{{ description }}</p>
     <button v-if="showRetry" class="error-state-retry" @click="emit('retry')">
@@ -38,8 +40,9 @@ const emit = defineEmits<{
 }
 
 .error-state-icon {
-  font-size: 3rem;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 1rem;
 }
 

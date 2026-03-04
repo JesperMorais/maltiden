@@ -6,6 +6,7 @@ import { getCurrentMenu, saveMenu } from '@/api/menu.api'
 import type { Menu, MenuDay as ApiMenuDay } from '@/api/menu.api'
 import RecipeEditForm from '@/components/recipe-parser/RecipeEditForm.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
+import { Loader2, AlertTriangle } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
 import { useFocusTrap } from '@/composables/useFocusTrap'
 
@@ -213,17 +214,17 @@ function handleClose() {
       <div ref="modalCardRef" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="recipe-detail-title" @click.stop>
         <!-- Loading -->
         <div v-if="isLoading" class="modal-loading">
-          <div class="spinner-emoji">🍳</div>
+          <Loader2 :size="40" class="spinner-emoji" />
           <p class="loading-text">Laddar recept...</p>
         </div>
 
         <!-- Error -->
-        <ErrorState v-else-if="error" icon="⚠️" title="Kunde inte ladda receptet" :show-retry="false" />
+        <ErrorState v-else-if="error" title="Kunde inte ladda receptet" :show-retry="false" />
 
         <!-- Confirm delete -->
         <template v-else-if="mode === 'confirm-delete' && recipe">
           <div class="confirm-content">
-            <div class="confirm-icon">⚠️</div>
+            <AlertTriangle :size="40" class="confirm-icon" color="var(--warning)" />
             <h3 class="confirm-title">Ta bort recept?</h3>
             <p class="confirm-text">
               Är du säker på att du vill ta bort
@@ -360,8 +361,8 @@ function handleClose() {
 }
 
 .spinner-emoji {
-  font-size: 3rem;
-  animation: spin 1.5s ease-in-out infinite;
+  color: var(--accent);
+  animation: spin 1.5s linear infinite;
 }
 
 @keyframes spin {
@@ -567,7 +568,6 @@ function handleClose() {
 }
 
 .confirm-icon {
-  font-size: 3rem;
   margin-bottom: 1rem;
 }
 
