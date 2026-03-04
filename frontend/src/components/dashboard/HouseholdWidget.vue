@@ -60,6 +60,18 @@ function toggleSettings() {
 }
 
 /**
+ * Recalculate today's menu servings based on eating members + lunch boxes,
+ * then persist via the menu API and refresh the shopping list.
+ */
+function recalculateTodayServings() {
+  const members = props.members
+  const eaters = members.filter((m) => m.isEatingToday).length
+  const lunchBoxes = members.filter((m) => m.isEatingToday && m.wantsLunchBox).length
+  const today = new Date().toISOString().split('T')[0]!
+  dashboardStore.updateDayServings(today, eaters, lunchBoxes)
+}
+
+/**
  * Optimistically toggle a member's eating status.
  * Updates local state immediately, calls API in background, reverts on error.
  */
@@ -72,10 +84,12 @@ function toggleEating(member: HouseholdMember) {
   const newValue = !member.isEatingToday
   dashboardStore.updateMemberLocally(member.id, { isEatingToday: newValue })
 
-  updateMemberStatus(member.id, { isEatingToday: newValue }).catch(() => {
-    dashboardStore.updateMemberLocally(member.id, { isEatingToday: !newValue })
-    toast.error('Kunde inte uppdatera status. Försök igen.')
-  })
+  updateMemberStatus(member.id, { isEatingToday: newValue })
+    .then(() => recalculateTodayServings())
+    .catch(() => {
+      dashboardStore.updateMemberLocally(member.id, { isEatingToday: !newValue })
+      toast.error('Kunde inte uppdatera status. Försök igen.')
+    })
 }
 
 /**
@@ -86,10 +100,12 @@ function toggleLunchBox(member: HouseholdMember, event: Event) {
   const newValue = !member.wantsLunchBox
   dashboardStore.updateMemberLocally(member.id, { wantsLunchBox: newValue })
 
-  updateMemberStatus(member.id, { wantsLunchBox: newValue }).catch(() => {
-    dashboardStore.updateMemberLocally(member.id, { wantsLunchBox: !newValue })
-    toast.error('Kunde inte uppdatera matlådestatus. Försök igen.')
-  })
+  updateMemberStatus(member.id, { wantsLunchBox: newValue })
+    .then(() => recalculateTodayServings())
+    .catch(() => {
+      dashboardStore.updateMemberLocally(member.id, { wantsLunchBox: !newValue })
+      toast.error('Kunde inte uppdatera matlådestatus. Försök igen.')
+    })
 }
 
 function handleRemoveClick(member: HouseholdMember) {
