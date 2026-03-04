@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import { UtensilsCrossed, Sprout, UsersRound } from 'lucide-vue-next'
+import BackLink from '@/components/common/BackLink.vue'
 import SpotlightCard from '@/components/vue-bits/SpotlightCard.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
 </script>
@@ -16,10 +17,7 @@ import FadeContent from '@/components/vue-bits/FadeContent.vue'
 
     <!-- Navigation -->
     <nav class="about-nav">
-      <RouterLink v-prefetch="'landing'" to="/" class="back-link">
-        <span class="back-arrow">←</span>
-        <span>Tillbaka</span>
-      </RouterLink>
+      <BackLink to="/" />
     </nav>
 
     <!-- Hero Section -->
@@ -188,33 +186,13 @@ import FadeContent from '@/components/vue-bits/FadeContent.vue'
   padding: 1.5rem 2rem;
 }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-  text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 100px;
-  transition: all 0.3s ease;
+.about-nav :deep(.back-link) {
   background: var(--bg-card);
   backdrop-filter: blur(10px);
 }
 
-.back-link:hover {
-  color: var(--accent);
+.about-nav :deep(.back-link:hover) {
   background: var(--accent-bg);
-}
-
-.back-arrow {
-  transition: transform 0.3s ease;
-}
-
-.back-link:hover .back-arrow {
-  transform: translateX(-4px);
 }
 
 /* Hero Section */
