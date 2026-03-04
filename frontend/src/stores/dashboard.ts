@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type { DashboardData, Meal, MenuDay, Household, HouseholdMember, ShoppingListSummary } from '@/api/types/dashboard.types'
 import { mockDashboardData } from '@/mocks/dashboard.mock'
+import { USE_MOCKS } from '@/mocks'
 import { useUserStore } from './user'
 import apiClient from '@/api/client'
 import { getCurrentMenu, saveMenu } from '@/api/menu.api'
@@ -122,7 +123,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   async function refreshShoppingList() {
-    if (!currentMenuId.value || !isUsingRealData.value) return
+    if (!currentMenuId.value) return
     try {
       const list = await getShoppingList(currentMenuId.value)
       if (dashboardData.value) {
@@ -141,6 +142,32 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
     isLoading.value = true
     error.value = null
+
+    if (USE_MOCKS) {
+      // In mock mode, use mock data directly — no network requests
+      try {
+        const menu = await getCurrentMenu()
+        if (menu) {
+          currentMenuId.value = menu.id
+          const transformed = transformMenuToDashboard(menu)
+          dashboardData.value = {
+            ...mockDashboardData,
+            todaysMeal: transformed.todaysMeal,
+            weeklyMenu: transformed.weeklyMenu,
+          }
+        } else {
+          dashboardData.value = mockDashboardData
+          currentMenuId.value = 'menu_current'
+        }
+
+        if (dashboardData.value.user) {
+          userStore.setUser(dashboardData.value.user)
+        }
+      } finally {
+        isLoading.value = false
+      }
+      return
+    }
 
     try {
       // Fetch real household data from backend
@@ -201,7 +228,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
       const msg = e instanceof Error ? e.message : String(e)
       console.warn('Using mock dashboard data —', msg)
       dashboardData.value = mockDashboardData
-      // Set menuId so shopping list can load in mock mode
       currentMenuId.value = 'menu_current'
 
       if (dashboardData.value.user) {
@@ -321,9 +347,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   )
 
   async function updateDayServings(date: string, baseServings: number, lunchBoxCount: number) {
-    // Never mutate meal.portions — components compute total from base + lunchBoxCount
-    // Only call API if we have real backend data (not mock fallback)
-    if (!isUsingRealData.value) return
+    if (!currentMenuId.value) return
 
     const totalServings = baseServings + lunchBoxCount
     const menu = weeklyMenu.value
@@ -335,8 +359,14 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }))
 
     try {
-      await saveMenu(days)
-      refreshShoppingList()
+      const savedMenu = await saveMenu(days)
+      // Update store with saved servings to prevent stale data on next toggle
+      const transformed = transformMenuToDashboard(savedMenu)
+      if (dashboardData.value) {
+        dashboardData.value.weeklyMenu = transformed.weeklyMenu
+        dashboardData.value.todaysMeal = transformed.todaysMeal
+      }
+      await refreshShoppingList()
     } catch (e) {
       console.warn('Could not save menu servings:', e)
     }
