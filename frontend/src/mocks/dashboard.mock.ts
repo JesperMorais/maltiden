@@ -9,12 +9,12 @@ function generateWeekDays(): MenuDay[] {
 
   const meals = [
     { id: 'rec_1', name: 'Pasta Carbonara', emoji: '🍝', portions: 4 },
-    { id: 'rec_2', name: 'Kycklingwok', emoji: '🥡', portions: 4 },
-    { id: 'rec_3', name: 'Köttfärssås', emoji: '🍖', portions: 4 },
-    { id: 'rec_4', name: 'Fiskgratäng', emoji: '🐟', portions: 4 },
-    { id: 'rec_5', name: 'Tacos', emoji: '🌮', portions: 4 },
+    { id: 'rec_2', name: 'Kycklingwok', emoji: '🥘', portions: 4 },
+    { id: 'rec_3', name: 'Tacos', emoji: '🌮', portions: 4 },
+    { id: 'rec_4', name: 'Laxfilé med potatis', emoji: '🐟', portions: 4 },
+    { id: 'rec_5', name: 'Köttfärssås', emoji: '🍖', portions: 4 },
     null, // Lördag - äter ute
-    { id: 'rec_6', name: 'Söndagsstek', emoji: '🥘', portions: 4 }
+    { id: 'rec_6', name: 'Vegetarisk curry', emoji: '🥗', portions: 4 }
   ]
 
   const today = new Date()
@@ -97,7 +97,7 @@ export const mockDashboardData: DashboardData = {
   },
 
   todaysMeal: {
-    id: 'meal-today',
+    id: 'rec_1',
     name: 'Pasta Carbonara',
     emoji: '🍝',
     imageUrl: undefined,
