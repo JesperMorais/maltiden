@@ -195,7 +195,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
         refreshShoppingList()
       }
     } catch (e) {
-      // If backend fails, fall back to full mock data
+      // If backend fails (including 401 with skipAuthRedirect), fall back to mock data.
+      // This is intentional: a stale-token 401 is swallowed here to prevent the
+      // post-login redirect loop. See client.ts markAuthSuccess() for context.
       const msg = e instanceof Error ? e.message : String(e)
       console.warn('Using mock dashboard data —', msg)
       dashboardData.value = mockDashboardData
