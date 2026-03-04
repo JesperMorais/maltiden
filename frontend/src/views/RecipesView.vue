@@ -143,13 +143,13 @@ function switchToList() {
 
 .tab-button:hover:not(.active) {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--tab-hover-bg);
 }
 
 .tab-button.active {
   background: var(--bg-card);
   color: var(--text-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--tab-active-shadow);
 }
 
 /* Content */

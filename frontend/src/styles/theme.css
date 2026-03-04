@@ -35,8 +35,13 @@
 
   /* Border and overlay */
   --border-color: rgba(61, 44, 41, 0.08);
+  --border-color-light: rgba(61, 44, 41, 0.05);
   --border-color-hover: rgba(255, 107, 91, 0.2);
   --overlay-bg: rgba(61, 44, 41, 0.6);
+
+  /* Tab control */
+  --tab-hover-bg: rgba(255, 255, 255, 0.5);
+  --tab-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 
   /* Shadows */
   --shadow-sm: 0 2px 8px rgba(61, 44, 41, 0.08);
@@ -139,8 +144,13 @@
 
   /* Border and overlay */
   --border-color: rgba(255, 255, 255, 0.1);
+  --border-color-light: rgba(255, 255, 255, 0.05);
   --border-color-hover: rgba(255, 138, 125, 0.3);
   --overlay-bg: rgba(0, 0, 0, 0.7);
+
+  /* Tab control */
+  --tab-hover-bg: rgba(255, 255, 255, 0.08);
+  --tab-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 
   /* Shadows - darker and more subtle */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
