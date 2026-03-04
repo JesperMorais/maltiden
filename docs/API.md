@@ -2,6 +2,21 @@
 
 Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
+## Recent Changes (PR #99)
+
+**Auth client improvements (frontend only — no backend changes):**
+
+- **Default request timeout reduced:** 10,000 ms → **5,000 ms** for all Axios requests (parse/parse-and-save endpoints keep their own 60 s override; offers endpoints keep 10–30 s).
+- **401 redirect logic hardened to prevent loops:**
+  - `/auth/*` endpoints (`/auth/login`, `/auth/register`) are now fully excluded from 401 redirect handling — a wrong-password 401 no longer clears the token or redirects.
+  - Redirect is also suppressed when the user is already on `/register` (previously only `/login` was excluded).
+  - A **10-second grace period** is enforced after a successful login/register (`markAuthSuccess()`). If a 401 arrives within that window the token is kept and no redirect happens, preventing a race condition where a fast in-flight request (e.g. `GET /households/me`) 401s right after JWT issuance.
+- **`skipAuthRedirect` per-request option:** Individual Axios requests can set `{ skipAuthRedirect: true }` in their config to suppress the redirect entirely (used for background probes).
+
+**No endpoint contract changes** — request/response shapes, HTTP methods, and URL paths are unchanged.
+
+---
+
 ## Recent Changes (PR #85)
 
 **New Endpoints:**
