@@ -5,6 +5,7 @@ import MockAdapter from 'axios-mock-adapter'
 // and mock the HTTP layer underneath it.
 let apiClient: typeof import('../client').default
 let markAuthSuccess: typeof import('../client').markAuthSuccess
+let resetAuthState: typeof import('../client').resetAuthState
 let mock: MockAdapter
 
 // Mock tokenUtils
@@ -32,10 +33,14 @@ beforeEach(async () => {
     value: { ...originalLocation, pathname: '/dashboard', href: '' },
   })
 
-  // Fresh import to get a clean axios instance with interceptors
+  // Import the shared axios instance (ES modules are cached, same singleton)
   const mod = await import('../client')
   apiClient = mod.default
   markAuthSuccess = mod.markAuthSuccess
+  resetAuthState = mod.resetAuthState
+
+  // Reset module-level auth timing state to prevent leaks between tests
+  resetAuthState()
 
   // Attach mock adapter
   mock = new MockAdapter(apiClient)
@@ -131,10 +136,6 @@ describe('API client 401 response interceptor', () => {
   })
 
   it('does NOT redirect when already on /login page', async () => {
-    // Advance Date.now past the 10s anti-loop guard (may leak from prior markAuthSuccess)
-    const realNow = Date.now()
-    vi.spyOn(Date, 'now').mockReturnValue(realNow + 15_000)
-
     Object.defineProperty(window, 'location', {
       writable: true,
       value: { pathname: '/login', href: '' },
@@ -146,15 +147,9 @@ describe('API client 401 response interceptor', () => {
     expect(mockTokenUtils.remove).toHaveBeenCalled()
     expect(sessionStorage.getItem('session_expired')).toBeNull()
     expect(window.location.href).toBe('')
-
-    vi.restoreAllMocks()
   })
 
   it('does NOT redirect when already on /register page', async () => {
-    // Advance Date.now past the 10s anti-loop guard (may leak from prior markAuthSuccess)
-    const realNow = Date.now()
-    vi.spyOn(Date, 'now').mockReturnValue(realNow + 15_000)
-
     Object.defineProperty(window, 'location', {
       writable: true,
       value: { pathname: '/register', href: '' },
@@ -166,8 +161,6 @@ describe('API client 401 response interceptor', () => {
     expect(mockTokenUtils.remove).toHaveBeenCalled()
     expect(sessionStorage.getItem('session_expired')).toBeNull()
     expect(window.location.href).toBe('')
-
-    vi.restoreAllMocks()
   })
 
   it('does NOT touch token or redirect on non-401 errors', async () => {
