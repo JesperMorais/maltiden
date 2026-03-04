@@ -112,3 +112,72 @@ func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 
 	WriteJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
+
+func (h *ShoppingHandler) AddCustomItem(w http.ResponseWriter, r *http.Request) {
+	householdID := middleware.GetHouseholdID(r)
+	if householdID == "" {
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	menuID := r.URL.Query().Get("menuId")
+	if !ValidateID(w, menuID, "menu_id") {
+		return
+	}
+
+	// IDOR protection: verify menu belongs to user's household
+	menuHouseholdID, err := h.menuStorage.GetHouseholdIDByMenuID(menuID)
+	if err != nil {
+		log.Printf("ERROR [AddCustomItem] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
+		return
+	}
+	if menuHouseholdID == "" {
+		WriteError(w, http.StatusNotFound, "menu_not_found")
+		return
+	}
+	if menuHouseholdID != householdID {
+		WriteError(w, http.StatusForbidden, "forbidden")
+		return
+	}
+
+	var req domain.CreateCustomItemRequest
+	if !DecodeJSON(w, r, maxBodySize, &req) {
+		return
+	}
+
+	if req.Name == "" {
+		WriteError(w, http.StatusBadRequest, "name_required")
+		return
+	}
+
+	item, err := h.shoppingService.CreateCustomItem(menuID, householdID, req)
+	if err != nil {
+		log.Printf("ERROR [AddCustomItem] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
+		return
+	}
+
+	WriteJSON(w, http.StatusCreated, item)
+}
+
+func (h *ShoppingHandler) DeleteCustomItem(w http.ResponseWriter, r *http.Request) {
+	householdID := middleware.GetHouseholdID(r)
+	if householdID == "" {
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	itemID := r.PathValue("id")
+	if !ValidateItemID(w, itemID, "item_id") {
+		return
+	}
+
+	if err := h.shoppingService.DeleteCustomItem(itemID, householdID); err != nil {
+		log.Printf("ERROR [DeleteCustomItem] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}

@@ -6,6 +6,8 @@ import (
 	"maltiden/internal/domain"
 	"sort"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 type ShoppingService struct {
@@ -162,13 +164,70 @@ func (s *ShoppingService) GetShoppingList(menuID string) (*domain.ShoppingList, 
 		}
 	}
 
+	// Append custom items as "Egna varor" category
+	customItems, err := s.shoppingStorage.GetCustomItems(menuID)
+	if err != nil {
+		return nil, err
+	}
+	if len(customItems) > 0 {
+		var items []domain.ShoppingItem
+		for _, ci := range customItems {
+			items = append(items, domain.ShoppingItem{
+				ID:       ci.ID,
+				Name:     ci.Name,
+				Amount:   ci.Amount,
+				Unit:     ci.Unit,
+				Checked:  ci.Checked,
+				IsCustom: true,
+			})
+		}
+		categories = append(categories, domain.ShoppingCategory{
+			Name:  "Egna varor",
+			Items: items,
+		})
+	}
+
 	return &domain.ShoppingList{
 		MenuID:     menuID,
 		Categories: categories,
 	}, nil
 }
 
+func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domain.CreateCustomItemRequest) (*domain.CustomShoppingItem, error) {
+	unit := req.Unit
+	if unit == "" {
+		unit = "st"
+	}
+	amount := req.Amount
+	if amount <= 0 {
+		amount = 1
+	}
+
+	item := &domain.CustomShoppingItem{
+		ID:          "citem_" + uuid.New().String(),
+		MenuID:      menuID,
+		HouseholdID: householdID,
+		Name:        req.Name,
+		Unit:        unit,
+		Amount:      amount,
+	}
+
+	if err := s.shoppingStorage.CreateCustomItem(item); err != nil {
+		return nil, err
+	}
+
+	return item, nil
+}
+
+func (s *ShoppingService) DeleteCustomItem(itemID, householdID string) error {
+	return s.shoppingStorage.DeleteCustomItem(itemID, householdID)
+}
+
 func (s *ShoppingService) UpdateItemChecked(menuID, itemID string, checked bool) error {
+	// Custom items are stored in a separate table
+	if strings.HasPrefix(itemID, "citem_") {
+		return s.shoppingStorage.SetCustomItemChecked(itemID, checked)
+	}
 	return s.shoppingStorage.SetChecked(menuID, itemID, checked)
 }
 

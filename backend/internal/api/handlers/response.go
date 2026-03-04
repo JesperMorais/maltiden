@@ -71,14 +71,14 @@ func ValidateID(w http.ResponseWriter, id, paramName string) bool {
 	return true
 }
 
-// ValidateItemID checks that a shopping item ID is non-empty and matches the
-// hash-based format used by the shopping service (e.g., "item_a1b2c3d4e5f6g7h8").
+// ValidateItemID checks that a shopping item ID is non-empty and matches either
+// the hash-based format (e.g., "item_a1b2c3d4") or custom item UUID format (e.g., "citem_550e8400-...").
 func ValidateItemID(w http.ResponseWriter, id, paramName string) bool {
 	if id == "" {
 		WriteError(w, http.StatusBadRequest, paramName+"_required")
 		return false
 	}
-	if !hashIDPattern.MatchString(id) {
+	if !hashIDPattern.MatchString(id) && !prefixedUUIDPattern.MatchString(id) {
 		WriteError(w, http.StatusBadRequest, "invalid_"+paramName)
 		return false
 	}

@@ -148,6 +148,12 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.Handle("PATCH /shopping-list/items/{id}", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.shopping.UpdateItem),
 	))
+	mux.Handle("POST /shopping-list/items", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.shopping.AddCustomItem),
+	))
+	mux.Handle("DELETE /shopping-list/items/{id}", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.shopping.DeleteCustomItem),
+	))
 	mux.Handle("POST /feedback", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.feedback.Create),
 	))
