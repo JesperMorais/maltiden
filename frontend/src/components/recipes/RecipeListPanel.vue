@@ -9,6 +9,7 @@ import RecipesSkeleton from '@/components/skeleton/layouts/RecipesSkeleton.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
+import { BookOpen, Search } from 'lucide-vue-next'
 
 const emit = defineEmits<{
   (e: 'navigate-to-add'): void
@@ -115,7 +116,7 @@ onMounted(fetchRecipes)
 <template>
   <div class="recipe-list-panel">
     <!-- Error state -->
-    <ErrorState v-if="error" icon="⚠️" :description="error" @retry="fetchRecipes" />
+    <ErrorState v-if="error" :description="error" @retry="fetchRecipes" />
 
     <!-- Skeleton / Content switch -->
     <SkeletonSwitch v-else :loading="showSkeleton">
@@ -157,20 +158,22 @@ onMounted(fetchRecipes)
       <!-- Empty state: no recipes at all -->
       <EmptyState
         v-else-if="!recipes.length"
-        icon="📖"
         title="Inga recept ännu"
         description="Börja med att lägga till ditt första recept."
         action-label="Lägg till recept"
         @action="emit('navigate-to-add')"
-      />
+      >
+        <template #icon><BookOpen :size="48" color="var(--text-muted)" /></template>
+      </EmptyState>
 
       <!-- Empty state: no search results -->
       <EmptyState
         v-else
-        icon="🔍"
         title="Inga träffar"
         description="Försök med andra sökord eller ta bort filter."
-      />
+      >
+        <template #icon><Search :size="48" color="var(--text-muted)" /></template>
+      </EmptyState>
     </SkeletonSwitch>
 
     <!-- Detail modal -->

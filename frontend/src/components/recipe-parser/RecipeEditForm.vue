@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { Trash2 } from 'lucide-vue-next'
 import type { Ingredient, CreateRecipeRequest } from '@/api/recipes.api'
 
 type EditableRecipe = CreateRecipeRequest & { emoji?: string }
@@ -165,7 +166,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
             class="form-input unit-input"
             placeholder="Enhet"
           />
-          <button class="remove-btn" @click="removeIngredient(i)" title="Ta bort">🗑️</button>
+          <button class="remove-btn" aria-label="Ta bort ingrediens" @click="removeIngredient(i)"><Trash2 :size="16" /></button>
         </div>
       </div>
       <button class="add-btn" @click="addIngredient">+ Lägg till ingrediens</button>
@@ -184,7 +185,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
             class="form-input flex-1"
             :placeholder="'Steg ' + (i + 1)"
           />
-          <button class="remove-btn" @click="removeInstruction(i)" title="Ta bort">🗑️</button>
+          <button class="remove-btn" aria-label="Ta bort steg" @click="removeInstruction(i)"><Trash2 :size="16" /></button>
         </div>
       </div>
       <button class="add-btn" @click="addInstruction">+ Lägg till steg</button>

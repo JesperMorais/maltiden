@@ -223,7 +223,7 @@ onBeforeRouteLeave((to, from, next) => {
         </div>
 
         <!-- Error state -->
-        <ErrorState v-if="store.error" icon="⚠️" :description="store.error" @retry="handleInitialGenerate" />
+        <ErrorState v-if="store.error" :description="store.error" @retry="handleInitialGenerate" />
       </div>
     </main>
 
