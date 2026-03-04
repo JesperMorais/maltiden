@@ -18,7 +18,14 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <article class="todays-meal" @click="emit('click')">
+  <article
+    class="todays-meal"
+    role="button"
+    tabindex="0"
+    @click="emit('click')"
+    @keydown.enter="emit('click')"
+    @keydown.space.prevent="emit('click')"
+  >
     <!-- Background decorations -->
     <div class="meal-bg">
       <div class="blob blob-1"></div>

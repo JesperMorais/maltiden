@@ -65,7 +65,7 @@ function handleOverlayClick(e: MouseEvent) {
           <!-- Header -->
           <div class="modal-header">
             <h2 id="invite-modal-title">Bjud in familjemedlem</h2>
-            <button class="close-btn" @click="emit('close')">
+            <button class="close-btn" aria-label="Stäng" @click="emit('close')">
               <span>&times;</span>
             </button>
           </div>
