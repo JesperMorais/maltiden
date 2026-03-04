@@ -1,69 +1,127 @@
 /**
  * Shopping List API Mock Data
+ *
+ * Builds a dynamic shopping list from mock recipes scaled by current menu servings.
+ * When servings change (toggle eating / lunchbox), the amounts update accordingly.
  */
 
-import type { ShoppingList } from '@/api/shopping.api'
+import type { ShoppingList, ShoppingCategory, ShoppingItem } from '@/api/shopping.api'
+import { getMockMenuState } from './menu.mock'
+import { mockRecipes } from './recipes.mock'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-const mockShoppingList: ShoppingList = {
-  menuId: 'menu_current',
-  categories: [
-    {
-      name: 'Kött & Fisk',
-      items: [
-        { id: 'item_1', name: 'Kycklingfilé', amount: 500, unit: 'g', checked: false },
-        { id: 'item_2', name: 'Köttfärs', amount: 900, unit: 'g', checked: false },
-        { id: 'item_3', name: 'Bacon', amount: 200, unit: 'g', checked: true },
-        { id: 'item_4', name: 'Laxfilé', amount: 600, unit: 'g', checked: false }
-      ]
-    },
-    {
-      name: 'Mejeri',
-      items: [
-        { id: 'item_5', name: 'Ägg', amount: 4, unit: 'st', checked: false },
-        { id: 'item_6', name: 'Parmesan', amount: 100, unit: 'g', checked: false },
-        { id: 'item_7', name: 'Riven ost', amount: 200, unit: 'g', checked: true }
-      ]
-    },
-    {
-      name: 'Grönsaker',
-      items: [
-        { id: 'item_8', name: 'Wokgrönsaker', amount: 400, unit: 'g', checked: false },
-        { id: 'item_9', name: 'Sallad', amount: 1, unit: 'st', checked: false },
-        { id: 'item_10', name: 'Tomat', amount: 3, unit: 'st', checked: false },
-        { id: 'item_11', name: 'Lök', amount: 2, unit: 'st', checked: true },
-        { id: 'item_12', name: 'Potatis', amount: 800, unit: 'g', checked: false }
-      ]
-    },
-    {
-      name: 'Skafferi',
-      items: [
-        { id: 'item_13', name: 'Spaghetti', amount: 400, unit: 'g', checked: false },
-        { id: 'item_14', name: 'Ris', amount: 4, unit: 'dl', checked: true },
-        { id: 'item_15', name: 'Krossade tomater', amount: 400, unit: 'g', checked: false },
-        { id: 'item_16', name: 'Tacokrydda', amount: 1, unit: 'påse', checked: false },
-        { id: 'item_17', name: 'Tacoskal', amount: 12, unit: 'st', checked: false },
-        { id: 'item_18', name: 'Sojasås', amount: 1, unit: 'flaska', checked: true }
-      ]
-    }
-  ]
+/** Track checked state by ingredient name so it persists across list rebuilds */
+const checkedByName = new Map<string, boolean>([
+  ['Bacon', true],
+  ['Riven ost', true],
+  ['Ris', true],
+  ['Lök', true],
+  ['Sojasås', true],
+])
+
+/** Simple ingredient-to-category mapping for mock data */
+const categoryMap: Record<string, string> = {
+  'Kycklingfilé': 'Kött & Fisk',
+  'Köttfärs': 'Kött & Fisk',
+  'Bacon': 'Kött & Fisk',
+  'Laxfilé': 'Kött & Fisk',
+  'Skinka': 'Kött & Fisk',
+  'Ägg': 'Mejeri',
+  'Parmesan': 'Mejeri',
+  'Riven ost': 'Mejeri',
+  'Mozzarella': 'Mejeri',
+  'Kokosmjölk': 'Mejeri',
+  'Wokgrönsaker': 'Grönsaker',
+  'Sallad': 'Grönsaker',
+  'Tomat': 'Grönsaker',
+  'Lök': 'Grönsaker',
+  'Potatis': 'Grönsaker',
+  'Citron': 'Grönsaker',
+  'Dill': 'Grönsaker',
+  'Vitlök': 'Grönsaker',
+  'Spenat': 'Grönsaker',
+  'Champinjoner': 'Grönsaker',
 }
 
-export async function mockGetShoppingList(_menuId?: string): Promise<ShoppingList> {
-  await delay(300)
-  return JSON.parse(JSON.stringify(mockShoppingList)) // Deep clone
+const categoryOrder = ['Kött & Fisk', 'Mejeri', 'Grönsaker', 'Skafferi']
+
+function buildShoppingList(menuId: string): ShoppingList {
+  const menu = getMockMenuState()
+
+  // Aggregate ingredients across all menu days, scaled by servings
+  const ingredients = new Map<string, { amount: number; unit: string }>()
+
+  if (menu) {
+    for (const day of menu.days) {
+      if (day.skip || !day.recipeId) continue
+      const recipe = mockRecipes.find((r) => r.id === day.recipeId)
+      if (!recipe) continue
+
+      const scale = day.servings / recipe.servings
+      for (const ing of recipe.ingredients) {
+        const existing = ingredients.get(ing.name)
+        if (existing) {
+          existing.amount = Math.round((existing.amount + ing.amount * scale) * 10) / 10
+        } else {
+          ingredients.set(ing.name, {
+            amount: Math.round(ing.amount * scale * 10) / 10,
+            unit: ing.unit,
+          })
+        }
+      }
+    }
+  }
+
+  // Group into categories
+  const groups = new Map<string, ShoppingItem[]>()
+  let idx = 0
+
+  for (const [name, { amount, unit }] of ingredients) {
+    const category = categoryMap[name] ?? 'Skafferi'
+    let items = groups.get(category)
+    if (!items) {
+      items = []
+      groups.set(category, items)
+    }
+    idx++
+    items.push({
+      id: `item_${idx}`,
+      name,
+      amount,
+      unit,
+      checked: checkedByName.get(name) ?? false,
+    })
+  }
+
+  const categories: ShoppingCategory[] = categoryOrder
+    .filter((cat) => groups.has(cat))
+    .map((cat) => ({ name: cat, items: groups.get(cat)! }))
+
+  return { menuId, categories }
+}
+
+/** Keep a reference to the last built list so toggleItem can find items by ID */
+let lastBuiltList: ShoppingList | null = null
+
+export async function mockGetShoppingList(menuId?: string): Promise<ShoppingList> {
+  await delay(200)
+  const list = buildShoppingList(menuId ?? 'menu_current')
+  lastBuiltList = list
+  return JSON.parse(JSON.stringify(list))
 }
 
 export async function mockToggleItem(itemId: string, checked: boolean): Promise<{ ok: boolean }> {
-  await delay(200)
+  await delay(100)
 
-  // Update local mock data
-  for (const category of mockShoppingList.categories) {
-    const item = category.items.find(i => i.id === itemId)
-    if (item) {
-      item.checked = checked
-      break
+  // Find the ingredient name from the last built list
+  if (lastBuiltList) {
+    for (const category of lastBuiltList.categories) {
+      const item = category.items.find((i) => i.id === itemId)
+      if (item) {
+        checkedByName.set(item.name, checked)
+        break
+      }
     }
   }
 
