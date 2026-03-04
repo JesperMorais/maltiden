@@ -46,7 +46,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="popover" @click.stop>
+  <div ref="popoverRef" class="popover" @click.stop>
     <div class="popover-arrow"></div>
 
     <!-- Meal identity -->

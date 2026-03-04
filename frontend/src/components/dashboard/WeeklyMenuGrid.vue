@@ -96,13 +96,6 @@ function handleLunchboxUpdate(count: number) {
       </div>
     </header>
 
-    <!-- Backdrop to catch clicks when popover is open -->
-    <div
-      v-if="dashboardStore.selectedDate"
-      class="popover-backdrop"
-      @click="dashboardStore.setSelectedDate(null)"
-    />
-
     <TransitionGroup
       name="day-list"
       tag="div"
@@ -184,6 +177,8 @@ function handleLunchboxUpdate(count: number) {
   padding: 1.5rem;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
+  /* Contain popover z-index so it can't cover the sidebar */
+  isolation: isolate;
 }
 
 .menu-header {
@@ -254,13 +249,6 @@ function handleLunchboxUpdate(count: number) {
 .dropdown-leave-to {
   opacity: 0;
   transform: translateY(-8px) scale(0.95);
-}
-
-/* Popover backdrop — covers viewport to catch clicks outside popover */
-.popover-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
 }
 
 /* Grid */
