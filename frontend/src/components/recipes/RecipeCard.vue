@@ -20,7 +20,7 @@ defineEmits<{
     class-name="recipe-spotlight"
   >
     <BaseCard class="recipe-card" padding="md" @click="$emit('click')">
-      <div class="recipe-emoji">{{ recipe.emoji || '🍽️' }}</div>
+      <div class="recipe-emoji" aria-hidden="true">{{ recipe.emoji || '🍽️' }}</div>
       <h3 class="recipe-name">{{ recipe.name }}</h3>
       <p class="recipe-servings">{{ recipe.servings }} portioner</p>
       <div v-if="recipe.tags.length" class="recipe-tags">
