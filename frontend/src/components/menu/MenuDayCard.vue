@@ -76,7 +76,7 @@ const emit = defineEmits<{
       <!-- LANDED / FILLED STATE -->
       <template v-else-if="day.recipeId">
         <!-- Recipe emoji -->
-        <div class="recipe-emoji" :class="{ 'landing-bounce': hasLanded }">
+        <div class="recipe-emoji" aria-hidden="true" :class="{ 'landing-bounce': hasLanded }">
           {{ day.emoji || '🍽️' }}
         </div>
 
