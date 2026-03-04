@@ -6,6 +6,7 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useSkeleton } from '@/composables/useSkeleton'
 import ErrorState from '@/components/common/ErrorState.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import BackLink from '@/components/common/BackLink.vue'
 import { ClipboardList, ShoppingCart } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -49,10 +50,7 @@ onMounted(async () => {
     <!-- Header -->
     <header class="header">
       <div class="header-content">
-        <button class="back-link" @click="router.push({ name: 'dashboard' })">
-          <span class="back-arrow">&larr;</span>
-          <span>Dashboard</span>
-        </button>
+        <BackLink :to="{ name: 'dashboard' }" label="Dashboard" />
         <h1 class="title">Inköpslista</h1>
         <p class="description">
           Alla ingredienser du behöver till veckans meny.
@@ -169,28 +167,9 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: none;
-  border: none;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0;
-  margin-bottom: 1rem;
-  transition: color 0.2s ease;
-}
-
-.back-link:hover {
-  color: var(--accent);
-}
-
-.back-arrow {
-  font-size: 1.1rem;
+.header-content :deep(.back-link) {
+  margin-bottom: 0.5rem;
+  margin-left: -1rem;
 }
 
 .title {
