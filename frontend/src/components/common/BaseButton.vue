@@ -102,7 +102,7 @@ withDefaults(defineProps<Props>(), {
 /* Variant: Outline */
 .variant-outline {
   background: transparent;
-  color: var(--accent);
+  color: var(--accent-text);
   box-shadow: inset 0 0 0 2.5px var(--accent);
 }
 
