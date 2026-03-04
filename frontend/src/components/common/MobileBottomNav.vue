@@ -78,7 +78,7 @@ function navigate(to: string) {
   }
 
   .nav-tab.active {
-    color: var(--accent);
+    color: var(--accent-text);
   }
 
   .tab-label {

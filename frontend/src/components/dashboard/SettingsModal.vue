@@ -489,7 +489,7 @@ function handleOverlayClick(e: MouseEvent) {
 
 .feedback-btn {
   background: var(--accent-bg, #e8f4fd);
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: none;
 }
 

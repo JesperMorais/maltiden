@@ -302,7 +302,7 @@ onBeforeRouteLeave((to, from, next) => {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 1.25rem;
-  color: var(--accent);
+  color: var(--accent-text);
   margin: 0 0 1rem 0;
 }
 
