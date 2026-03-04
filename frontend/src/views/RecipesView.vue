@@ -32,17 +32,25 @@ function switchToList() {
         </p>
 
         <!-- Segmented tab control -->
-        <div class="tab-control">
+        <div class="tab-control" role="tablist">
           <button
+            id="tab-list"
+            role="tab"
             class="tab-button"
             :class="{ active: activeTab === 'list' }"
+            :aria-selected="activeTab === 'list'"
+            aria-controls="panel-list"
             @click="switchToList"
           >
             Mina recept
           </button>
           <button
+            id="tab-add"
+            role="tab"
             class="tab-button"
             :class="{ active: activeTab === 'add' }"
+            :aria-selected="activeTab === 'add'"
+            aria-controls="panel-add"
             @click="switchToAdd"
           >
             Lägg till
@@ -55,15 +63,19 @@ function switchToList() {
     <main class="content">
       <div class="content-container">
         <FadeContent v-show="activeTab === 'list'" :duration="500" :blur="true">
-          <RecipeListPanel
-            ref="recipeListRef"
-            @navigate-to-add="switchToAdd"
-          />
+          <div id="panel-list" role="tabpanel" aria-labelledby="tab-list">
+            <RecipeListPanel
+              ref="recipeListRef"
+              @navigate-to-add="switchToAdd"
+            />
+          </div>
         </FadeContent>
         <FadeContent v-if="activeTab === 'add'" :duration="500" :blur="true">
-          <AddRecipePanel
-            @navigate-to-list="switchToList"
-          />
+          <div id="panel-add" role="tabpanel" aria-labelledby="tab-add">
+            <AddRecipePanel
+              @navigate-to-list="switchToList"
+            />
+          </div>
         </FadeContent>
       </div>
     </main>

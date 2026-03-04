@@ -56,7 +56,7 @@ function handleOverlayClick(e: MouseEvent) {
           <!-- Header -->
           <div class="modal-header">
             <h2 id="settings-modal-title">Inställningar</h2>
-            <button class="close-btn" @click="handleClose">
+            <button class="close-btn" aria-label="Stäng" @click="handleClose">
               <span>×</span>
             </button>
           </div>
