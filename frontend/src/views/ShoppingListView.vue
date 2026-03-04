@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useShoppingList } from '@/composables/useShoppingList'
 import { useDashboardStore } from '@/stores/dashboard'
@@ -7,7 +7,16 @@ import { useSkeleton } from '@/composables/useSkeleton'
 import ErrorState from '@/components/common/ErrorState.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import BackLink from '@/components/common/BackLink.vue'
-import { ClipboardList, ShoppingCart } from 'lucide-vue-next'
+import {
+  ClipboardList,
+  ShoppingCart,
+  Search,
+  Plus,
+  X,
+  ChevronRight,
+  Check,
+  Trash2,
+} from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,17 +24,35 @@ const dashboardStore = useDashboardStore()
 const {
   isLoading,
   error,
-  categories,
   totalItems,
-  checkedItems,
+  checkedItemCount,
+  remainingItems,
   progress,
   fetchList,
   toggle,
+
+  // Search
+  searchQuery,
+  isSearchOpen,
+  toggleSearch,
+
+  // Collapse
+  collapsedCategories,
+  toggleCategory,
+
+  // Separated lists
+  uncheckedCategories,
+  checkedItems,
+  isCheckedCollapsed,
+
+  // Custom items
+  addCustomItem,
+  removeCustomItem,
 } = useShoppingList()
 
 const { showSkeleton } = useSkeleton(
   computed(() => isLoading.value),
-  { minDuration: 300 }
+  { minDuration: 300 },
 )
 
 const menuId = computed(() => {
@@ -34,8 +61,38 @@ const menuId = computed(() => {
   return dashboardStore.menuId
 })
 
+// Add item UI
+const isAddOpen = ref(false)
+const newItemName = ref('')
+const newItemInput = ref<HTMLInputElement | null>(null)
+
+function toggleAddItem() {
+  isAddOpen.value = !isAddOpen.value
+  if (isAddOpen.value) {
+    nextTick(() => newItemInput.value?.focus())
+  } else {
+    newItemName.value = ''
+  }
+}
+
+async function submitNewItem() {
+  const name = newItemName.value.trim()
+  if (!name) return
+  newItemName.value = ''
+  await addCustomItem(name)
+}
+
+// Search input ref
+const searchInput = ref<HTMLInputElement | null>(null)
+
+function handleToggleSearch() {
+  toggleSearch()
+  if (isSearchOpen.value) {
+    nextTick(() => searchInput.value?.focus())
+  }
+}
+
 onMounted(async () => {
-  // Ensure dashboard is loaded so we have menuId
   if (!dashboardStore.dashboardData) {
     await dashboardStore.fetchDashboard()
   }
@@ -47,23 +104,96 @@ onMounted(async () => {
 
 <template>
   <div class="shopping-list-view">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-content">
+    <!-- Sticky header -->
+    <header class="sticky-header">
+      <div class="header-inner">
         <BackLink :to="{ name: 'dashboard' }" label="Dashboard" />
-        <h1 class="title">Inköpslista</h1>
-        <p class="description">
-          Alla ingredienser du behöver till veckans meny.
-        </p>
+        <div class="header-row">
+          <div class="header-info">
+            <h1 class="title">Inköpslista</h1>
+            <span v-if="totalItems > 0" class="progress-text">
+              {{ checkedItemCount }} av {{ totalItems }}
+              <span class="progress-separator">&middot;</span>
+              {{ remainingItems }} kvar
+            </span>
+          </div>
+          <div class="header-actions">
+            <button
+              class="icon-btn"
+              :class="{ active: isSearchOpen }"
+              @click="handleToggleSearch"
+              aria-label="Sök"
+            >
+              <Search :size="20" :stroke-width="2" />
+            </button>
+            <button
+              class="icon-btn"
+              :class="{ active: isAddOpen }"
+              @click="toggleAddItem"
+              aria-label="Lägg till vara"
+            >
+              <Plus :size="20" :stroke-width="2" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div v-if="totalItems > 0" class="progress-bar-track">
+          <div class="progress-bar-fill" :style="{ width: `${progress * 100}%` }" />
+        </div>
+
+        <!-- Search bar -->
+        <Transition name="search-slide">
+          <div v-if="isSearchOpen" class="search-bar">
+            <Search :size="16" :stroke-width="2" class="search-icon" />
+            <input
+              ref="searchInput"
+              v-model="searchQuery"
+              type="text"
+              placeholder="Sök vara..."
+              class="search-input"
+            />
+            <button
+              v-if="searchQuery"
+              class="search-clear"
+              @click="searchQuery = ''"
+              aria-label="Rensa sökning"
+            >
+              <X :size="16" :stroke-width="2" />
+            </button>
+          </div>
+        </Transition>
       </div>
     </header>
 
+    <!-- Add item section -->
+    <Transition name="add-slide">
+      <div v-if="isAddOpen" class="add-item-section">
+        <div class="add-item-inner">
+          <input
+            ref="newItemInput"
+            v-model="newItemName"
+            type="text"
+            placeholder="T.ex. Hushållspapper"
+            class="add-item-input"
+            @keydown.enter="submitNewItem"
+          />
+          <button
+            class="add-item-btn"
+            :disabled="!newItemName.trim()"
+            @click="submitNewItem"
+          >
+            Lägg till
+          </button>
+        </div>
+      </div>
+    </Transition>
+
     <!-- Main content -->
-    <main class="content">
-      <div class="content-container">
+    <main class="list-content">
+      <div class="list-container">
         <!-- Skeleton loading -->
         <div v-if="showSkeleton" class="skeleton-wrapper">
-          <div class="skeleton-progress" />
           <div v-for="n in 3" :key="n" class="skeleton-category">
             <div class="skeleton-heading" />
             <div v-for="m in 4" :key="m" class="skeleton-item" />
@@ -78,7 +208,9 @@ onMounted(async () => {
           action-label="Generera meny"
           @action="router.push({ name: 'generate-menu' })"
         >
-          <template #icon><ClipboardList :size="48" color="var(--text-muted)" /></template>
+          <template #icon>
+            <ClipboardList :size="48" color="var(--text-muted)" />
+          </template>
         </EmptyState>
 
         <!-- Error state -->
@@ -86,170 +218,449 @@ onMounted(async () => {
 
         <!-- Empty state -->
         <EmptyState
-          v-else-if="totalItems === 0"
+          v-else-if="totalItems === 0 && !isLoading"
           title="Ingen inköpslista"
           description="Generera en meny först så skapas din inköpslista automatiskt."
           action-label="Generera meny"
           @action="router.push({ name: 'generate-menu' })"
         >
-          <template #icon><ShoppingCart :size="48" color="var(--text-muted)" /></template>
+          <template #icon>
+            <ShoppingCart :size="48" color="var(--text-muted)" />
+          </template>
         </EmptyState>
 
         <!-- Shopping list -->
         <template v-else>
-          <!-- Progress summary -->
-          <div class="progress-card">
-            <div class="progress-text">
-              <span class="progress-count">{{ checkedItems }} av {{ totalItems }} varor</span>
-            </div>
-            <div class="progress-bar-track">
-              <div
-                class="progress-bar-fill"
-                :style="{ width: `${progress * 100}%` }"
-              />
-            </div>
-          </div>
-
-          <!-- Categories -->
-          <div
-            v-for="category in categories"
+          <!-- Category sections -->
+          <section
+            v-for="category in uncheckedCategories"
             :key="category.name"
             class="category-section"
           >
-            <h2 class="category-heading">{{ category.name }}</h2>
-            <ul class="item-list">
-              <li
-                v-for="item in category.items"
-                :key="item.id"
-                class="item-row"
-                :class="{ checked: item.checked }"
+            <button class="category-header" @click="toggleCategory(category.name)">
+              <ChevronRight
+                :size="18"
+                :stroke-width="2.5"
+                class="chevron-icon"
+                :class="{ expanded: !collapsedCategories.has(category.name) }"
+              />
+              <span class="category-name">{{ category.name }}</span>
+              <span class="category-count">{{ category.items.length }}</span>
+            </button>
+
+            <Transition name="collapse">
+              <ul
+                v-show="!collapsedCategories.has(category.name)"
+                class="item-list"
               >
-                <label class="item-label">
-                  <input
-                    type="checkbox"
-                    class="item-checkbox"
-                    :checked="item.checked"
-                    @change="toggle(item.id, !item.checked)"
-                  />
+                <li
+                  v-for="item in category.items"
+                  :key="item.id"
+                  class="item-row"
+                  @click="toggle(item.id, true)"
+                >
+                  <span class="custom-checkbox">
+                    <Check :size="14" :stroke-width="3" class="check-icon" />
+                  </span>
                   <span class="item-name">{{ item.name }}</span>
                   <span class="item-amount">{{ item.amount }} {{ item.unit }}</span>
-                </label>
-              </li>
-            </ul>
-          </div>
+                  <button
+                    v-if="item.isCustom"
+                    class="delete-btn"
+                    @click.stop="removeCustomItem(item.id)"
+                    aria-label="Ta bort"
+                  >
+                    <Trash2 :size="16" :stroke-width="2" />
+                  </button>
+                </li>
+              </ul>
+            </Transition>
+          </section>
+
+          <!-- Checked "Klart" section -->
+          <section v-if="checkedItems.length > 0" class="checked-section">
+            <button
+              class="category-header checked-header"
+              @click="isCheckedCollapsed = !isCheckedCollapsed"
+            >
+              <ChevronRight
+                :size="18"
+                :stroke-width="2.5"
+                class="chevron-icon"
+                :class="{ expanded: !isCheckedCollapsed }"
+              />
+              <span class="category-name">Klart</span>
+              <span class="category-count">{{ checkedItems.length }}</span>
+            </button>
+
+            <Transition name="collapse">
+              <ul v-show="!isCheckedCollapsed" class="item-list checked-list">
+                <li
+                  v-for="item in checkedItems"
+                  :key="item.id"
+                  class="item-row checked"
+                  @click="toggle(item.id, false)"
+                >
+                  <span class="custom-checkbox is-checked">
+                    <Check :size="14" :stroke-width="3" class="check-icon" />
+                  </span>
+                  <span class="item-name">{{ item.name }}</span>
+                  <span class="item-amount">{{ item.amount }} {{ item.unit }}</span>
+                </li>
+              </ul>
+            </Transition>
+          </section>
         </template>
       </div>
     </main>
+
+    <!-- Bottom spacer for MobileBottomNav -->
+    <div class="bottom-spacer" />
   </div>
 </template>
 
 <style scoped>
 .shopping-list-view {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg-primary);
   display: flex;
   flex-direction: column;
 }
 
-/* Header */
-.header {
-  padding: 2rem 2rem 1.5rem;
-  background: linear-gradient(
-    180deg,
-    var(--bg-card) 0%,
-    var(--bg-primary) 100%
-  );
+/* Sticky header */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--bg-primary) 90%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
 }
 
-.header-content {
-  max-width: 720px;
+.header-inner {
+  max-width: 640px;
   margin: 0 auto;
+  padding: 0.75rem 1rem 0;
 }
 
-.header-content :deep(.back-link) {
-  margin-bottom: 0.5rem;
-  margin-left: -1rem;
+.header-inner :deep(.back-link) {
+  margin-bottom: 0.25rem;
+  margin-left: -0.5rem;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.header-info {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
 .title {
   font-family: 'Fraunces', serif;
   font-weight: 800;
-  font-size: 2.5rem;
+  font-size: 1.5rem;
   color: var(--text-primary);
-  margin: 0 0 0.5rem;
-  line-height: 1.2;
-}
-
-.description {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  font-size: 1.1rem;
-  color: var(--text-secondary);
   margin: 0;
-  line-height: 1.6;
-}
-
-/* Content */
-.content {
-  flex: 1;
-  padding: 2rem;
-}
-
-.content-container {
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-/* Progress card */
-.progress-card {
-  background: var(--bg-card);
-  border-radius: 16px;
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 2rem;
-  border: 1px solid var(--border-color);
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .progress-text {
-  margin-bottom: 0.75rem;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
-.progress-count {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 1rem;
+.progress-separator {
+  color: var(--text-muted);
+  margin: 0 0.1rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.icon-btn:hover {
+  background: var(--bg-hover);
   color: var(--text-primary);
 }
 
+.icon-btn.active {
+  color: var(--accent);
+  background: var(--bg-hover);
+}
+
+/* Progress bar */
 .progress-bar-track {
-  height: 8px;
+  height: 4px;
   background: var(--bg-secondary);
   border-radius: 100px;
   overflow: hidden;
+  margin: 0.5rem 0 0;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: var(--accent);
+  background: var(--success);
   border-radius: 100px;
-  transition: width 0.3s ease;
+  transition: width 0.4s ease;
+}
+
+/* Search bar */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--bg-hover);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.search-slide-enter-active,
+.search-slide-leave-active {
+  transition: all var(--duration-fast) ease;
+  overflow: hidden;
+}
+
+.search-slide-enter-from,
+.search-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.search-slide-enter-to,
+.search-slide-leave-from {
+  opacity: 1;
+  max-height: 60px;
+}
+
+/* Add item section */
+.add-item-section {
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.add-item-inner {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-item-input {
+  flex: 1;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.75rem;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--duration-fast) ease;
+}
+
+.add-item-input:focus {
+  border-color: var(--accent);
+}
+
+.add-item-input::placeholder {
+  color: var(--text-muted);
+}
+
+.add-item-btn {
+  padding: 0.6rem 1rem;
+  border: none;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-radius: var(--radius-md);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--duration-fast) ease;
+}
+
+.add-item-btn:hover:not(:disabled) {
+  background: var(--accent-dark);
+}
+
+.add-item-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.add-slide-enter-active,
+.add-slide-leave-active {
+  transition: all var(--duration-fast) ease;
+  overflow: hidden;
+}
+
+.add-slide-enter-from,
+.add-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
+.add-slide-enter-to,
+.add-slide-leave-from {
+  opacity: 1;
+  max-height: 80px;
+}
+
+/* List content */
+.list-content {
+  flex: 1;
+  padding: 1rem;
+}
+
+.list-container {
+  max-width: 640px;
+  margin: 0 auto;
 }
 
 /* Category sections */
 .category-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
-.category-heading {
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 0.25rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chevron-icon {
+  color: var(--text-muted);
+  transition: transform var(--duration-fast) ease;
+  flex-shrink: 0;
+}
+
+.chevron-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.category-name {
   font-family: 'Fraunces', serif;
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   color: var(--text-primary);
-  margin: 0 0 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border-color);
+  flex: 1;
+  text-align: left;
 }
 
+.category-count {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  min-width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.4rem;
+}
+
+/* Collapse transition */
+.collapse-enter-active,
+.collapse-leave-active {
+  transition:
+    max-height var(--duration-normal) ease,
+    opacity var(--duration-fast) ease;
+  overflow: hidden;
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+
+.collapse-enter-to,
+.collapse-leave-from {
+  max-height: 2000px;
+  opacity: 1;
+}
+
+/* Item list */
 .item-list {
   list-style: none;
   margin: 0;
@@ -257,124 +668,206 @@ onMounted(async () => {
 }
 
 .item-row {
-  transition: opacity 0.2s ease;
-}
-
-.item-row.checked {
-  opacity: 0.65;
-}
-
-.item-label {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 0;
+  padding: 0.65rem 0.5rem;
+  min-height: 52px;
   cursor: pointer;
-  border-bottom: 1px solid var(--border-color-light);
-  min-height: 48px;
+  border-radius: var(--radius-md);
+  transition: all 150ms ease;
   -webkit-tap-highlight-color: transparent;
 }
 
-.item-label:active {
+.item-row:hover {
   background: var(--bg-hover);
-  border-radius: 8px;
-  margin: 0 -0.5rem;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
 }
 
-.item-checkbox {
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
-  accent-color: var(--accent);
-  cursor: pointer;
+.item-row:active {
+  transform: scale(0.98);
+}
+
+/* Custom checkbox */
+.custom-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border: 2px solid var(--border-color-hover);
+  border-radius: var(--radius-full);
+  background: transparent;
+  transition: all 200ms ease;
   flex-shrink: 0;
-  /* Expand touch target beyond visual size */
-  padding: 10px;
-  margin: -10px;
-  box-sizing: content-box;
+}
+
+.custom-checkbox .check-icon {
+  opacity: 0;
+  color: white;
+  transform: scale(0.5);
+  transition: all 200ms ease;
+}
+
+.custom-checkbox.is-checked {
+  background: var(--success);
+  border-color: var(--success);
+  animation: checkbox-pop 300ms ease;
+}
+
+.custom-checkbox.is-checked .check-icon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@keyframes checkbox-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.9); }
+  100% { transform: scale(1); }
 }
 
 .item-name {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--text-primary);
   flex: 1;
-  transition: all 0.2s ease;
-}
-
-.item-row.checked .item-name {
-  text-decoration: line-through;
-  color: var(--text-secondary);
+  min-width: 0;
 }
 
 .item-amount {
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+  font-size: 0.85rem;
+  color: var(--text-muted);
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--duration-fast) ease;
+}
+
+.delete-btn:hover {
+  color: var(--accent);
+  background: var(--bg-hover);
+}
+
+/* Checked section */
+.checked-section {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 0.25rem;
+}
+
+.checked-header .category-name {
+  color: var(--text-secondary);
+}
+
+.checked-list .item-row {
+  opacity: 0.6;
+}
+
+.checked-list .item-name {
+  text-decoration: line-through;
+  color: var(--text-secondary);
 }
 
 /* Skeleton */
 .skeleton-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-}
-
-.skeleton-progress {
-  height: 64px;
-  background: var(--bg-card);
-  border-radius: 16px;
-  animation: pulse 1.5s ease-in-out infinite;
+  gap: 1.25rem;
 }
 
 .skeleton-category {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .skeleton-heading {
-  height: 24px;
-  width: 140px;
+  height: 20px;
+  width: 120px;
   background: var(--bg-secondary);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   margin-bottom: 0.25rem;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
 .skeleton-item {
-  height: 44px;
+  height: 48px;
   background: var(--bg-secondary);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   animation: pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .header {
-    padding: 1.5rem 1rem 1rem;
+/* Bottom spacer */
+.bottom-spacer {
+  height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem);
+}
+
+/* Responsive — desktop */
+@media (min-width: 769px) {
+  .header-inner {
+    padding: 1rem 1.5rem 0;
   }
 
-  .content {
-    padding: 1.5rem 1rem;
+  .list-content {
+    padding: 1.5rem;
   }
 
   .title {
     font-size: 1.75rem;
   }
+}
 
-  .description {
-    font-size: 0.95rem;
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar-fill,
+  .chevron-icon,
+  .custom-checkbox,
+  .custom-checkbox .check-icon,
+  .item-row {
+    transition: none;
+  }
+
+  .collapse-enter-active,
+  .collapse-leave-active,
+  .search-slide-enter-active,
+  .search-slide-leave-active,
+  .add-slide-enter-active,
+  .add-slide-leave-active {
+    transition: none;
+  }
+
+  @keyframes checkbox-pop {
+    0%,
+    50%,
+    100% {
+      transform: none;
+    }
   }
 }
 </style>
