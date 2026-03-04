@@ -34,6 +34,8 @@ var (
 	ErrInstructionsRequired = errors.New("instructions_required")
 	ErrNameTooLong          = errors.New("name_too_long")
 	ErrTooManyIngredients   = errors.New("too_many_ingredients")
+	ErrTooManyTags          = errors.New("too_many_tags")
+	ErrTagTooLong           = errors.New("tag_too_long")
 
 	// Auth validation
 	ErrInvalidEmail = errors.New("invalid_email")
