@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useUserStore } from '@/stores/user'
+import { Lock } from 'lucide-vue-next'
 
 interface Props {
   /** Whether this action requires member role */
@@ -20,7 +21,7 @@ const isLocked = props.requiresMember && userStore.isGuest
 
     <div v-if="isLocked" class="lock-overlay">
       <div class="lock-badge">
-        <span class="lock-icon">🔒</span>
+        <Lock :size="14" class="lock-icon" />
         <span class="lock-text">Endast medlemmar</span>
       </div>
     </div>
@@ -69,7 +70,7 @@ const isLocked = props.requiresMember && userStore.isGuest
 }
 
 .lock-icon {
-  font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
 .lock-text {
