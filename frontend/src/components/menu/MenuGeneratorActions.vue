@@ -191,11 +191,11 @@ const emit = defineEmits<{
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
   color: var(--text-on-accent);
   border-color: var(--accent);
-  box-shadow: 0 4px 12px rgba(255, 107, 91, 0.3);
+  box-shadow: var(--shadow-accent-sm);
 }
 
 .btn-save:hover:not(:disabled) {
-  box-shadow: 0 6px 16px rgba(255, 107, 91, 0.4);
+  box-shadow: var(--shadow-accent-hover);
 }
 
 /* Responsive */

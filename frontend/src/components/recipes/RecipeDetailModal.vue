@@ -520,7 +520,7 @@ function handleClose() {
 
 .close-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(255, 107, 91, 0.4);
+  box-shadow: var(--shadow-accent-hover);
 }
 
 .edit-btn {
