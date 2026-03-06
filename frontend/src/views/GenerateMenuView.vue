@@ -423,7 +423,7 @@ onBeforeRouteLeave((to, from, next) => {
 }
 
 .modal-btn-leave:hover {
-  box-shadow: 0 4px 12px rgba(255, 107, 91, 0.4);
+  box-shadow: var(--shadow-accent-hover);
 }
 
 /* Responsive */

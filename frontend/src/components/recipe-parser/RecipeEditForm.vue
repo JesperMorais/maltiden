@@ -226,17 +226,17 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
 
 .confidence-badge.high {
   background: var(--success-bg);
-  color: #2f855a;
+  color: var(--confidence-high);
 }
 
 .confidence-badge.medium {
   background: var(--warning-bg);
-  color: #b7791f;
+  color: var(--confidence-medium);
 }
 
 .confidence-badge.low {
   background: var(--error-bg);
-  color: #c53030;
+  color: var(--confidence-low);
 }
 
 /* Warnings */
@@ -251,7 +251,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
   font-family: 'Nunito', sans-serif;
   font-weight: 600;
   font-size: 0.9rem;
-  color: #b7791f;
+  color: var(--confidence-medium);
   background: var(--warning-bg);
   padding: 0.5rem 0.75rem;
   border-radius: 8px;

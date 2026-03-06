@@ -140,7 +140,7 @@ Rör ner äggblandningen."
 .form-error {
   font-family: 'Nunito', sans-serif;
   font-size: 0.9rem;
-  color: #e53e3e;
+  color: var(--error);
   margin: 1rem 0 0;
   padding: 0.5rem 0.75rem;
   background: var(--error-bg);

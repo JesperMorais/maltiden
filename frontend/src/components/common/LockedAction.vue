@@ -56,7 +56,7 @@ const isLocked = props.requiresMember && userStore.isGuest
   align-items: center;
   gap: 0.35rem;
   padding: 0.35rem 0.75rem;
-  background: rgba(61, 44, 41, 0.9);
+  background: var(--overlay-bg);
   border-radius: 100px;
   opacity: 0;
   transform: scale(0.9);
