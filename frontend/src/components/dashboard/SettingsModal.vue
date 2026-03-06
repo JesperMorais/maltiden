@@ -383,6 +383,7 @@ function handleOverlayClick(e: MouseEvent) {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem;
+  min-height: 44px;
   background: var(--bg-card);
   border-radius: 14px;
   border: 1px solid var(--border-color);
@@ -426,8 +427,8 @@ function handleOverlayClick(e: MouseEvent) {
 
 .toggle-slider {
   position: relative;
-  width: 48px;
-  height: 28px;
+  width: 52px;
+  height: 32px;
   background: var(--border-color);
   border-radius: 100px;
   transition: all 0.3s ease;
@@ -439,8 +440,8 @@ function handleOverlayClick(e: MouseEvent) {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   background: var(--bg-primary);
   border-radius: 50%;
   box-shadow: var(--shadow-sm);

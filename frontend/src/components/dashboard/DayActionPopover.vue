@@ -319,8 +319,8 @@ onUnmounted(() => {
 }
 
 .counter-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1.5px solid var(--border-color);
   background: var(--bg-card);
