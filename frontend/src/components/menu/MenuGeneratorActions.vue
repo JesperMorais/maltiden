@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Lock, RefreshCw } from 'lucide-vue-next'
+
 interface Props {
   hasMenu: boolean
   isLoading: boolean
@@ -30,7 +32,7 @@ const emit = defineEmits<{
       <!-- Center: Lock status -->
       <div v-if="hasMenu" class="actions-center">
         <div class="lock-status">
-          <span class="lock-icon">🔒</span>
+          <Lock :size="14" class="lock-icon" />
           <span class="lock-text">{{ lockedCount }} av {{ totalDays }} dagar låsta</span>
         </div>
       </div>
@@ -44,7 +46,7 @@ const emit = defineEmits<{
           :title="lockedCount === totalDays ? 'Lås upp minst en dag för att generera nya recept' : ''"
           @click="emit('regenerate')"
         >
-          <span class="btn-icon">🔄</span>
+          <RefreshCw :size="16" class="btn-icon" />
           <span class="btn-text">Generera nya</span>
         </button>
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { AnimatePresence, Motion } from 'motion-v'
+import { Lock, LockOpen } from 'lucide-vue-next'
 import type { DraftMenuDay } from '@/stores/menuGenerator'
 import type { DisplayRecipe } from '@/composables/useSlotMachine'
 
@@ -107,7 +108,7 @@ const emit = defineEmits<{
       :disabled="isLoading"
       @click.stop="emit('toggle-lock')"
     >
-      <span class="lock-icon">{{ isLocked ? '🔒' : '🔓' }}</span>
+      <component :is="isLocked ? Lock : LockOpen" :size="14" class="lock-icon" />
     </button>
   </article>
 </template>
