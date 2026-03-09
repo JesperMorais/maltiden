@@ -1,151 +1,338 @@
-# Phase 4: Polish & Delight — Design Document
+# Phase 4: Polish & Delight — Implementation Plan
 
-**Date:** 2026-03-09
-**Branch:** feat/fe_design-review-fixes
-**Goal:** Add skeleton loading states, empty state icons, route transitions, and micro-interactions.
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
----
+**Goal:** Add skeleton loading states, empty state entrance animation, and remaining micro-interactions polish.
 
-## 1. Skeleton Loading States
+**Architecture:** Reuse existing skeleton primitives (SkeletonBlock, SkeletonCircle) and useSkeleton composable. CSS-only animations. No new dependencies.
 
-### 1a. GenerateMenuView Skeleton
-
-Add `GenerateMenuSkeleton.vue` in `components/skeleton/layouts/` mirroring the GenerateMenuView layout:
-- Action bar skeleton (3 buttons as blocks)
-- 5 day-card skeletons in a grid (matching MenuDayCard dimensions: emoji circle + title block + subtitle block)
-- Reuse existing `SkeletonBlock` and `SkeletonCircle` primitives
-- Wire into GenerateMenuView with `useSkeleton` composable (same pattern as ShoppingListView)
-
-### 1b. RecipeDetailModal Skeleton
-
-Replace the loading spinner inside RecipeDetailModal with inline skeleton blocks:
-- Skeleton circle for emoji (80px)
-- SkeletonBlock for title, tags, and section headings
-- 4-5 SkeletonBlock rows for ingredients/instructions
-- Show while `isLoading` is true, already gated by existing v-if
+**Tech Stack:** Vue 3, TypeScript, CSS variables, Lucide Vue icons
 
 ---
 
-## 2. Empty State Lucide Icons + Entrance Animation
+## Pre-flight: Already Done (skip these)
 
-### 2a. Replace Emoji Icons
-
-Replace emoji `icon` props on EmptyState usages with Lucide `#icon` slot:
-
-| Location | Current | Replacement (Lucide) |
-|----------|---------|---------------------|
-| RecipeListPanel (no recipes) | `icon="📖"` | `BookOpen` via `#icon` slot |
-| RecipeListPanel (no results) | `icon="🔍"` | `Search` via `#icon` slot |
-| GenerateMenuEmptyState | Custom emoji-based | `CalendarDays` or keep custom component |
-| ShoppingListWidget | Handled by redesign | Already uses Lucide |
-
-### 2b. Entrance Animation
-
-Add a subtle fade-up entrance to the `EmptyState` component using CSS:
-```css
-.empty-state {
-  animation: empty-state-enter 0.4s ease-out;
-}
-@keyframes empty-state-enter {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-```
+Confirmed by code read — do NOT re-implement:
+- **Route transitions**: App.vue already has `<RouterView v-slot>` + `<Transition>` with page-fade, page-slide, page-scale CSS
+- **Route meta**: All routes in router/index.ts already have `meta.transition` assigned
+- **EmptyState Lucide icons**: RecipeListPanel already uses `#icon` slot with BookOpen/Search
+- **ShoppingListView empty states**: Already uses Lucide ClipboardList/ShoppingCart via `#icon` slot
+- **BaseButton active state**: Already has `:active` scale(0.98)
+- **RecipeCard hover**: Already has translateY(-4px) + shadow-lg
+- **MenuDayCard hover**: Already has translateY(-2px) + shadow-md
+- **Shopping list checkbox**: Already has checkbox-pop animation, scale transitions, is-checked states
+- **RecipeDetailModal loading**: Already uses Lucide Loader2 (replaced emoji in full-sweep plan)
 
 ---
 
-## 3. Route Page Transitions
+### Task 1: Create GenerateMenuSkeleton layout
 
-### Implementation
+**Files:**
+- Create: `frontend/src/components/skeleton/layouts/GenerateMenuSkeleton.vue`
 
-Wrap `<RouterView>` in `App.vue` with Vue's `<Transition>` using dynamic transition name from route meta:
+**Step 1: Create the skeleton component**
+
+Mirror the GenerateMenuView layout: 5-column grid of day-card skeletons matching MenuDayCard (20px radius, 280px min-height, emoji circle + title + subtitle).
 
 ```vue
-<RouterView v-slot="{ Component, route }">
-  <Transition :name="route.meta.transition || 'page-fade'" mode="out-in">
-    <component :is="Component" :key="route.path" />
-  </Transition>
-</RouterView>
+<script setup lang="ts">
+import SkeletonBlock from '../SkeletonBlock.vue'
+import SkeletonCircle from '../SkeletonCircle.vue'
+</script>
+
+<template>
+  <div class="generate-menu-skeleton" aria-hidden="true">
+    <div class="menu-grid-skeleton">
+      <div v-for="i in 5" :key="i" class="day-card-skeleton">
+        <SkeletonBlock width="48px" height="12px" radius="6px" />
+        <SkeletonCircle size="64px" />
+        <SkeletonBlock width="80%" height="18px" radius="8px" />
+        <SkeletonBlock width="60%" height="12px" radius="6px" />
+      </div>
+    </div>
+    <!-- Action bar skeleton -->
+    <div class="actions-skeleton">
+      <SkeletonBlock width="90px" height="40px" radius="100px" />
+      <SkeletonBlock width="140px" height="14px" radius="8px" />
+      <div class="actions-right-skeleton">
+        <SkeletonBlock width="130px" height="40px" radius="100px" />
+        <SkeletonBlock width="110px" height="40px" radius="100px" />
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.generate-menu-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.menu-grid-skeleton {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1.5rem;
+}
+
+.day-card-skeleton {
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: 20px;
+  padding: 1.5rem;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.actions-skeleton {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.actions-right-skeleton {
+  display: flex;
+  gap: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+  .menu-grid-skeleton {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .menu-grid-skeleton {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .day-card-skeleton {
+    min-height: 220px;
+    padding: 1rem;
+  }
+
+  .actions-skeleton {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 0.75rem;
+  }
+
+  .actions-right-skeleton {
+    width: 100%;
+    justify-content: center;
+  }
+}
+</style>
 ```
 
-### Transition Definitions (global CSS)
+**Step 2: Commit**
 
-**page-fade** (default): opacity only, 200ms
-```css
-.page-fade-enter-active { transition: opacity 0.2s ease-out; }
-.page-fade-leave-active { transition: opacity 0.15s ease-in; }
-.page-fade-enter-from, .page-fade-leave-to { opacity: 0; }
+```bash
+git add frontend/src/components/skeleton/layouts/GenerateMenuSkeleton.vue
+git commit -m "feat: add GenerateMenuSkeleton layout component"
 ```
-
-**page-slide**: translateY + opacity, 250ms
-```css
-.page-slide-enter-active { transition: all 0.25s ease-out; }
-.page-slide-leave-active { transition: all 0.15s ease-in; }
-.page-slide-enter-from { opacity: 0; transform: translateY(16px); }
-.page-slide-leave-to { opacity: 0; transform: translateY(-8px); }
-```
-
-Already respects `prefers-reduced-motion` via global rule in theme.css.
-
-### Route Meta Assignments
-
-| Route | Transition |
-|-------|-----------|
-| landing, login, register | page-fade |
-| dashboard | page-fade |
-| recipes, shopping-list, generate-menu, offers | page-slide |
-| about | page-fade |
 
 ---
 
-## 4. Micro-interactions
+### Task 2: Wire GenerateMenuSkeleton into GenerateMenuView
 
-### 4a. Button Press Feedback
+**Files:**
+- Modify: `frontend/src/views/GenerateMenuView.vue:1-12` (script imports) and `204-210` (template)
 
-Add `active` state to BaseButton and accent buttons:
-```css
-button:active:not(:disabled) {
-  transform: scale(0.97);
-  transition: transform 0.1s ease;
-}
+**Step 1: Add imports**
+
+Add to the script imports (after the existing imports around line 11):
+```ts
+import GenerateMenuSkeleton from '@/components/skeleton/layouts/GenerateMenuSkeleton.vue'
+import { useSkeleton } from '@/composables/useSkeleton'
 ```
 
-### 4b. Card Hover Lift
+**Step 2: Add skeleton state**
 
-Add a reusable pattern in theme.css:
-```css
-.card-interactive {
-  transition: transform var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
-}
-.card-interactive:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
+After line 31 (`const isLoading = computed(() => store.isLoading)`), add:
+```ts
+const { showSkeleton } = useSkeleton(
+  computed(() => store.isGenerating && !slotMachine.isAnimating.value),
+  { minDuration: 400 }
+)
 ```
 
-Apply to: RecipeCard, MenuDayCard (non-rolling state), TodaysMeal, QuickActions items.
+**Step 3: Add skeleton to template**
 
-### 4c. Shopping List Checkbox
+Before the `<GenerateMenuEmptyState>` line (around line 208), add the skeleton:
+```html
+        <!-- Skeleton loading state -->
+        <GenerateMenuSkeleton v-if="showSkeleton" />
 
-Enhance the existing checkbox with a brief fill transition:
-- Coral background-color transition on check (150ms)
-- Checkmark scale-in (0 to 1, 150ms)
-- Text strikethrough with color fade to --text-muted (200ms)
+        <!-- Empty state -->
+        <GenerateMenuEmptyState v-else-if="!showGrid" @generate="handleInitialGenerate" />
+```
+
+**Step 4: Commit**
+
+```bash
+git add frontend/src/views/GenerateMenuView.vue
+git commit -m "feat: wire skeleton loading state into GenerateMenuView"
+```
 
 ---
 
-## 5. Typography Rhythm — SKIPPED
+### Task 3: Add skeleton loading to RecipeDetailModal
 
-Existing Fraunces/Nunito pairing works well. Not worth the churn.
+**Files:**
+- Modify: `frontend/src/components/recipes/RecipeDetailModal.vue:9,216-219`
+
+**Step 1: Add skeleton imports**
+
+Add after the existing Lucide imports (line 9):
+```ts
+import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
+import SkeletonCircle from '@/components/skeleton/SkeletonCircle.vue'
+```
+
+**Step 2: Replace loading spinner with skeleton**
+
+Replace lines 216-219 (the `<div v-if="isLoading" class="modal-loading">` block):
+
+```html
+        <div v-if="isLoading" class="modal-loading">
+          <div class="modal-header">
+            <SkeletonCircle size="64px" />
+            <SkeletonBlock width="70%" height="24px" radius="12px" />
+            <SkeletonBlock width="80px" height="14px" radius="8px" />
+            <div class="skeleton-tags">
+              <SkeletonBlock width="52px" height="22px" radius="100px" />
+              <SkeletonBlock width="64px" height="22px" radius="100px" />
+            </div>
+          </div>
+          <div class="modal-body">
+            <SkeletonBlock width="110px" height="16px" radius="8px" />
+            <div class="skeleton-list">
+              <SkeletonBlock v-for="n in 5" :key="n" width="100%" height="14px" radius="6px" />
+            </div>
+            <SkeletonBlock width="110px" height="16px" radius="8px" />
+            <div class="skeleton-list">
+              <SkeletonBlock v-for="n in 3" :key="n" width="100%" height="14px" radius="6px" />
+            </div>
+          </div>
+        </div>
+```
+
+**Step 3: Add skeleton CSS**
+
+Add to the `<style scoped>` section (after the existing `.modal-loading` styles):
+
+```css
+.skeleton-tags {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1rem 0 1.5rem;
+}
+```
+
+**Step 4: Remove old spinner CSS**
+
+Remove `.spinner-emoji` styles if they exist (replaced by skeleton).
+
+**Step 5: Commit**
+
+```bash
+git add frontend/src/components/recipes/RecipeDetailModal.vue
+git commit -m "feat: replace RecipeDetailModal loading spinner with skeleton"
+```
 
 ---
 
-## Implementation Order
+### Task 4: Add entrance animation to EmptyState component
 
-1. **Wave 5** — Skeletons (GenerateMenu + RecipeDetailModal)
-2. **Wave 6** — Empty state icons + entrance animation
-3. **Wave 7** — Route page transitions
-4. **Wave 8** — Micro-interactions (button press, card hover, checkbox)
-5. **Wave 9** — Verify: type-check, lint, build, test
+**Files:**
+- Modify: `frontend/src/components/common/EmptyState.vue:32-35` (style)
 
-One commit per wave.
+**Step 1: Add animation to empty-state class**
+
+In the `.empty-state` CSS rule, add the animation:
+
+```css
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  animation: empty-state-enter 0.4s ease-out;
+}
+
+@keyframes empty-state-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+```
+
+This is already covered by the global `prefers-reduced-motion` rule in theme.css (forces `animation-duration: 0.01ms`).
+
+**Step 2: Commit**
+
+```bash
+git add frontend/src/components/common/EmptyState.vue
+git commit -m "feat: add fade-up entrance animation to EmptyState"
+```
+
+---
+
+### Task 5: Verify everything passes
+
+**Step 1: Type check**
+
+```bash
+cd frontend && npm run type-check
+```
+
+**Step 2: Lint**
+
+```bash
+npm run lint
+```
+
+**Step 3: Build**
+
+```bash
+npm run build
+```
+
+**Step 4: Test**
+
+```bash
+npm run test
+```
+
+All must pass. Fix any issues before proceeding.
+
+**Step 5: Commit any fixes**
+
+Only if lint/type-check required changes:
+```bash
+git add -A && git commit -m "fix: resolve type-check and lint issues from Phase 4"
+```
