@@ -9,6 +9,8 @@ import MenuDayCard from '@/components/menu/MenuDayCard.vue'
 import GenerateMenuEmptyState from '@/components/menu/GenerateMenuEmptyState.vue'
 import MenuGeneratorActions from '@/components/menu/MenuGeneratorActions.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
+import GenerateMenuSkeleton from '@/components/skeleton/layouts/GenerateMenuSkeleton.vue'
+import { useSkeleton } from '@/composables/useSkeleton'
 
 const router = useRouter()
 const store = useMenuGeneratorStore()
@@ -29,6 +31,10 @@ const hasNavigatedFromSave = ref(false)
 const days = computed(() => store.orderedDays)
 const hasMenu = computed(() => store.hasMenu)
 const isLoading = computed(() => store.isLoading)
+const { showSkeleton } = useSkeleton(
+  computed(() => store.isGenerating && !slotMachine.isAnimating.value),
+  { minDuration: 400 }
+)
 
 // Show grid during slot animation even before recipes arrive
 const showGrid = computed(() => {
@@ -204,8 +210,11 @@ onBeforeRouteLeave((to, from, next) => {
     <!-- Main content -->
     <main class="content">
       <div class="content-container">
+        <!-- Skeleton loading state -->
+        <GenerateMenuSkeleton v-if="showSkeleton" />
+
         <!-- Empty state -->
-        <GenerateMenuEmptyState v-if="!showGrid" @generate="handleInitialGenerate" />
+        <GenerateMenuEmptyState v-else-if="!showGrid" @generate="handleInitialGenerate" />
 
         <!-- Menu grid -->
         <div v-else class="menu-grid">
