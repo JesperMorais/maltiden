@@ -1,4 +1,11 @@
 <script setup lang="ts">
+/**
+ * Skeleton layout mirroring GenerateMenuView.vue
+ *
+ * Matches the exact grid, spacing, and border-radius values from:
+ * - MenuDayCard.vue (5-column grid, 20px radius, 280px min-height)
+ * - Action bar (back button, status text, save/generate buttons)
+ */
 import SkeletonBlock from '../SkeletonBlock.vue'
 import SkeletonCircle from '../SkeletonCircle.vue'
 </script>
@@ -95,6 +102,12 @@ import SkeletonCircle from '../SkeletonCircle.vue'
   .actions-right-skeleton {
     width: 100%;
     justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .menu-grid-skeleton {
+    grid-template-columns: 1fr;
   }
 }
 </style>
