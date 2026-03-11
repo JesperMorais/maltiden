@@ -2,7 +2,7 @@
 
 Uppgiftslista för Jesper & David.
 
-**Senast uppdaterad:** 2026-02-26
+**Senast uppdaterad:** 2026-03-10
 
 ---
 
@@ -125,37 +125,23 @@ Appen fungerar utan dessa, men UX blir klart sämre.
 
 Appen är desktop-first idag men betafamiljerna använder primärt mobil. Dessa CSS-justeringar krävs för bra UX på 375px–414px (iPhone SE/12/13/14).
 
-#### M1. WCAG AA kontrastproblem
-- Accent `#FF6B5B` på cream `#FFF5EF` = 2.6:1 (kräver 4.5:1)
-- Påverkar: "IDAG"-etikett, "Bjud in"-knapp, dagens-highlight i veckomeny
-- `--accent-text` fix (`#c4402e`, 4.75:1) finns i theme.css men appliceras inte överallt
-- **Filer:** `theme.css`, `WeeklyMenuGrid.vue`, `HouseholdWidget.vue`
+#### M1. WCAG AA kontrastproblem ✅
+- **Klart:** `--accent-text` (`#c4402e`, 4.75:1) applicerat på alla accent-element. Hardcoded `#FF6B5B` ersatt med CSS-variabler.
 
-#### M2. Landing page — grid-overflow på mobil
-- `FeaturesSection.vue`: `minmax(280px, 1fr)` tvingar horisontell scroll på 375px
-- Hero/CTA padding för stor på mobil (`padding-bottom: 10rem`, `padding: 3rem 2rem`)
-- **Filer:** `FeaturesSection.vue`, `HeroSection.vue`, `CtaSection.vue`
+#### M2. Landing page — grid-overflow på mobil ✅
+- **Klart:** Features-grid, hero och CTA anpassade för 375px. `minmax(280px, 1fr)` → responsiv kolumnbredd, padding reducerad på mobil.
 
-#### M3. Receptparsern — textarea för hög på mobil
-- `RecipeParseInput.vue`: `min-height: 300px` tar hela mobilskärmen
-- Bör vara 150–200px på små skärmar
-- **Filer:** `RecipeParseInput.vue`
+#### M3. Receptparsern — textarea för hög på mobil ✅
+- **Klart:** `min-height` reducerad till 150px på <480px-skärmar.
 
-#### M4. TodaysMeal-kort för högt på mobil
-- `min-height: 280px` + `padding: 2rem 1.5rem` på mobil trycker ner allt under fold
-- Bör vara `min-height: 200px`, `padding: 1.5rem 1rem` på <480px
-- **Filer:** `TodaysMeal.vue`
+#### M4. TodaysMeal-kort för högt på mobil ✅
+- **Klart:** `min-height: 200px`, `padding: 1.5rem 1rem` på <480px. Bättre fold-position på mobil.
 
-#### M5. Receptredigeringsformulär trångt på mobil
-- Ingrediensrader med fasta 90px inputs fungerar inte under 480px
-- Behöver bättre wrapping/stacking på små skärmar
-- **Filer:** `RecipeEditForm.vue`
+#### M5. Receptredigeringsformulär trångt på mobil ✅
+- **Klart:** Ingrediensrader stackar vertikalt på <480px istället för fasta 90px-kolumner.
 
-#### M6. Touch targets under 44px-minimum
-- `DashboardHeader.vue`: user-button `padding: 0.35rem` — för liten
-- Temaväxlare gränsfall (~32px diameter)
-- Alla interaktiva element bör vara minst 44×44px
-- **Filer:** `DashboardHeader.vue`, `BaseThemeToggle.vue`
+#### M6. Touch targets under 44px-minimum ✅
+- **Klart:** Alla interaktiva element minst 44×44px. Emoji-ikoner ersatta med Lucide-komponenter.
 
 ---
 
@@ -189,7 +175,7 @@ Appen är desktop-first idag men betafamiljerna använder primärt mobil. Dessa 
 - [x] 🟡 V5 klar (20 seed-recept)
 - [x] Minst 15 seed-recept finns (20 st)
 - [x] Fly.io volume snapshots verifierade (dagliga, 5d retention)
-- [ ] 🟠 M1–M6 mobilpolish klar
+- [x] 🟠 M1–M6 mobilpolish klar
 - [ ] Testat på riktig telefon (iPhone SE 375px + Android ~390px)
 - [ ] Philip gör en komplett QA-genomgång av alla flöden
 
