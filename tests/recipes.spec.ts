@@ -17,12 +17,12 @@ test.describe('Recipes page', () => {
   })
 
   test('shows tab controls', async ({ page }) => {
-    await expect(page.getByRole('button', { name: 'Mina recept' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Lägg till' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Mina recept' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Lägg till' })).toBeVisible()
   })
 
   test('my recipes tab is active by default', async ({ page }) => {
-    const myRecipesTab = page.getByRole('button', { name: 'Mina recept' })
+    const myRecipesTab = page.getByRole('tab', { name: 'Mina recept' })
     await expect(myRecipesTab).toHaveClass(/active/)
   })
 
@@ -46,7 +46,7 @@ test.describe('Recipes page', () => {
   })
 
   test('switches to add recipe tab', async ({ page }) => {
-    await page.getByRole('button', { name: 'Lägg till' }).click()
+    await page.getByRole('tab', { name: 'Lägg till' }).click()
     await page.waitForTimeout(500)
     await expect(page.getByText(/Hur vill du lägga till/i)).toBeVisible({ timeout: 3000 })
   })
@@ -59,9 +59,9 @@ test.describe('Recipes page', () => {
   })
 
   test('switching back to list tab shows recipes again', async ({ page }) => {
-    await page.getByRole('button', { name: 'Lägg till' }).click()
+    await page.getByRole('tab', { name: 'Lägg till' }).click()
     await page.waitForTimeout(500)
-    await page.getByRole('button', { name: 'Mina recept' }).click()
+    await page.getByRole('tab', { name: 'Mina recept' }).click()
     await page.waitForTimeout(1500)
     const recipes = page.locator('[class*="recipe-card"], [class*="RecipeCard"]')
     await expect(recipes.first()).toBeVisible({ timeout: 5000 })

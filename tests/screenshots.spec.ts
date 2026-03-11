@@ -105,7 +105,7 @@ test.describe('Screenshots: Logged-in views', () => {
         await expect(page).toHaveURL(/\/recipes/)
         await page.waitForTimeout(1000)
 
-        await page.getByRole('button', { name: 'Lägg till' }).click()
+        await page.getByRole('tab', { name: 'Lägg till' }).click()
         await page.waitForTimeout(1000)
         await page.screenshot({
           path: screenshotPath('add-recipe', vp.name),
