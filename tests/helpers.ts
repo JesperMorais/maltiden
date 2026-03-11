@@ -12,14 +12,17 @@ export async function login(page: Page) {
 
 /** Navigate via Vue Router (preserves Pinia state) */
 export async function navigateTo(page: Page, path: string) {
-  // Click a link to trigger Vue Router navigation
   await page.evaluate((p) => {
-    const link = document.createElement('a')
-    link.href = p
-    link.style.display = 'none'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
+    // Access the Vue Router instance from the app
+    const app = (document.querySelector('#app') as any)?.__vue_app__
+    const router = app?.config?.globalProperties?.$router
+    if (router) {
+      router.push(p)
+    } else {
+      // Fallback: use history.pushState + popstate to trigger router
+      window.history.pushState({}, '', p)
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    }
   }, path)
   await page.waitForURL(new RegExp(path.replace(/\//g, '\\/')), { timeout: 5000 })
 }
