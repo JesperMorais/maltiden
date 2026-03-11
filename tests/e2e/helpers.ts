@@ -15,12 +15,11 @@ export function generateUniqueName(prefix: string): string {
 /** Register a new user via the Onboarding "Create household" UI flow. */
 export async function registerUser(
   page: Page,
-  options?: { email?: string; password?: string; name?: string; householdName?: string },
+  options?: { email?: string; password?: string; name?: string },
 ): Promise<{ email: string; password: string; name: string }> {
   const email = options?.email ?? generateUniqueEmail()
   const password = options?.password ?? 'TestPassword123!'
   const name = options?.name ?? 'Test User'
-  const householdName = options?.householdName ?? 'Test Hushåll'
 
   await page.goto('/register')
   await page.getByText('Skapa nytt hushåll').click()
@@ -29,7 +28,6 @@ export async function registerUser(
   await page.getByPlaceholder('anna@exempel.se').fill(email)
   await page.getByPlaceholder('Minst 8 tecken').fill(password)
   await page.getByPlaceholder('Skriv lösenordet igen').fill(password)
-  await page.getByPlaceholder('Familjen Andersson').fill(householdName)
 
   await page.getByRole('button', { name: 'Skapa konto' }).click()
   await expect(page.getByText('Konto skapat!')).toBeVisible({ timeout: 10_000 })
