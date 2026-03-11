@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { login } from './helpers'
+import { login, navigateTo } from './helpers'
 
 test.describe('Recipes page', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
-    await page.getByRole('button', { name: /Recept.*Hantera/ }).click()
+    await navigateTo(page, '/recipes')
     await expect(page).toHaveURL(/\/recipes/)
   })
 
