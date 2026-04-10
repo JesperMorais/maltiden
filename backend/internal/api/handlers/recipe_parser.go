@@ -1,8 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
-	"log"
+	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"net/http"
@@ -25,63 +24,61 @@ func NewRecipeParserHandler(
 
 func (h *RecipeParserHandler) ParseRecipe(w http.ResponseWriter, r *http.Request) {
 	var req domain.ParseRecipeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
 	if req.RawText == "" {
-		http.Error(w, `{"error":"rawText is required"}`, http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "raw_text_required")
 		return
 	}
 
 	if len(req.RawText) > 10000 {
-		http.Error(w, `{"error":"input too long (max 10000 characters)"}`, http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "input_too_long")
 		return
 	}
 
 	result, err := h.parserService.ParseRecipe(req.RawText)
 	if err != nil {
-		log.Printf("ParseRecipe error: %v", err)
-		http.Error(w, `{"error":"failed to parse recipe"}`, http.StatusInternalServerError)
+		slog.Error("ParseRecipe failed", "error", err)
+		WriteError(w, http.StatusInternalServerError, "parse_failed")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	WriteJSON(w, http.StatusOK, result)
 }
 
 func (h *RecipeParserHandler) ParseAndSave(w http.ResponseWriter, r *http.Request) {
 	var req domain.ParseRecipeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
 	if req.RawText == "" {
-		http.Error(w, `{"error":"rawText is required"}`, http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "raw_text_required")
 		return
 	}
 
 	if len(req.RawText) > 10000 {
-		http.Error(w, `{"error":"input too long (max 10000 characters)"}`, http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "input_too_long")
 		return
 	}
 
 	parsed, err := h.parserService.ParseRecipe(req.RawText)
 	if err != nil {
-		http.Error(w, `{"error":"failed to parse recipe"}`, http.StatusInternalServerError)
+		slog.Error("ParseAndSave parse failed", "error", err)
+		WriteError(w, http.StatusInternalServerError, "parse_failed")
 		return
 	}
 
 	created, err := h.recipeService.Create(parsed.Recipe)
 	if err != nil {
-		http.Error(w, `{"error":"failed to save recipe"}`, http.StatusInternalServerError)
+		slog.Error("ParseAndSave save failed", "error", err)
+		WriteError(w, http.StatusInternalServerError, "save_failed")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	WriteJSON(w, http.StatusCreated, map[string]interface{}{
 		"id":         created.ID,
 		"recipe":     parsed.Recipe,
 		"confidence": parsed.Confidence,

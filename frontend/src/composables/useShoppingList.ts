@@ -8,6 +8,7 @@ import {
 
 export function useShoppingList() {
   const shoppingList = ref<ShoppingList | null>(null)
+  const activeMenuId = ref<string | undefined>(undefined)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
@@ -33,6 +34,7 @@ export function useShoppingList() {
   )
 
   async function fetchList(menuId?: string) {
+    activeMenuId.value = menuId
     isLoading.value = true
     error.value = null
     try {
@@ -55,7 +57,7 @@ export function useShoppingList() {
     }
 
     try {
-      await toggleItem(itemId, checked)
+      await toggleItem(itemId, checked, activeMenuId.value)
     } catch {
       // Revert on failure
       for (const cat of categories.value) {

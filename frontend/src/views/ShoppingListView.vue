@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useShoppingList } from '@/composables/useShoppingList'
 import { useSkeleton } from '@/composables/useSkeleton'
+import { useDashboardStore } from '@/stores/dashboard'
 
 const router = useRouter()
+const route = useRoute()
+const dashboardStore = useDashboardStore()
 const {
   isLoading,
   error,
@@ -21,8 +24,18 @@ const { showSkeleton } = useSkeleton(
   { minDuration: 300 }
 )
 
-onMounted(() => {
-  fetchList()
+onMounted(async () => {
+  // Get menuId from query param, or from dashboard store
+  const menuId = (route.query.menuId as string) || dashboardStore.currentMenuId
+  if (menuId) {
+    fetchList(menuId)
+  } else {
+    // Try to load dashboard first to get the current menu
+    await dashboardStore.fetchDashboard()
+    if (dashboardStore.currentMenuId) {
+      fetchList(dashboardStore.currentMenuId)
+    }
+  }
 })
 </script>
 
@@ -59,7 +72,7 @@ onMounted(() => {
           <span class="error-icon">😅</span>
           <h2>Något gick fel</h2>
           <p>{{ error }}</p>
-          <button class="retry-btn" @click="fetchList()">Försök igen</button>
+          <button class="retry-btn" @click="fetchList(dashboardStore.currentMenuId ?? undefined)">Försök igen</button>
         </div>
 
         <!-- Empty state -->
