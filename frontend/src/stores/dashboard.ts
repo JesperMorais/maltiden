@@ -188,6 +188,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
         } catch {
           // No shopping list available
         }
+      } else {
+        currentMenuId.value = null
       }
 
       dashboardData.value = {
