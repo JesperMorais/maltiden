@@ -138,6 +138,15 @@ async function handleJoinAsMember() {
     }, 2000)
   } catch (e) {
     isSubmitting.value = false
+
+    // Registration succeeded but join failed — user is already authenticated
+    // with their own household. Redirect to dashboard instead of leaving
+    // them stuck on the form (retrying would fail with duplicate email).
+    if (userStore.currentUser) {
+      router.push('/dashboard')
+      return
+    }
+
     const err = e as { response?: { data?: { error?: string } } }
     const errorCode = err?.response?.data?.error
     if (errorCode === 'invalid_code') {
@@ -182,6 +191,13 @@ async function handleJoinAsGuest() {
     }, 2000)
   } catch {
     isSubmitting.value = false
+
+    // Registration succeeded but join failed — redirect to dashboard
+    if (userStore.currentUser) {
+      router.push('/dashboard')
+      return
+    }
+
     joinError.value = 'Kunde inte gå med i hushållet. Försök igen.'
   }
 }
