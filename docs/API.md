@@ -2,23 +2,23 @@
 
 Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
-## Recent Changes (PR #35)
+## Recent Changes (PR #110)
 
-**Recipe Navigation Consolidation:**
-- Added new unified `/recipes` route with tabbed interface ("Mina recept" and "Lägg till")
-- Added redirect from legacy `/recipes/parse` route to `/recipes`
-- Route requires authentication and member access
+**Bug Fixes:**
+- Orphaned account handling: if `POST /households/join` fails after `POST /auth/register` succeeds, the frontend now detects the already-authenticated state and redirects to dashboard instead of showing an unrecoverable form error.
+- Stale `currentMenuId`: `GET /menus/current` returning `null` now correctly resets the cached menu ID on the frontend, preventing shopping list fetches with an expired menu ID.
 
-**New API Endpoints:**
-- `POST /recipes/parse` - Parse unstructured recipe text into structured data using AI
-- `POST /recipes/parse-and-save` - Parse and immediately save recipe to database
-- Both endpoints support 60-second timeout for AI processing
-- Both endpoints accept optional `source` URL parameter
+**Documentation Updates:**
+- Added `/shopping-list` frontend route (was missing from route table)
+- Corrected `POST /auth/register` error codes to match backend (`email_already_exists` at 409, added `weak_password` and `invalid_email`)
+- Documented required `menuId` query parameter on shopping list endpoints
+- Documented IDOR protection (403 `forbidden`) on shopping list endpoints
+- Added `already_member` (409) and `code_required` (400) errors for `POST /households/join`
+- Added `emoji` field to recipe and menu day response types
+- Added `recipeName` field to menu day response type
+- Expanded error code reference table
 
-**Frontend Implementation:**
-- Frontend API client implemented in `frontend/src/api/recipes.api.ts`
-- Mock implementations available for development
-- Integrated into new `RecipesView` component with tabs
+---
 
 ## Auth
 
@@ -28,7 +28,8 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 {
   "email": "anna@example.com",
   "password": "minst8tecken",
-  "name": "Anna"
+  "name": "Anna",
+  "householdName": "Familjen Svensson"  // optional — creates household with this name
 }
 
 // Response 201
@@ -42,8 +43,12 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
   }
 }
 
+// Error 409
+{ "error": "email_already_exists" }
+
 // Error 400
-{ "error": "email_taken" }
+{ "error": "weak_password" }
+{ "error": "invalid_email" }
 ```
 
 ### POST /auth/login
@@ -84,6 +89,7 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 ```
 
 ### POST /households/invite
+Guests cannot create invite codes — only owners and members can.
 ```json
 // Request
 {}
@@ -93,6 +99,9 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
   "code": "ABC123",
   "expiresAt": "2025-01-20T12:00:00Z"
 }
+
+// Error 403
+{ "error": "forbidden" }  // caller is a guest
 ```
 
 ### POST /households/join
@@ -104,7 +113,11 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 { "householdId": "hh_xyz789" }
 
 // Error 400
-{ "error": "invalid_code" }
+{ "error": "code_required" }  // missing code field
+{ "error": "invalid_code" }   // code not found or expired
+
+// Error 409
+{ "error": "already_member" }  // user is already in a household
 ```
 
 ### GET /households/members/status
@@ -126,9 +139,9 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 }
 ```
 
-### PATCH /households/members/:id/status
+### PATCH /households/members/{id}/status
 ```json
-// Request (partial update)
+// Request (partial update — at least one field required)
 { "isEatingToday": false }
 // or
 { "wantsLunchBox": true }
@@ -137,15 +150,19 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
 // Response 200
 { "ok": true }
+
+// Error 400
+{ "error": "no_fields_to_update" }
 ```
 
-### DELETE /households/members/:id
+### DELETE /households/members/{id}
 ```json
 // Response 200
 { "ok": true }
 
-// Error 403 (can't remove yourself or owner)
-{ "error": "cannot_remove" }
+// Error 403
+{ "error": "cannot_remove" }  // can't remove yourself or owner
+{ "error": "forbidden" }      // caller lacks permission
 ```
 
 ---
@@ -153,6 +170,7 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 ## Recipes
 
 ### GET /recipes
+Public endpoint — no auth required.
 ```json
 // Response 200
 {
@@ -161,13 +179,15 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
       "id": "rec_001",
       "name": "Köttfärssås",
       "servings": 4,
-      "tags": ["vardag", "barn"]
+      "tags": ["vardag", "barn"],
+      "emoji": "🍝"  // optional
     }
   ]
 }
 ```
 
-### GET /recipes/:id
+### GET /recipes/{id}
+Public endpoint — no auth required.
 ```json
 // Response 200
 {
@@ -183,11 +203,13 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
     "Tillsätt tomater",
     "Låt sjuda 20 min"
   ],
-  "tags": ["vardag", "barn"]
+  "tags": ["vardag", "barn"],
+  "emoji": "🍝"  // optional
 }
 ```
 
-### POST /recipes (admin/Philip)
+### POST /recipes
+Auth required.
 ```json
 // Request
 {
@@ -203,7 +225,7 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 ```
 
 ### POST /recipes/parse
-Parse unstructured recipe text into structured data using AI.
+Parse unstructured recipe text into structured data using AI. Auth required.
 ```json
 // Request
 {
@@ -239,7 +261,7 @@ Parse unstructured recipe text into structured data using AI.
 ```
 
 ### POST /recipes/parse-and-save
-Parse recipe text and immediately save it to the database.
+Parse recipe text and immediately save it to the database. Auth required.
 ```json
 // Request
 {
@@ -272,6 +294,8 @@ Parse recipe text and immediately save it to the database.
 
 ## Menu
 
+**Auth required:** `Authorization: Bearer <token>`
+
 ### POST /menus/generate
 ```json
 // Request
@@ -286,20 +310,30 @@ Parse recipe text and immediately save it to the database.
 {
   "id": "menu_001",
   "days": [
-    { "date": "2025-01-20", "recipeId": "rec_001", "servings": 4 },
-    { "date": "2025-01-21", "recipeId": "rec_002", "servings": 4 },
-    { "date": "2025-01-22", "skip": true },
-    { "date": "2025-01-23", "recipeId": "rec_003", "servings": 6 }
+    { "date": "2025-01-20", "recipeId": "rec_001", "recipeName": "Köttfärssås", "emoji": "🍝", "servings": 4 },
+    { "date": "2025-01-21", "recipeId": "rec_002", "recipeName": "Pasta Carbonara", "emoji": "🍜", "servings": 4 },
+    { "date": "2025-01-22", "skip": true, "servings": 0 },
+    { "date": "2025-01-23", "recipeId": "rec_003", "recipeName": "Lax med ris", "emoji": "🐟", "servings": 6 }
   ]
 }
+
+// Error 400
+{ "error": "invalid_days" }      // days must be 1–14
+{ "error": "invalid_servings" }  // servings must be > 0
+{ "error": "no_recipes_available" }
 ```
 
 ### GET /menus/current
 ```json
 // Response 200
-{ "id": "menu_001", "days": [...] }
+{
+  "id": "menu_001",
+  "days": [
+    { "date": "2025-01-20", "recipeId": "rec_001", "recipeName": "Köttfärssås", "emoji": "🍝", "servings": 4 }
+  ]
+}
 
-// Response 404 (ingen aktiv meny)
+// Response 404 (no active menu)
 { "error": "no_active_menu" }
 ```
 
@@ -307,9 +341,13 @@ Parse recipe text and immediately save it to the database.
 
 ## Shopping List
 
+**Auth required:** `Authorization: Bearer <token>`
+
+IDOR protection is enforced: the menu must belong to the caller's household.
+
 ### GET /shopping-list
 ```json
-// Query: ?menuId=menu_001
+// Query: ?menuId=menu_001  (required)
 
 // Response 200
 {
@@ -318,26 +356,45 @@ Parse recipe text and immediately save it to the database.
     {
       "name": "Kött & Fisk",
       "items": [
-        { "name": "Köttfärs", "amount": 800, "unit": "g", "checked": false }
+        { "id": "item_001", "name": "Köttfärs", "amount": 800, "unit": "g", "checked": false }
       ]
     },
     {
       "name": "Mejeri",
       "items": [
-        { "name": "Grädde", "amount": 2, "unit": "dl", "checked": false }
+        { "id": "item_002", "name": "Grädde", "amount": 2, "unit": "dl", "checked": false }
       ]
     }
   ]
 }
+
+// Error 400
+{ "error": "invalid_input" }  // missing or malformed menuId
+
+// Error 403
+{ "error": "forbidden" }  // menu belongs to a different household
+
+// Error 404
+{ "error": "menu_not_found" }
 ```
 
-### PATCH /shopping-list/items/:id
+### PATCH /shopping-list/items/{id}
 ```json
+// Query: ?menuId=menu_001  (required)
 // Request
 { "checked": true }
 
 // Response 200
 { "ok": true }
+
+// Error 400
+{ "error": "invalid_input" }  // missing or malformed menuId
+
+// Error 403
+{ "error": "forbidden" }  // menu belongs to a different household
+
+// Error 404
+{ "error": "menu_not_found" }
 ```
 
 ---
@@ -416,23 +473,37 @@ Get list of available stores in the area.
 
 ---
 
-## Error-format
+## Error Format
 
-Alla errors följer samma struktur:
+All errors use the same structure:
 ```json
 {
   "error": "error_code",
-  "message": "Läsbar beskrivning (valfri)"
+  "message": "Human-readable description (optional)"
 }
 ```
 
-| Kod | HTTP | Betydelse |
-|-----|------|-----------|
-| `invalid_credentials` | 401 | Fel email/lösenord |
-| `unauthorized` | 401 | Token saknas/ogiltig |
-| `email_taken` | 400 | Email redan registrerad |
-| `invalid_code` | 400 | Inbjudningskod ogiltig/utgången |
-| `not_found` | 404 | Resursen finns inte |
+| Code | HTTP | Description |
+|------|------|-------------|
+| `invalid_credentials` | 401 | Wrong email or password |
+| `unauthorized` | 401 | Token missing or invalid |
+| `email_already_exists` | 409 | Email already registered |
+| `weak_password` | 400 | Password too short or too simple |
+| `invalid_email` | 400 | Email format invalid |
+| `code_required` | 400 | Invite code field missing |
+| `invalid_code` | 400 | Invite code not found or expired |
+| `already_member` | 409 | User is already in a household |
+| `no_fields_to_update` | 400 | PATCH request body has no recognized fields |
+| `cannot_remove` | 403 | Cannot remove yourself or the household owner |
+| `forbidden` | 403 | Caller lacks permission for this action |
+| `not_found` | 404 | Resource not found |
+| `menu_not_found` | 404 | Menu ID not found |
+| `no_active_menu` | 404 | No current active menu for household |
+| `invalid_days` | 400 | days parameter out of valid range |
+| `invalid_servings` | 400 | servings must be a positive integer |
+| `no_recipes_available` | 400 | No recipes to generate a menu from |
+| `invalid_input` | 400 | Request body or query param malformed |
+| `internal_error` | 500 | Unexpected server error |
 
 ---
 
@@ -449,6 +520,7 @@ The frontend uses Vue Router with the following routes:
 | `/menu/generate` | GenerateMenuView | Yes | Yes | Menu generator (members only) |
 | `/recipes` | RecipesView | Yes | Yes | Unified recipes page with tabs |
 | `/recipes/parse` | *(redirect to /recipes)* | Yes | Yes | Legacy route, redirects to recipes |
+| `/shopping-list` | ShoppingListView | Yes | Yes | Shopping list (members only) |
 | `/about` | AboutView | No | No | About page |
 | `/offers-poc` | OffersView | No | No | Offers POC page |
 
@@ -470,17 +542,17 @@ The frontend uses Vue Router with the following routes:
 | POST /households/invite | ✅ | ✅ |
 | POST /households/join | ✅ | ✅ |
 | GET /households/members/status | ✅ | ✅ |
-| PATCH /households/members/:id/status | ✅ | ✅ |
-| DELETE /households/members/:id | ✅ | ✅ |
+| PATCH /households/members/{id}/status | ✅ | ✅ |
+| DELETE /households/members/{id} | ✅ | ✅ |
 | GET /recipes | ✅ | ✅ |
-| GET /recipes/:id | ✅ | ✅ |
+| GET /recipes/{id} | ✅ | ✅ |
 | POST /recipes | ✅ | ✅ |
 | POST /recipes/parse | ✅ | ✅ |
 | POST /recipes/parse-and-save | ✅ | ✅ |
 | POST /menus/generate | ✅ | ✅ |
 | GET /menus/current | ✅ | ✅ |
 | GET /shopping-list | ✅ | ✅ |
-| PATCH /shopping-list/items/:id | ✅ | ✅ |
+| PATCH /shopping-list/items/{id} | ✅ | ✅ |
 | GET /offers/search | ✅ | ✅ |
 | GET /offers/discounts | ✅ | ✅ |
 | GET /offers/stores | ✅ | ✅ |
