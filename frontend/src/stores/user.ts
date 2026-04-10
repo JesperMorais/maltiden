@@ -102,18 +102,23 @@ export const useUserStore = defineStore('user', () => {
   /**
    * Register a new user
    */
-  async function register(name: string, email: string, password: string): Promise<boolean> {
+  async function register(
+    name: string,
+    email: string,
+    password: string,
+    householdName?: string,
+  ): Promise<boolean> {
     isLoading.value = true
     error.value = null
 
     try {
-      const response = await authApi.register(name, email, password)
+      const response = await authApi.register(name, email, password, householdName)
       tokenUtils.set(response.token)
       setUser({
         id: response.user.id,
         name: response.user.name,
         email: response.user.email,
-        role: 'member'
+        role: 'owner',
       })
       return true
     } catch (e) {

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useUserStore } from '@/stores/user'
 import { usePlanningPreferencesStore } from '@/stores/planningPreferences'
+import { createInvite, removeMember } from '@/api/household.api'
 import DashboardHeader from '@/components/dashboard/DashboardHeader.vue'
 import TodaysMeal from '@/components/dashboard/TodaysMeal.vue'
 import WeeklyMenuGrid from '@/components/dashboard/WeeklyMenuGrid.vue'
@@ -31,6 +32,12 @@ const prefsStore = usePlanningPreferencesStore()
 // Settings modal state
 const showSettings = ref(false)
 
+// Invite modal state
+const showInviteModal = ref(false)
+const generatedInviteCode = ref('')
+const isGeneratingInvite = ref(false)
+const inviteExpiresAt = ref('')
+
 onMounted(() => {
   dashboardStore.fetchDashboard()
   userStore.initFromToken()
@@ -38,13 +45,16 @@ onMounted(() => {
 })
 
 function handleDayClick(day: MenuDay) {
-  console.log('Day clicked:', day)
-  // TODO: Open day detail modal
+  if (day.meal) {
+    router.push({ name: 'recipes' })
+  }
 }
 
 function handleMealClick() {
-  console.log('Today meal clicked')
-  // TODO: Open recipe detail
+  const meal = dashboardStore.todaysMeal
+  if (meal) {
+    router.push({ name: 'recipes' })
+  }
 }
 
 function handleLogout() {
@@ -71,19 +81,42 @@ function handleParseRecipe() {
   router.push('/recipes/parse')
 }
 
-function handleInviteMember() {
-  console.log('Invite member')
-  // TODO: Show invite modal
+async function handleInviteMember() {
+  await generateAndShowInvite()
 }
 
-function handleShowInvite() {
-  console.log('Show invite code')
-  // TODO: Show invite modal
+async function handleShowInvite() {
+  await generateAndShowInvite()
 }
 
-function handleRemoveMember(memberId: string) {
-  console.log('Remove member:', memberId)
-  // TODO: Call API to remove member from household
+async function generateAndShowInvite() {
+  isGeneratingInvite.value = true
+  showInviteModal.value = true
+
+  try {
+    const response = await createInvite()
+    generatedInviteCode.value = response.code
+    inviteExpiresAt.value = new Date(response.expiresAt).toLocaleDateString('sv-SE')
+  } catch {
+    generatedInviteCode.value = ''
+  } finally {
+    isGeneratingInvite.value = false
+  }
+}
+
+function closeInviteModal() {
+  showInviteModal.value = false
+  generatedInviteCode.value = ''
+}
+
+async function handleRemoveMember(memberId: string) {
+  try {
+    await removeMember(memberId)
+    // Refresh dashboard to reflect the change
+    await dashboardStore.fetchDashboard(true)
+  } catch (e) {
+    console.error('Failed to remove member:', e)
+  }
 }
 
 function handleViewShoppingList() {
@@ -186,6 +219,29 @@ function handleViewShoppingList() {
         @close="handleCloseSettings"
         @logout="handleLogout"
       />
+
+      <!-- Invite Modal -->
+      <Teleport to="body">
+        <Transition name="modal">
+          <div v-if="showInviteModal" class="invite-overlay" @click.self="closeInviteModal">
+            <div class="invite-dialog">
+              <button class="invite-close" @click="closeInviteModal" aria-label="Stäng">x</button>
+              <h3 class="invite-title">Bjud in till hushållet</h3>
+              <template v-if="isGeneratingInvite">
+                <p class="invite-loading">Skapar inbjudningskod...</p>
+              </template>
+              <template v-else-if="generatedInviteCode">
+                <p class="invite-description">Dela denna kod med den du vill bjuda in:</p>
+                <div class="invite-code-display">{{ generatedInviteCode }}</div>
+                <p class="invite-expires">Giltig till {{ inviteExpiresAt }}</p>
+              </template>
+              <template v-else>
+                <p class="invite-error">Kunde inte skapa inbjudningskod. Försök igen.</p>
+              </template>
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
     </template>
   </div>
 </template>
@@ -317,5 +373,111 @@ function handleViewShoppingList() {
   .sidebar {
     grid-template-columns: 1fr;
   }
+}
+</style>
+
+<!-- Non-scoped styles for teleported invite modal -->
+<style>
+.invite-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.invite-dialog {
+  background: var(--bg-primary);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.invite-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.invite-close:hover {
+  background: var(--bg-hover);
+}
+
+.invite-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  margin: 0 0 1rem;
+}
+
+.invite-description {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+}
+
+.invite-code-display {
+  font-family: 'Courier New', monospace;
+  font-weight: 800;
+  font-size: 2rem;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  background: var(--bg-hover);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 0 0 0.75rem;
+  user-select: all;
+}
+
+.invite-expires {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.invite-loading {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 1rem 0;
+}
+
+.invite-error {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  color: var(--error);
+  margin: 1rem 0;
+}
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: all 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
 }
 </style>
