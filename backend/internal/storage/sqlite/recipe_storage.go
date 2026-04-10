@@ -29,6 +29,8 @@ func (s *RecipeStorage) GetAll(filter *domain.RecipeFilter, householdID string) 
 	if householdID != "" {
 		query += ` AND (household_id = ? OR household_id IS NULL)`
 		args = append(args, householdID)
+	} else {
+		query += ` AND household_id IS NULL`
 	}
 
 	// Add name filter (case-insensitive partial match)
@@ -204,6 +206,8 @@ func (s *RecipeStorage) GetAllPaginated(filter *domain.RecipeFilter, householdID
 	if householdID != "" {
 		whereClause += " AND (household_id = ? OR household_id IS NULL)"
 		args = append(args, householdID)
+	} else {
+		whereClause += " AND household_id IS NULL"
 	}
 
 	// Add name filter (case-insensitive partial match)

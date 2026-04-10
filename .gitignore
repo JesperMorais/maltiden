@@ -49,8 +49,13 @@ playwright-report/
 /playwright/.cache/
 /playwright/.auth/
 
+# Python
+__pycache__/
+*.pyc
+
 # Lighthouse
 tests/lighthouse-*.report.json
+tests/lighthouse-*.report.html
 tests/lighthouse-desktop-after/
 tests/lighthouse-mobile-after/
 
