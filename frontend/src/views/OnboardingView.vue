@@ -4,6 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
 import { useUserStore } from '@/stores/user'
+import { joinHousehold } from '@/api/household.api'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -17,12 +18,14 @@ const joinStep = ref<JoinStep>('code')
 const matchedFamily = ref('')
 const isValidatingCode = ref(false)
 const codeError = ref('')
+// Store the validated code for later join
+const validatedCode = ref('')
 
 const joinForm = ref({
   name: '',
   email: '',
   password: '',
-  passwordConfirm: ''
+  passwordConfirm: '',
 })
 
 const createForm = ref({
@@ -30,11 +33,12 @@ const createForm = ref({
   email: '',
   password: '',
   passwordConfirm: '',
-  householdName: ''
+  householdName: '',
 })
 const isSubmitting = ref(false)
 const submitSuccess = ref(false)
 const joinedAsMember = ref(false)
+const joinError = ref('')
 
 // Password visibility toggles
 const showJoinPassword = ref(false)
@@ -42,35 +46,29 @@ const showJoinPasswordConfirm = ref(false)
 const showCreatePassword = ref(false)
 const showCreatePasswordConfirm = ref(false)
 
-// Mock family database
-const mockFamilies: Record<string, string> = {
-  'ABC123': 'Familjen Andersson',
-  'FAM456': 'Johanssons Hushåll',
-  'TEST99': 'Testfamiljen',
-  'DEMO01': 'Demo Hushåll'
-}
-
 const canSubmitCode = computed(() => joinCode.value.length >= 4)
 
-const passwordsMatchCreate = computed(() =>
-  createForm.value.password === createForm.value.passwordConfirm
+const passwordsMatchCreate = computed(
+  () => createForm.value.password === createForm.value.passwordConfirm,
 )
-const passwordsMatchJoin = computed(() =>
-  joinForm.value.password === joinForm.value.passwordConfirm
+const passwordsMatchJoin = computed(
+  () => joinForm.value.password === joinForm.value.passwordConfirm,
 )
 
-const canSubmitCreate = computed(() =>
-  createForm.value.name.length >= 2 &&
-  createForm.value.email.includes('@') &&
-  createForm.value.password.length >= 8 &&
-  passwordsMatchCreate.value &&
-  createForm.value.householdName.length >= 2
+const canSubmitCreate = computed(
+  () =>
+    createForm.value.name.length >= 2 &&
+    createForm.value.email.includes('@') &&
+    createForm.value.password.length >= 8 &&
+    passwordsMatchCreate.value &&
+    createForm.value.householdName.length >= 2,
 )
-const canSubmitJoinMember = computed(() =>
-  joinForm.value.name.length >= 2 &&
-  joinForm.value.email.includes('@') &&
-  joinForm.value.password.length >= 8 &&
-  passwordsMatchJoin.value
+const canSubmitJoinMember = computed(
+  () =>
+    joinForm.value.name.length >= 2 &&
+    joinForm.value.email.includes('@') &&
+    joinForm.value.password.length >= 8 &&
+    passwordsMatchJoin.value,
 )
 const canSubmitJoinGuest = computed(() => joinForm.value.name.length >= 2)
 
@@ -79,6 +77,7 @@ function selectChoice(choice: Choice) {
   submitSuccess.value = false
   joinStep.value = 'code'
   codeError.value = ''
+  joinError.value = ''
   joinCode.value = ''
   matchedFamily.value = ''
 }
@@ -88,21 +87,17 @@ async function validateCode() {
   isValidatingCode.value = true
   codeError.value = ''
 
-  // Mock API call - check if code exists
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  // For now, we accept the code and proceed to the next step.
+  // The actual validation happens when the user tries to join.
+  // We store the code for later use.
+  validatedCode.value = joinCode.value.toUpperCase()
+  matchedFamily.value = 'Hushållet'
+  joinStep.value = 'welcome'
 
-  const upperCode = joinCode.value.toUpperCase()
-  if (mockFamilies[upperCode]) {
-    matchedFamily.value = mockFamilies[upperCode]
-    joinStep.value = 'welcome'
-
-    // Auto-advance to choice after showing welcome
-    setTimeout(() => {
-      joinStep.value = 'member-or-guest'
-    }, 1500)
-  } else {
-    codeError.value = 'Koden hittades inte. Kontrollera och försök igen.'
-  }
+  // Auto-advance to choice after showing welcome
+  setTimeout(() => {
+    joinStep.value = 'member-or-guest'
+  }, 1500)
 
   isValidatingCode.value = false
 }
@@ -114,23 +109,81 @@ function selectJoinType(type: 'member' | 'guest') {
 async function handleJoinAsMember() {
   if (!canSubmitJoinMember.value) return
   isSubmitting.value = true
+  joinError.value = ''
 
-  await new Promise(resolve => setTimeout(resolve, 1500))
+  try {
+    // First register the user
+    const success = await userStore.register(
+      joinForm.value.name,
+      joinForm.value.email,
+      joinForm.value.password,
+    )
 
-  isSubmitting.value = false
-  joinedAsMember.value = true
-  submitSuccess.value = true
+    if (!success) {
+      joinError.value = userStore.error || 'Registreringen misslyckades'
+      isSubmitting.value = false
+      return
+    }
+
+    // Then join the household with the invite code
+    await joinHousehold(validatedCode.value)
+
+    isSubmitting.value = false
+    joinedAsMember.value = true
+    submitSuccess.value = true
+
+    // Redirect to dashboard
+    setTimeout(() => {
+      router.push('/dashboard')
+    }, 2000)
+  } catch (e) {
+    isSubmitting.value = false
+    const err = e as { response?: { data?: { error?: string } } }
+    const errorCode = err?.response?.data?.error
+    if (errorCode === 'invalid_code') {
+      joinError.value = 'Inbjudningskoden är ogiltig eller har gått ut.'
+    } else if (errorCode === 'already_member') {
+      joinError.value = 'Du är redan medlem i detta hushåll.'
+    } else {
+      joinError.value = 'Kunde inte gå med i hushållet. Försök igen.'
+    }
+  }
 }
 
 async function handleJoinAsGuest() {
   if (!canSubmitJoinGuest.value) return
   isSubmitting.value = true
+  joinError.value = ''
 
-  await new Promise(resolve => setTimeout(resolve, 1500))
+  try {
+    // Register a guest account (minimal info)
+    const success = await userStore.register(
+      joinForm.value.name,
+      `guest_${Date.now()}@maltiden.local`,
+      `Guest${Date.now()}!`,
+    )
 
-  isSubmitting.value = false
-  joinedAsMember.value = false
-  submitSuccess.value = true
+    if (!success) {
+      joinError.value = userStore.error || 'Registreringen misslyckades'
+      isSubmitting.value = false
+      return
+    }
+
+    // Join household with invite code
+    await joinHousehold(validatedCode.value)
+
+    isSubmitting.value = false
+    joinedAsMember.value = false
+    submitSuccess.value = true
+
+    // Redirect to dashboard
+    setTimeout(() => {
+      router.push('/dashboard')
+    }, 2000)
+  } catch {
+    isSubmitting.value = false
+    joinError.value = 'Kunde inte gå med i hushållet. Försök igen.'
+  }
 }
 
 const createError = ref('')
@@ -140,11 +193,12 @@ async function handleCreate() {
   isSubmitting.value = true
   createError.value = ''
 
-  // Call real backend registration
+  // Call real backend registration with household name
   const success = await userStore.register(
     createForm.value.name,
     createForm.value.email,
-    createForm.value.password
+    createForm.value.password,
+    createForm.value.householdName,
   )
 
   isSubmitting.value = false
@@ -392,6 +446,8 @@ async function handleCreate() {
                     </span>
                   </label>
 
+                  <p v-if="joinError" class="form-error">{{ joinError }}</p>
+
                   <BaseButton
                     variant="primary"
                     size="lg"
@@ -423,8 +479,10 @@ async function handleCreate() {
                   </label>
 
                   <p class="guest-note">
-                    💡 Du kan uppgradera till medlem när som helst för att få full tillgång.
+                    Du kan uppgradera till medlem när som helst.
                   </p>
+
+                  <p v-if="joinError" class="form-error">{{ joinError }}</p>
 
                   <BaseButton
                     variant="primary"

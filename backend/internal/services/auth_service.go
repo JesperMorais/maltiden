@@ -91,10 +91,14 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 	}
 	defer tx.Rollback()
 
-	// Create household
+	// Create household with provided name or default
+	householdName := req.HouseholdName
+	if householdName == "" {
+		householdName = req.Name + "s hushåll"
+	}
 	household := &domain.Household{
 		ID:        householdID,
-		Name:      req.Name + "'s household",
+		Name:      householdName,
 		CreatedAt: now,
 	}
 	if err := s.householdStorage.CreateTx(tx, household); err != nil {
