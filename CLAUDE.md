@@ -7,8 +7,8 @@ Full-stack monorepo: **Go backend + Vue 3 frontend**, deployed on Fly.io.
 
 | Layer | Technology | Version |
 |-------|-----------|---------|
-| Backend | Go | 1.24 |
-| Database | SQLite (go-sqlite3, CGO) | 1.14.33 |
+| Backend | Go | 1.26 |
+| Database | SQLite (go-sqlite3, CGO) | 1.14.41 |
 | Auth | JWT (golang-jwt) + bcrypt | HS256, 7-day expiry |
 | Frontend | Vue 3 + TypeScript strict | 3.5.x / 5.9.x |
 | State | Pinia (Composition API) | 3.0.x |
