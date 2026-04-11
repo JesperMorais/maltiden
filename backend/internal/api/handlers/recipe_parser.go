@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"log"
+	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
@@ -30,7 +30,7 @@ func (h *RecipeParserHandler) ParseRecipe(w http.ResponseWriter, r *http.Request
 	}
 
 	if req.RawText == "" {
-		WriteError(w, http.StatusBadRequest, "rawText_required")
+		WriteError(w, http.StatusBadRequest, "raw_text_required")
 		return
 	}
 
@@ -41,8 +41,8 @@ func (h *RecipeParserHandler) ParseRecipe(w http.ResponseWriter, r *http.Request
 
 	result, err := h.parserService.ParseRecipe(req.RawText)
 	if err != nil {
-		log.Printf("ParseRecipe error: %v", err)
-		WriteError(w, http.StatusInternalServerError, "failed_to_parse_recipe")
+		slog.Error("ParseRecipe failed", "error", err)
+		WriteError(w, http.StatusInternalServerError, "parse_failed")
 		return
 	}
 
@@ -56,7 +56,7 @@ func (h *RecipeParserHandler) ParseAndSave(w http.ResponseWriter, r *http.Reques
 	}
 
 	if req.RawText == "" {
-		WriteError(w, http.StatusBadRequest, "rawText_required")
+		WriteError(w, http.StatusBadRequest, "raw_text_required")
 		return
 	}
 
@@ -67,14 +67,15 @@ func (h *RecipeParserHandler) ParseAndSave(w http.ResponseWriter, r *http.Reques
 
 	parsed, err := h.parserService.ParseRecipe(req.RawText)
 	if err != nil {
-		WriteError(w, http.StatusInternalServerError, "failed_to_parse_recipe")
+		slog.Error("ParseAndSave parse failed", "error", err)
+		WriteError(w, http.StatusInternalServerError, "parse_failed")
 		return
 	}
 
 	householdID := middleware.GetHouseholdID(r)
 	created, err := h.recipeService.Create(parsed.Recipe, householdID)
 	if err != nil {
-		WriteError(w, http.StatusInternalServerError, "failed_to_save_recipe")
+		WriteError(w, http.StatusInternalServerError, "save_failed")
 		return
 	}
 
