@@ -7,15 +7,15 @@ Full-stack monorepo: **Go backend + Vue 3 frontend**, deployed on Fly.io.
 
 | Layer | Technology | Version |
 |-------|-----------|---------|
-| Backend | Go | 1.24 |
-| Database | SQLite (go-sqlite3, CGO) | 1.14.34 |
+| Backend | Go | 1.26 |
+| Database | SQLite (go-sqlite3, CGO) | 1.14.42 |
 | Auth | JWT (golang-jwt) + bcrypt | HS256, 7-day expiry |
 | Frontend | Vue 3 + TypeScript strict | 3.5.x / 5.9.x |
 | State | Pinia (Composition API) | 3.0.x |
-| HTTP client | Axios | 1.13.x |
+| HTTP client | Axios | 1.15.x |
 | Build | Vite | 7.3.x |
 | Lint/Format | ESLint + Prettier | semi: false, singleQuote: true, printWidth: 100 |
-| Animation | motion-v | 2.0.x |
+| Animation | motion-v | 2.2.x |
 | Testing | Vitest + @vue/test-utils + happy-dom | 4.0.x |
 | Node | ^20.19.0 \|\| >=22.12.0 | LTS |
 | AI | Claude API (Anthropic) | Recipe parsing |
@@ -198,7 +198,7 @@ npm run test                      # Run tests (vitest)
 
 **Public:** `GET /health`, `POST /auth/register`, `POST /auth/login`, `GET /recipes`, `GET /recipes/{id}`, `GET /offers/search`, `GET /offers/discounts`, `GET /offers/stores`
 
-**Protected (JWT required):** `GET /households/me`, `POST /households/invite`, `POST /households/join`, `*/households/members/*`, `POST /recipes`, `POST /recipes/parse`, `POST /recipes/parse-and-save`, `POST /menus/generate`, `GET /menus/current`, `GET /shopping-list`, `PATCH /shopping-list/items/{id}`
+**Protected (JWT required):** `GET /households/me`, `POST /households/invite`, `POST /households/join`, `*/households/members/*`, `POST /recipes`, `PUT /recipes/{id}`, `DELETE /recipes/{id}`, `POST /recipes/parse`, `POST /recipes/parse-and-save`, `POST /menus/generate`, `GET /menus/current`, `PUT /menus/current`, `GET /shopping-list`, `PATCH /shopping-list/items/{id}`, `POST /feedback`
 
 See `docs/API.md` for full request/response contracts.
 
