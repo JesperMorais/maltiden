@@ -91,10 +91,18 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 	}
 	defer tx.Rollback()
 
-	// Create household with provided name or default
+	// Create household with provided name or default.
+	// Swedish genitive: names ending in s/x/z don't take an extra -s.
 	householdName := req.HouseholdName
 	if householdName == "" {
-		householdName = req.Name + "s hushåll"
+		lowerName := strings.ToLower(req.Name)
+		if strings.HasSuffix(lowerName, "s") ||
+			strings.HasSuffix(lowerName, "x") ||
+			strings.HasSuffix(lowerName, "z") {
+			householdName = req.Name + " hushåll"
+		} else {
+			householdName = req.Name + "s hushåll"
+		}
 	}
 	household := &domain.Household{
 		ID:        householdID,
