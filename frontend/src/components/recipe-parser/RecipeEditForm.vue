@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { Trash2 } from 'lucide-vue-next'
 import type { Ingredient, CreateRecipeRequest } from '@/api/recipes.api'
 
 type EditableRecipe = CreateRecipeRequest & { emoji?: string }
@@ -165,7 +166,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
             class="form-input unit-input"
             placeholder="Enhet"
           />
-          <button class="remove-btn" @click="removeIngredient(i)" title="Ta bort">🗑️</button>
+          <button class="remove-btn" aria-label="Ta bort ingrediens" @click="removeIngredient(i)"><Trash2 :size="16" /></button>
         </div>
       </div>
       <button class="add-btn" @click="addIngredient">+ Lägg till ingrediens</button>
@@ -184,7 +185,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
             class="form-input flex-1"
             :placeholder="'Steg ' + (i + 1)"
           />
-          <button class="remove-btn" @click="removeInstruction(i)" title="Ta bort">🗑️</button>
+          <button class="remove-btn" aria-label="Ta bort steg" @click="removeInstruction(i)"><Trash2 :size="16" /></button>
         </div>
       </div>
       <button class="add-btn" @click="addInstruction">+ Lägg till steg</button>
@@ -224,17 +225,17 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
 }
 
 .confidence-badge.high {
-  background: rgba(72, 187, 120, 0.15);
+  background: var(--success-bg);
   color: #2f855a;
 }
 
 .confidence-badge.medium {
-  background: rgba(237, 181, 61, 0.15);
+  background: var(--warning-bg);
   color: #b7791f;
 }
 
 .confidence-badge.low {
-  background: rgba(229, 62, 62, 0.15);
+  background: var(--error-bg);
   color: #c53030;
 }
 
@@ -251,7 +252,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
   font-weight: 600;
   font-size: 0.9rem;
   color: #b7791f;
-  background: rgba(237, 181, 61, 0.1);
+  background: var(--warning-bg);
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
 }
@@ -300,7 +301,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
 .form-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(255, 107, 91, 0.1);
+  box-shadow: 0 0 0 4px var(--accent-bg);
 }
 
 .form-input::placeholder {
@@ -376,13 +377,13 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: 1rem;
-  color: var(--accent);
+  color: var(--accent-text);
   width: 28px;
   height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 107, 91, 0.1);
+  background: var(--accent-bg);
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -402,14 +403,14 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
 
 .remove-btn:hover {
   opacity: 1;
-  background: rgba(229, 62, 62, 0.1);
+  background: var(--error-bg);
 }
 
 .add-btn {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
-  color: var(--accent);
+  color: var(--accent-text);
   background: none;
   border: 2px dashed var(--border-color);
   border-radius: 14px;
@@ -422,7 +423,7 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
 
 .add-btn:hover {
   border-color: var(--accent);
-  background: rgba(255, 107, 91, 0.05);
+  background: var(--bg-hover);
 }
 
 /* Actions */
@@ -454,6 +455,31 @@ const tagsString = computed(() => props.recipe.tags.join(', '))
   .unit-input {
     width: calc(50% - 1.25rem);
     flex: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .ingredient-row {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .ingredient-row .flex-1 {
+    flex: 1 1 100%;
+  }
+
+  .amount-input,
+  .unit-input {
+    width: calc(50% - 1rem);
+    flex: 1;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions > * {
+    width: 100%;
   }
 }
 </style>

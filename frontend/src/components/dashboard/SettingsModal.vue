@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, toRefs } from 'vue'
 import type { User } from '@/api/types/dashboard.types'
 import { useThemeStore } from '@/stores/theme'
+import { useFocusTrap } from '@/composables/useFocusTrap'
+import { User as UserIcon, Bell, Palette, Settings, LogOut, MessageCircle } from 'lucide-vue-next'
 
 interface Props {
   user: User | null
   isOpen: boolean
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+const { isOpen } = toRefs(props)
 
 const emit = defineEmits<{
   close: []
@@ -17,6 +20,13 @@ const emit = defineEmits<{
 
 // Theme store for dark mode
 const themeStore = useThemeStore()
+
+const settingsModalRef = ref<HTMLElement | null>(null)
+
+useFocusTrap(settingsModalRef, {
+  isActive: isOpen,
+  onEscape: () => emit('close'),
+})
 
 // Settings state
 const notificationsEnabled = ref(true)
@@ -42,11 +52,11 @@ function handleOverlayClick(e: MouseEvent) {
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="isOpen" class="settings-overlay" @click="handleOverlayClick">
-        <div class="settings-modal">
+        <div ref="settingsModalRef" class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
           <!-- Header -->
           <div class="modal-header">
-            <h2>Inställningar</h2>
-            <button class="close-btn" @click="handleClose">
+            <h2 id="settings-modal-title">Inställningar</h2>
+            <button class="close-btn" aria-label="Stäng" @click="handleClose">
               <span>×</span>
             </button>
           </div>
@@ -56,7 +66,7 @@ function handleOverlayClick(e: MouseEvent) {
             <!-- Profile Section -->
             <section class="settings-section">
               <h3>
-                <span class="section-icon">👤</span>
+                <span class="section-icon"><UserIcon :size="16" /></span>
                 Profil
               </h3>
               <div class="profile-card">
@@ -76,7 +86,7 @@ function handleOverlayClick(e: MouseEvent) {
             <!-- Notifications Section -->
             <section class="settings-section">
               <h3>
-                <span class="section-icon">🔔</span>
+                <span class="section-icon"><Bell :size="16" /></span>
                 Notifikationer
               </h3>
               <div class="settings-options">
@@ -126,7 +136,7 @@ function handleOverlayClick(e: MouseEvent) {
             <!-- Appearance Section -->
             <section class="settings-section">
               <h3>
-                <span class="section-icon">🎨</span>
+                <span class="section-icon"><Palette :size="16" /></span>
                 Utseende
               </h3>
               <div class="settings-options">
@@ -147,15 +157,33 @@ function handleOverlayClick(e: MouseEvent) {
               <p class="coming-soon">Fler teman kommer snart!</p>
             </section>
 
+            <!-- Feedback Section -->
+            <section class="settings-section">
+              <h3>
+                <span class="section-icon"><MessageCircle :size="16" /></span>
+                Feedback
+              </h3>
+              <div class="account-actions">
+                <a
+                  href="mailto:maltiden.app@gmail.com?subject=Feedback%20-%20Måltiden"
+                  class="action-btn feedback-btn"
+                >
+                  <span class="btn-icon"><MessageCircle :size="18" /></span>
+                  Skicka feedback
+                </a>
+              </div>
+              <p class="coming-soon">Hjälp oss bli bättre — vi läser all feedback!</p>
+            </section>
+
             <!-- Account Section -->
             <section class="settings-section">
               <h3>
-                <span class="section-icon">⚙️</span>
+                <span class="section-icon"><Settings :size="16" /></span>
                 Konto
               </h3>
               <div class="account-actions">
                 <button class="action-btn logout-btn" @click="handleLogout">
-                  <span class="btn-icon">👋</span>
+                  <span class="btn-icon"><LogOut :size="18" /></span>
                   Logga ut
                 </button>
               </div>
@@ -289,7 +317,7 @@ function handleOverlayClick(e: MouseEvent) {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 1.5rem;
-  color: white;
+  color: var(--text-on-accent);
   flex-shrink: 0;
 }
 
@@ -320,7 +348,7 @@ function handleOverlayClick(e: MouseEvent) {
   display: inline-block;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.25rem 0.75rem;
@@ -329,12 +357,12 @@ function handleOverlayClick(e: MouseEvent) {
 
 .profile-role.owner {
   background: var(--role-owner-bg);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .profile-role.member {
   background: var(--role-member-bg);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .profile-role.guest {
@@ -459,14 +487,26 @@ function handleOverlayClick(e: MouseEvent) {
   transition: all 0.3s ease;
 }
 
+.feedback-btn {
+  background: var(--accent-bg, #e8f4fd);
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+.feedback-btn:hover {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  transform: translateY(-2px);
+}
+
 .logout-btn {
-  background: rgba(229, 62, 62, 0.1);
+  background: var(--error-bg);
   color: var(--error);
 }
 
 .logout-btn:hover {
   background: var(--error);
-  color: white;
+  color: var(--text-on-accent);
   transform: translateY(-2px);
 }
 

@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import RecipeListPanel from '@/components/recipes/RecipeListPanel.vue'
 import AddRecipePanel from '@/components/recipes/AddRecipePanel.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
-
-const router = useRouter()
+import BackLink from '@/components/common/BackLink.vue'
 
 type Tab = 'list' | 'add'
 const activeTab = ref<Tab>('list')
@@ -27,27 +25,32 @@ function switchToList() {
     <!-- Header -->
     <header class="header">
       <div class="header-content">
-        <button class="back-link" @click="router.push({ name: 'dashboard' })">
-          <span class="back-arrow">&larr;</span>
-          <span>Dashboard</span>
-        </button>
+        <BackLink :to="{ name: 'dashboard' }" label="Dashboard" />
         <h1 class="title">Recept</h1>
         <p class="description">
           Hantera dina recept — bläddra, sök eller lägg till nya.
         </p>
 
         <!-- Segmented tab control -->
-        <div class="tab-control">
+        <div class="tab-control" role="tablist">
           <button
+            id="tab-list"
+            role="tab"
             class="tab-button"
             :class="{ active: activeTab === 'list' }"
+            :aria-selected="activeTab === 'list'"
+            aria-controls="panel-list"
             @click="switchToList"
           >
             Mina recept
           </button>
           <button
+            id="tab-add"
+            role="tab"
             class="tab-button"
             :class="{ active: activeTab === 'add' }"
+            :aria-selected="activeTab === 'add'"
+            aria-controls="panel-add"
             @click="switchToAdd"
           >
             Lägg till
@@ -59,17 +62,20 @@ function switchToList() {
     <!-- Main content -->
     <main class="content">
       <div class="content-container">
-        <FadeContent :duration="500" :blur="true">
-          <RecipeListPanel
-            v-show="activeTab === 'list'"
-            ref="recipeListRef"
-            @navigate-to-add="switchToAdd"
-          />
+        <FadeContent v-show="activeTab === 'list'" :duration="500" :blur="true">
+          <div id="panel-list" role="tabpanel" aria-labelledby="tab-list">
+            <RecipeListPanel
+              ref="recipeListRef"
+              @navigate-to-add="switchToAdd"
+            />
+          </div>
         </FadeContent>
-        <FadeContent v-if="activeTab === 'add'" :duration="500" :blur="true">
-          <AddRecipePanel
-            @navigate-to-list="switchToList"
-          />
+        <FadeContent v-show="activeTab === 'add'" :duration="500" :blur="true">
+          <div id="panel-add" role="tabpanel" aria-labelledby="tab-add">
+            <AddRecipePanel
+              @navigate-to-list="switchToList"
+            />
+          </div>
         </FadeContent>
       </div>
     </main>
@@ -100,28 +106,9 @@ function switchToList() {
   margin: 0 auto;
 }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: none;
-  border: none;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0;
-  margin-bottom: 1rem;
-  transition: color 0.2s ease;
-}
-
-.back-link:hover {
-  color: var(--accent);
-}
-
-.back-arrow {
-  font-size: 1.1rem;
+.header-content :deep(.back-link) {
+  margin-bottom: 0.5rem;
+  margin-left: -1rem;
 }
 
 .title {
@@ -157,6 +144,7 @@ function switchToList() {
   font-weight: 700;
   font-size: 0.95rem;
   padding: 0.6rem 1.5rem;
+  min-height: 44px;
   border: none;
   border-radius: 11px;
   background: transparent;
@@ -167,13 +155,13 @@ function switchToList() {
 
 .tab-button:hover:not(.active) {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--tab-hover-bg);
 }
 
 .tab-button.active {
   background: var(--bg-card);
   color: var(--text-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--tab-active-shadow);
 }
 
 /* Content */

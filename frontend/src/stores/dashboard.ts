@@ -1,16 +1,14 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type {
-  DashboardData,
-  Meal,
-  MenuDay,
-  Household,
-  ShoppingListSummary,
-} from '@/api/types/dashboard.types'
+import type { DashboardData, Meal, MenuDay, Household, HouseholdMember, ShoppingListSummary } from '@/api/types/dashboard.types'
+import { mockDashboardData } from '@/mocks/dashboard.mock'
+import { USE_MOCKS } from '@/mocks'
 import { useUserStore } from './user'
 import apiClient from '@/api/client'
-import { getCurrentMenu } from '@/api/menu.api'
-import { getMemberStatus } from '@/api/household.api'
+import { getCurrentMenu, saveMenu } from '@/api/menu.api'
+import type { Menu, SaveMenuDay } from '@/api/menu.api'
+import { getShoppingList } from '@/api/shopping.api'
+import type { ShoppingList } from '@/api/shopping.api'
 
 /**
  * Dashboard Store
@@ -23,9 +21,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // State
   const dashboardData = ref<DashboardData | null>(null)
-  const currentMenuId = ref<string | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const currentMenuId = ref<string | null>(null)
+  const selectedDate = ref<string | null>(null)
 
   // Computed - Today's Meal
   const todaysMeal = computed<Meal | null>(() => dashboardData.value?.todaysMeal ?? null)
@@ -33,35 +32,106 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // Computed - Weekly Menu
   const weeklyMenu = computed<MenuDay[]>(() => dashboardData.value?.weeklyMenu ?? [])
-  const todayFromMenu = computed(() => weeklyMenu.value.find((day) => day.isToday) ?? null)
+  const todayFromMenu = computed(() => weeklyMenu.value.find(day => day.isToday) ?? null)
 
   // Computed - Household
   const household = computed<Household | null>(() => dashboardData.value?.household ?? null)
   const householdName = computed(() => household.value?.name ?? 'Mitt hushåll')
   const householdMembers = computed(() => household.value?.members ?? [])
   const membersEatingToday = computed(() =>
-    householdMembers.value.filter((m) => m.isEatingToday),
+    householdMembers.value.filter(m => m.isEatingToday)
   )
   const inviteCode = computed(() => household.value?.inviteCode ?? '')
 
+  // Computed - Menu ID (for shopping list)
+  const menuId = computed(() => currentMenuId.value)
+
   // Computed - Shopping List
   const shoppingList = computed<ShoppingListSummary | null>(
-    () => dashboardData.value?.shoppingList ?? null,
+    () => dashboardData.value?.shoppingList ?? null
   )
   const shoppingItemsRemaining = computed(() => {
     if (!shoppingList.value) return 0
     return shoppingList.value.totalItems - shoppingList.value.checkedItems
   })
 
-  // Swedish day names
-  const dayNames: Record<string, { full: string; short: string }> = {
-    '0': { full: 'Söndag', short: 'Sön' },
-    '1': { full: 'Måndag', short: 'Mån' },
-    '2': { full: 'Tisdag', short: 'Tis' },
-    '3': { full: 'Onsdag', short: 'Ons' },
-    '4': { full: 'Torsdag', short: 'Tor' },
-    '5': { full: 'Fredag', short: 'Fre' },
-    '6': { full: 'Lördag', short: 'Lör' },
+  function setSelectedDate(date: string | null) {
+    selectedDate.value = date
+  }
+
+  const displayDate = computed(() => {
+    if (selectedDate.value) return selectedDate.value
+    return new Date().toISOString().split('T')[0]!
+  })
+
+  const membersForDisplayDate = computed(() =>
+    householdMembers.value.filter((m) => isMemberEatingDay(displayDate.value, m.id))
+  )
+
+  /**
+   * Transform API menu into dashboard MenuDay[] format
+   */
+  function transformMenuToDashboard(menu: Menu): { weeklyMenu: MenuDay[]; todaysMeal: Meal | null } {
+    const dayNames = ['Söndag', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag']
+    const dayShorts = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
+    const todayStr = new Date().toISOString().split('T')[0]!
+
+    let todaysMeal: Meal | null = null
+
+    const weeklyMenu: MenuDay[] = menu.days.map((apiDay) => {
+      const date = new Date(apiDay.date + 'T12:00:00')
+      const dayIndex = date.getDay()
+      const isToday = apiDay.date === todayStr
+      const hasMeal = !!apiDay.recipeId && !apiDay.skip
+
+      const meal: Meal | null = hasMeal
+        ? {
+            id: apiDay.recipeId!,
+            name: apiDay.recipeName || 'Recept',
+            emoji: apiDay.emoji,
+            portions: apiDay.servings,
+          }
+        : null
+
+      if (isToday && meal) {
+        todaysMeal = meal
+      }
+
+      return {
+        date: apiDay.date,
+        dayName: dayNames[dayIndex]!,
+        dayShort: dayShorts[dayIndex]!,
+        meal,
+        isToday,
+        isSkipped: apiDay.skip ?? false,
+      }
+    })
+
+    return { weeklyMenu, todaysMeal }
+  }
+
+  function toShoppingSummary(list: ShoppingList): ShoppingListSummary {
+    let totalItems = 0
+    let checkedItems = 0
+    const categories: { name: string; count: number }[] = []
+    for (const cat of list.categories) {
+      totalItems += cat.items.length
+      checkedItems += cat.items.filter((i) => i.checked).length
+      categories.push({ name: cat.name, count: cat.items.length })
+    }
+    return { totalItems, checkedItems, categories }
+  }
+
+  async function refreshShoppingList() {
+    if (!currentMenuId.value) return
+    try {
+      const list = await getShoppingList(currentMenuId.value)
+      if (dashboardData.value) {
+        dashboardData.value.shoppingList = toShoppingSummary(list)
+      }
+    } catch (e) {
+      console.warn('Could not refresh shopping list:', e)
+    }
   }
 
   // Actions
@@ -73,122 +143,54 @@ export const useDashboardStore = defineStore('dashboard', () => {
     isLoading.value = true
     error.value = null
 
-    try {
-      // Fetch household data, menu, and member statuses in parallel
-      const [householdRes, menu, memberStatusRes] = await Promise.all([
-        apiClient.get('/households/me'),
-        getCurrentMenu(),
-        getMemberStatus().catch(() => ({
-          members: [] as { id: string; isEatingToday: boolean; wantsLunchBox: boolean }[],
-        })),
-      ])
-
-      const householdData = householdRes.data
-
-      // Build member status lookup
-      const statusMap = new Map<string, { isEatingToday: boolean; wantsLunchBox: boolean }>()
-      for (const ms of memberStatusRes.members) {
-        statusMap.set(ms.id, {
-          isEatingToday: ms.isEatingToday,
-          wantsLunchBox: ms.wantsLunchBox,
-        })
-      }
-
-      // Build weekly menu from real data
-      const todayStr = new Date().toISOString().slice(0, 10)
-      let builtWeeklyMenu: MenuDay[] = []
-      let builtTodaysMeal: Meal | null = null
-      let builtShoppingList: ShoppingListSummary = {
-        totalItems: 0,
-        checkedItems: 0,
-        categories: [],
-      }
-
-      if (menu) {
-        currentMenuId.value = menu.id
-
-        // Fetch recipe details for menu days
-        const recipeIds = menu.days
-          .filter((d) => d.recipeId && !d.skip)
-          .map((d) => d.recipeId!)
-        const uniqueIds = [...new Set(recipeIds)]
-        const recipeLookup = new Map<
-          string,
-          { name: string; emoji?: string; servings: number }
-        >()
-
-        // Batch fetch recipes (they're public)
-        await Promise.all(
-          uniqueIds.map(async (id) => {
-            try {
-              const { data } = await apiClient.get(`/recipes/${id}`)
-              recipeLookup.set(id, {
-                name: data.name,
-                emoji: data.emoji,
-                servings: data.servings,
-              })
-            } catch {
-              // Skip recipes that fail to load
-            }
-          }),
-        )
-
-        builtWeeklyMenu = menu.days.map((day) => {
-          const date = new Date(day.date + 'T12:00:00')
-          const dayOfWeek = date.getDay().toString()
-          const isToday = day.date === todayStr
-          const recipe = day.recipeId ? recipeLookup.get(day.recipeId) : undefined
-
-          const menuDay: MenuDay = {
-            date: day.date,
-            dayName: dayNames[dayOfWeek]?.full ?? '',
-            dayShort: dayNames[dayOfWeek]?.short ?? '',
-            isToday,
-            isSkipped: day.skip ?? false,
-            meal: recipe
-              ? {
-                  id: day.recipeId!,
-                  name: recipe.name,
-                  emoji: recipe.emoji,
-                  portions: day.servings,
-                }
-              : null,
+    if (USE_MOCKS) {
+      // In mock mode, use mock data directly — no network requests
+      try {
+        const menu = await getCurrentMenu()
+        if (menu) {
+          currentMenuId.value = menu.id
+          const transformed = transformMenuToDashboard(menu)
+          dashboardData.value = {
+            ...mockDashboardData,
+            todaysMeal: transformed.todaysMeal,
+            weeklyMenu: transformed.weeklyMenu,
           }
-
-          if (isToday && menuDay.meal) {
-            builtTodaysMeal = menuDay.meal
-          }
-
-          return menuDay
-        })
-
-        // Fetch shopping list summary
-        try {
-          const { data: shoppingData } = await apiClient.get('/shopping-list', {
-            params: { menuId: menu.id },
-          })
-          const categories = shoppingData.categories ?? []
-          const totalItems = categories.reduce(
-            (sum: number, cat: { items: unknown[] }) => sum + cat.items.length,
-            0,
-          )
-          const checkedItems = categories.reduce(
-            (sum: number, cat: { items: { checked: boolean }[] }) =>
-              sum + cat.items.filter((i: { checked: boolean }) => i.checked).length,
-            0,
-          )
-          builtShoppingList = {
-            totalItems,
-            checkedItems,
-            categories: categories.map((c: { name: string; items: unknown[] }) => ({
-              name: c.name,
-              count: c.items.length,
-            })),
-          }
-        } catch {
-          // No shopping list available
+        } else {
+          dashboardData.value = mockDashboardData
+          currentMenuId.value = 'menu_current'
         }
-      } else {
+
+        if (dashboardData.value.user) {
+          userStore.setUser(dashboardData.value.user)
+        }
+      } finally {
+        isLoading.value = false
+      }
+      return
+    }
+
+    try {
+      // Fetch real household data from backend
+      const { data: householdData } = await apiClient.get('/households/me', {
+        skipAuthRedirect: true,
+      })
+
+      // Fetch current menu from backend
+      let weeklyMenu: MenuDay[] = []
+      let todaysMeal: Meal | null = null
+
+      try {
+        const menu = await getCurrentMenu()
+        if (menu) {
+          currentMenuId.value = menu.id
+          const transformed = transformMenuToDashboard(menu)
+          weeklyMenu = transformed.weeklyMenu
+          todaysMeal = transformed.todaysMeal
+        } else {
+          currentMenuId.value = null
+        }
+      } catch (menuErr) {
+        console.warn('Could not fetch menu:', menuErr)
         currentMenuId.value = null
       }
 
@@ -197,27 +199,40 @@ export const useDashboardStore = defineStore('dashboard', () => {
         household: {
           id: householdData.id,
           name: householdData.name,
-          inviteCode: '',
-          members: householdData.members.map(
-            (m: { id: string; name: string; role: string }) => {
-              const status = statusMap.get(m.id)
-              return {
-                id: m.id,
-                name: m.name,
-                role: m.role as 'owner' | 'member' | 'guest',
-                isEatingToday: status?.isEatingToday ?? true,
-                wantsLunchBox: status?.wantsLunchBox ?? false,
-              }
-            },
-          ),
+          inviteCode: householdData.inviteCode || '',
+          members: householdData.members.map((m: { id: string; name: string; role: string }) => ({
+            id: m.id,
+            name: m.name,
+            role: m.role as 'owner' | 'member' | 'guest',
+            isEatingToday: true,
+            wantsLunchBox: false,
+          })),
         },
-        todaysMeal: builtTodaysMeal,
-        weeklyMenu: builtWeeklyMenu,
-        shoppingList: builtShoppingList,
+        todaysMeal,
+        weeklyMenu,
+        shoppingList: {
+          totalItems: 0,
+          checkedItems: 0,
+          categories: [],
+        },
+      }
+
+      // Populate shopping list with real data if we have a menu
+      if (currentMenuId.value) {
+        refreshShoppingList()
       }
     } catch (e) {
-      console.error('Failed to load dashboard:', e)
-      error.value = 'Kunde inte ladda dashboarden. Kontrollera din anslutning.'
+      // If backend fails (including 401 with skipAuthRedirect), fall back to mock data.
+      // This is intentional: a stale-token 401 is swallowed here to prevent the
+      // post-login redirect loop. See client.ts markAuthSuccess() for context.
+      const msg = e instanceof Error ? e.message : String(e)
+      console.warn('Using mock dashboard data —', msg)
+      dashboardData.value = mockDashboardData
+      currentMenuId.value = 'menu_current'
+
+      if (dashboardData.value.user) {
+        userStore.setUser(dashboardData.value.user)
+      }
     } finally {
       isLoading.value = false
     }
@@ -244,6 +259,119 @@ export const useDashboardStore = defineStore('dashboard', () => {
     Object.assign(member, update)
   }
 
+  // Per-day lunchbox count state
+  const dayLunchBox = ref<Record<string, number>>({})
+
+  function getDayLunchBoxCount(date: string): number {
+    const val = dayLunchBox.value[date]
+    return typeof val === 'number' ? val : 0
+  }
+
+  function setDayLunchBoxCount(date: string, count: number) {
+    dayLunchBox.value[date] = Math.max(0, count)
+    localStorage.setItem('maltiden_day_lunchbox', JSON.stringify(dayLunchBox.value))
+  }
+
+  function initLunchBoxDays() {
+    const stored = localStorage.getItem('maltiden_day_lunchbox')
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Record<string, unknown>
+        const cleaned: Record<string, number> = {}
+        for (const [key, val] of Object.entries(parsed)) {
+          cleaned[key] = typeof val === 'number' ? val : 0
+        }
+        dayLunchBox.value = cleaned
+      } catch {
+        dayLunchBox.value = {}
+      }
+    }
+  }
+
+  // Per-day member exclusions (who is NOT eating on a given date)
+  const dayMemberExclusions = ref<Record<string, string[]>>({})
+
+  function initDayMemberExclusions() {
+    const stored = localStorage.getItem('maltiden_day_member_exclusions')
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Record<string, unknown>
+        const cleaned: Record<string, string[]> = {}
+        for (const [key, val] of Object.entries(parsed)) {
+          if (Array.isArray(val)) {
+            cleaned[key] = val.filter((v): v is string => typeof v === 'string')
+          }
+        }
+        dayMemberExclusions.value = cleaned
+      } catch {
+        dayMemberExclusions.value = {}
+      }
+    }
+  }
+
+  function isMemberEatingDay(date: string, memberId: string): boolean {
+    const exclusions = dayMemberExclusions.value[date]
+    if (!exclusions) return true
+    return !exclusions.includes(memberId)
+  }
+
+  function toggleMemberDay(date: string, memberId: string) {
+    const current = dayMemberExclusions.value[date] ?? []
+    const idx = current.indexOf(memberId)
+    if (idx >= 0) {
+      current.splice(idx, 1)
+    } else {
+      current.push(memberId)
+    }
+    dayMemberExclusions.value[date] = current
+    localStorage.setItem('maltiden_day_member_exclusions', JSON.stringify(dayMemberExclusions.value))
+
+    // Clamp lunchbox count if it exceeds new member count
+    const eatingCount = getMembersEatingDay(date).length
+    const currentLunchBoxes = getDayLunchBoxCount(date)
+    if (currentLunchBoxes > eatingCount) {
+      setDayLunchBoxCount(date, eatingCount)
+    }
+
+    // Persist new servings and refresh shopping list
+    updateDayServings(date, eatingCount, getDayLunchBoxCount(date))
+  }
+
+  function getMembersEatingDay(date: string): HouseholdMember[] {
+    return householdMembers.value.filter((m) => isMemberEatingDay(date, m.id))
+  }
+
+  // Whether the dashboard loaded from the real API (not mock fallback)
+  const isUsingRealData = computed(() =>
+    currentMenuId.value !== null && currentMenuId.value !== 'menu_current',
+  )
+
+  async function updateDayServings(date: string, baseServings: number, lunchBoxCount: number) {
+    if (!currentMenuId.value) return
+
+    const totalServings = baseServings + lunchBoxCount
+    const menu = weeklyMenu.value
+    const days: SaveMenuDay[] = menu.map((day) => ({
+      date: day.date,
+      recipeId: day.meal?.id,
+      servings: day.date === date ? totalServings : (day.meal?.portions ?? 4),
+      skip: day.isSkipped,
+    }))
+
+    try {
+      const savedMenu = await saveMenu(days)
+      // Update store with saved servings to prevent stale data on next toggle
+      const transformed = transformMenuToDashboard(savedMenu)
+      if (dashboardData.value) {
+        dashboardData.value.weeklyMenu = transformed.weeklyMenu
+        dashboardData.value.todaysMeal = transformed.todaysMeal
+      }
+      await refreshShoppingList()
+    } catch (e) {
+      console.warn('Could not save menu servings:', e)
+    }
+  }
+
   function clearError() {
     error.value = null
   }
@@ -251,7 +379,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
   return {
     // State
     dashboardData,
-    currentMenuId,
     isLoading,
     error,
 
@@ -270,13 +397,41 @@ export const useDashboardStore = defineStore('dashboard', () => {
     membersEatingToday,
     inviteCode,
 
+    // Menu
+    menuId,
+    currentMenuId,
+
+    // Selected date
+    selectedDate,
+    setSelectedDate,
+    displayDate,
+    membersForDisplayDate,
+
     // Shopping
     shoppingList,
     shoppingItemsRemaining,
+    refreshShoppingList,
+
+    // Day Lunchbox
+    dayLunchBox,
+    getDayLunchBoxCount,
+    setDayLunchBoxCount,
+    initLunchBoxDays,
+    updateDayServings,
+
+    // Day Member Exclusions
+    dayMemberExclusions,
+    initDayMemberExclusions,
+    isMemberEatingDay,
+    toggleMemberDay,
+    getMembersEatingDay,
+
+    // Data source
+    isUsingRealData,
 
     // Actions
     fetchDashboard,
     updateMemberLocally,
-    clearError,
+    clearError
   }
 })

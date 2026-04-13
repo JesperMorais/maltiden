@@ -32,7 +32,7 @@ func TestRecipeCreate_EmptyName(t *testing.T) {
 	req := validCreateRecipeReq()
 	req.Name = ""
 
-	_, err := svc.Create(req)
+	_, err := svc.Create(req, "hh_test")
 	if err != domain.ErrNameRequired {
 		t.Errorf("expected ErrNameRequired, got %v", err)
 	}
@@ -43,7 +43,7 @@ func TestRecipeCreate_NameTooLong(t *testing.T) {
 	req := validCreateRecipeReq()
 	req.Name = strings.Repeat("a", 201)
 
-	_, err := svc.Create(req)
+	_, err := svc.Create(req, "hh_test")
 	if err != domain.ErrNameTooLong {
 		t.Errorf("expected ErrNameTooLong, got %v", err)
 	}
@@ -54,7 +54,7 @@ func TestRecipeCreate_ServingsZero(t *testing.T) {
 	req := validCreateRecipeReq()
 	req.Servings = 0
 
-	_, err := svc.Create(req)
+	_, err := svc.Create(req, "hh_test")
 	if err != domain.ErrInvalidServings {
 		t.Errorf("expected ErrInvalidServings, got %v", err)
 	}
@@ -65,7 +65,7 @@ func TestRecipeCreate_ServingsNegative(t *testing.T) {
 	req := validCreateRecipeReq()
 	req.Servings = -1
 
-	_, err := svc.Create(req)
+	_, err := svc.Create(req, "hh_test")
 	if err != domain.ErrInvalidServings {
 		t.Errorf("expected ErrInvalidServings, got %v", err)
 	}
@@ -76,7 +76,7 @@ func TestRecipeCreate_ServingsTooHigh(t *testing.T) {
 	req := validCreateRecipeReq()
 	req.Servings = 101
 
-	_, err := svc.Create(req)
+	_, err := svc.Create(req, "hh_test")
 	if err != domain.ErrInvalidServings {
 		t.Errorf("expected ErrInvalidServings, got %v", err)
 	}
@@ -87,7 +87,7 @@ func TestRecipeCreate_EmptyIngredients(t *testing.T) {
 	req := validCreateRecipeReq()
 	req.Ingredients = nil
 
-	_, err := svc.Create(req)
+	_, err := svc.Create(req, "hh_test")
 	if err != domain.ErrIngredientsRequired {
 		t.Errorf("expected ErrIngredientsRequired, got %v", err)
 	}
@@ -101,7 +101,7 @@ func TestRecipeCreate_TooManyIngredients(t *testing.T) {
 		req.Ingredients[i] = domain.Ingredient{Name: "Ingredient", Amount: 1, Unit: "st"}
 	}
 
-	_, err := svc.Create(req)
+	_, err := svc.Create(req, "hh_test")
 	if err != domain.ErrTooManyIngredients {
 		t.Errorf("expected ErrTooManyIngredients, got %v", err)
 	}
@@ -112,7 +112,7 @@ func TestRecipeCreate_EmptyInstructions(t *testing.T) {
 	req := validCreateRecipeReq()
 	req.Instructions = nil
 
-	_, err := svc.Create(req)
+	_, err := svc.Create(req, "hh_test")
 	if err != domain.ErrInstructionsRequired {
 		t.Errorf("expected ErrInstructionsRequired, got %v", err)
 	}
@@ -123,7 +123,7 @@ func TestRecipeCreate_NilTagsDefaultsToEmptySlice(t *testing.T) {
 	req := validCreateRecipeReq()
 	req.Tags = nil
 
-	resp, err := svc.Create(req)
+	resp, err := svc.Create(req, "hh_test")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestRecipeCreate_Success(t *testing.T) {
 	svc := newTestRecipeService(t)
 	req := validCreateRecipeReq()
 
-	resp, err := svc.Create(req)
+	resp, err := svc.Create(req, "hh_test")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestRecipeCreate_MaxBoundaryServings(t *testing.T) {
 	req := validCreateRecipeReq()
 	req.Servings = 100
 
-	resp, err := svc.Create(req)
+	resp, err := svc.Create(req, "hh_test")
 	if err != nil {
 		t.Fatalf("servings=100 should succeed, got %v", err)
 	}
@@ -194,7 +194,7 @@ func TestRecipeCreate_MaxBoundaryIngredients(t *testing.T) {
 		req.Ingredients[i] = domain.Ingredient{Name: "Ingredient", Amount: 1, Unit: "st"}
 	}
 
-	_, err := svc.Create(req)
+	_, err := svc.Create(req, "hh_test")
 	if err != nil {
 		t.Fatalf("50 ingredients should succeed, got %v", err)
 	}

@@ -1,5 +1,19 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import { RouterView } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+
+const ToastNotification = defineAsyncComponent(() =>
+  import('@/components/common/ToastNotification.vue')
+)
+const FeedbackWidget = defineAsyncComponent(() =>
+  import('@/components/common/FeedbackWidget.vue')
+)
+const MobileBottomNav = defineAsyncComponent(() =>
+  import('@/components/common/MobileBottomNav.vue')
+)
 </script>
 
 <template>
@@ -8,6 +22,10 @@ import { RouterView } from 'vue-router'
       <component :is="Component" :key="route.path" />
     </Transition>
   </RouterView>
+  <div v-if="userStore.isAuthenticated" class="bottom-nav-spacer" />
+  <ToastNotification />
+  <FeedbackWidget v-if="userStore.isAuthenticated" />
+  <MobileBottomNav v-if="userStore.isAuthenticated" />
 </template>
 
 <style>
@@ -29,6 +47,18 @@ body {
   font-family: 'Nunito', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Bottom nav spacer — prevents content from being hidden behind fixed nav */
+.bottom-nav-spacer {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .bottom-nav-spacer {
+    display: block;
+    height: var(--bottom-nav-height);
+  }
 }
 
 /* Page transitions */

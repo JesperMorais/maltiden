@@ -91,10 +91,18 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 	}
 	defer tx.Rollback()
 
-	// Create household with provided name or default
+	// Create household with provided name or default.
+	// Swedish genitive: names ending in s/x/z don't take an extra -s.
 	householdName := req.HouseholdName
 	if householdName == "" {
-		householdName = req.Name + "s hushåll"
+		lowerName := strings.ToLower(req.Name)
+		if strings.HasSuffix(lowerName, "s") ||
+			strings.HasSuffix(lowerName, "x") ||
+			strings.HasSuffix(lowerName, "z") {
+			householdName = req.Name + " hushåll"
+		} else {
+			householdName = req.Name + "s hushåll"
+		}
 	}
 	household := &domain.Household{
 		ID:        householdID,
@@ -135,8 +143,8 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 		return nil, err
 	}
 
-	// Generate JWT
-	token, err := s.jwtService.GenerateToken(user.ID, user.HouseholdID)
+	// Generate JWT (new user starts at token_version 1)
+	token, err := s.jwtService.GenerateToken(user.ID, user.HouseholdID, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -165,8 +173,8 @@ func (s *AuthService) Login(req domain.LoginRequest) (*domain.AuthResponse, erro
 		return nil, domain.ErrInvalidCredentials
 	}
 
-	// Generate JWT
-	token, err := s.jwtService.GenerateToken(user.ID, user.HouseholdID)
+	// Generate JWT with current token_version
+	token, err := s.jwtService.GenerateToken(user.ID, user.HouseholdID, user.TokenVersion)
 	if err != nil {
 		return nil, err
 	}

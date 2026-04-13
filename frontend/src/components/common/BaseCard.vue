@@ -44,8 +44,10 @@ withDefaults(defineProps<Props>(), {
   transition: opacity 0.3s ease;
 }
 
-.base-card:hover::before {
-  opacity: 1;
+@media (hover: hover) {
+  .base-card:hover::before {
+    opacity: 1;
+  }
 }
 
 /* Padding variants */
@@ -59,8 +61,10 @@ withDefaults(defineProps<Props>(), {
   box-shadow: var(--shadow-sm);
 }
 
-.shadow:hover {
-  box-shadow: var(--shadow-md);
+@media (hover: hover) {
+  .shadow:hover {
+    box-shadow: var(--shadow-md);
+  }
 }
 
 /* Rounded */

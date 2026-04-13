@@ -4,6 +4,10 @@
  */
 
 :root {
+  /* Layout */
+  --header-height: 70px;
+  --bottom-nav-height: 64px;
+
   /* Background colors */
   --bg-primary: #fffcf7;
   --bg-secondary: #fff8f0;
@@ -19,6 +23,7 @@
   --accent: #ff6b5b;
   --accent-dark: #e85a4a;
   --accent-light: #ff8a7d;
+  --accent-text: #c4402e; /* WCAG AA: 4.75:1 on cream backgrounds */
   --peach: #ffb599;
   --yellow-soft: #ffd93d;
   --orange-soft: #ffab5e;
@@ -30,8 +35,13 @@
 
   /* Border and overlay */
   --border-color: rgba(61, 44, 41, 0.08);
+  --border-color-light: rgba(61, 44, 41, 0.05);
   --border-color-hover: rgba(255, 107, 91, 0.2);
   --overlay-bg: rgba(61, 44, 41, 0.6);
+
+  /* Tab control */
+  --tab-hover-bg: rgba(255, 255, 255, 0.5);
+  --tab-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 
   /* Shadows */
   --shadow-sm: 0 2px 8px rgba(61, 44, 41, 0.08);
@@ -43,12 +53,67 @@
   --success: #48bb78;
   --warning: #f6ad55;
   --error: #e53e3e;
+  --error-bg: rgba(229, 62, 62, 0.1);
+
+  /* Text on colored backgrounds */
+  --text-on-accent: #ffffff;
+
+  /* Focus rings */
+  --accent-focus-ring: rgba(255, 107, 91, 0.15);
+
+  /* Spacing scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* Border radius scale */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Animation tokens */
+  --ease-default: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+
+  /* Semantic status colors */
+  --success-dark: #38a169;
+  --success-bg: rgba(72, 187, 120, 0.12);
+  --error-dark: #c53030;
+  --warning-bg: rgba(246, 173, 85, 0.12);
+  --warning-dark: #92400e;
+  --warning-surface: #fef3c7;
+  --warning-surface-end: #fde68a;
+  --accent-bg: rgba(255, 107, 91, 0.1);
+  --accent-bg-subtle: rgba(255, 107, 91, 0.12);
+  --shadow-accent-hover: 0 6px 16px rgba(255, 107, 91, 0.4);
+  --shadow-success: 0 6px 20px rgba(72, 187, 120, 0.35);
+
+  /* Category colors — for shopping list badges, charts, etc. */
+  --category-purple: #8b7cf6;
+  --category-pink: #f472b6;
+  --category-blue: #38bdf8;
+
+  /* Avatar gradients */
+  --avatar-david: linear-gradient(135deg, #4a90d9 0%, #7ab8ff 100%);
+  --avatar-david-shadow: rgba(74, 144, 217, 0.3);
 
   /* Role badges */
   --role-owner-bg: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+  --role-owner-text: #9a4217; /* WCAG AA: 5.79:1 on #FCEDE1 */
+  --role-owner-text-bg: rgba(237, 137, 54, 0.15);
   --role-member-bg: linear-gradient(135deg, #ff6b5b 0%, #ffb599 100%);
-  --role-guest-bg: rgba(61, 44, 41, 0.1);
-  --role-guest-text: #6b5a56;
+  --role-guest-bg: rgba(61, 44, 41, 0.12);
+  --role-guest-text: #655350; /* WCAG AA: 6.88:1 on #FFF8F4 */
+  --role-guest-avatar: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
 }
 
 [data-theme="dark"] {
@@ -67,6 +132,7 @@
   --accent: #ff8a7d;
   --accent-dark: #ff6b5b;
   --accent-light: #ffb599;
+  --accent-text: #ff8a7d; /* High contrast on dark backgrounds */
   --peach: #ffcbb8;
   --yellow-soft: #d4b535;
   --orange-soft: #cc8a4e;
@@ -78,8 +144,13 @@
 
   /* Border and overlay */
   --border-color: rgba(255, 255, 255, 0.1);
+  --border-color-light: rgba(255, 255, 255, 0.05);
   --border-color-hover: rgba(255, 138, 125, 0.3);
   --overlay-bg: rgba(0, 0, 0, 0.7);
+
+  /* Tab control */
+  --tab-hover-bg: rgba(255, 255, 255, 0.08);
+  --tab-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 
   /* Shadows - darker and more subtle */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -91,12 +162,56 @@
   --success: #68d391;
   --warning: #fbd38d;
   --error: #fc8181;
+  --error-bg: rgba(252, 129, 129, 0.12);
+
+  /* Text on colored backgrounds */
+  --text-on-accent: #ffffff;
+
+  /* Focus rings */
+  --accent-focus-ring: rgba(255, 138, 125, 0.2);
+
+  /* Semantic status colors */
+  --success-dark: #48bb78;
+  --success-bg: rgba(104, 211, 145, 0.15);
+  --error-dark: #fc8181;
+  --warning-bg: rgba(251, 211, 141, 0.15);
+  --warning-dark: #fbd38d;
+  --warning-surface: rgba(251, 211, 141, 0.15);
+  --warning-surface-end: rgba(251, 211, 141, 0.25);
+  --accent-bg: rgba(255, 138, 125, 0.1);
+  --accent-bg-subtle: rgba(255, 138, 125, 0.15);
+  --shadow-accent-hover: 0 6px 16px rgba(255, 138, 125, 0.3);
+  --shadow-success: 0 6px 20px rgba(104, 211, 145, 0.25);
+
+  /* Category colors — adjusted for dark mode */
+  --category-purple: #a78bfa;
+  --category-pink: #f9a8d4;
+  --category-blue: #7dd3fc;
+
+  /* Avatar gradients */
+  --avatar-david: linear-gradient(135deg, #5a9de0 0%, #8bc4ff 100%);
+  --avatar-david-shadow: rgba(90, 157, 224, 0.3);
 
   /* Role badges */
   --role-owner-bg: linear-gradient(135deg, #fbd38d 0%, #f6ad55 100%);
+  --role-owner-text: #fbd38d;
+  --role-owner-text-bg: rgba(251, 211, 141, 0.15);
   --role-member-bg: linear-gradient(135deg, #ff8a7d 0%, #ffcbb8 100%);
   --role-guest-bg: rgba(255, 255, 255, 0.1);
   --role-guest-text: #b8aea8;
+  --role-guest-avatar: linear-gradient(135deg, #8a9bb0 0%, #607080 100%);
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Smooth transition when theme changes */
@@ -108,4 +223,23 @@ html {
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
+}
+
+/* Global focus-visible for all interactive elements (WCAG 2.4.7) */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--accent-focus-ring);
+}
+
+/* Remove default outline since we handle it above */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
 }

@@ -54,6 +54,9 @@ const props = withDefaults(defineProps<RotatingTextProps>(), {
 
 const currentTextIndex = ref(0)
 let intervalId: ReturnType<typeof setInterval> | null = null
+const prefersReducedMotion = ref(
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+)
 
 const splitIntoCharacters = (text: string): string[] => {
   if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
@@ -145,7 +148,7 @@ const cleanupInterval = (): void => {
 }
 
 const startInterval = (): void => {
-  if (props.auto) {
+  if (props.auto && !prefersReducedMotion.value) {
     intervalId = setInterval(next, props.rotationInterval)
   }
 }
@@ -168,13 +171,23 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <!-- Static fallback for prefers-reduced-motion -->
+  <span
+    v-if="prefersReducedMotion"
+    class="rotating-text rotating-text-static"
+    :class="mainClassName"
+    v-bind="$attrs"
+  >
+    {{ texts[0] }}
+  </span>
+
   <Motion
+    v-else
     tag="span"
     class="rotating-text"
     :class="mainClassName"
     v-bind="$attrs"
     :transition="transition"
-    layout
   >
     <span class="sr-only">
       {{ texts[currentTextIndex] }}
@@ -190,7 +203,6 @@ onUnmounted(() => {
             : 'rotating-text-inner'
         "
         aria-hidden="true"
-        layout
       >
         <span
           v-for="(wordObj, wordIndex) in elements"
@@ -270,5 +282,19 @@ onUnmounted(() => {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+.rotating-text-static {
+  display: inline-flex;
+  white-space: pre-wrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotating-text,
+  .rotating-text-inner,
+  .rotating-text-char {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 </style>

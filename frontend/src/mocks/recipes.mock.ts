@@ -6,7 +6,7 @@ import type { RecipeSummary, Recipe, CreateRecipeRequest, ParseRecipeRequest, Pa
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-const mockRecipes: Recipe[] = [
+export const mockRecipes: Recipe[] = [
   {
     id: 'rec_1',
     name: 'Pasta Carbonara',
@@ -113,6 +113,48 @@ const mockRecipes: Recipe[] = [
       'Låt sjuda 20 min',
       'Servera med pasta'
     ]
+  },
+  {
+    id: 'rec_6',
+    name: 'Vegetarisk curry',
+    servings: 4,
+    emoji: '🥗',
+    tags: ['vegetariskt', 'vardag'],
+    ingredients: [
+      { name: 'Kikärtor', amount: 400, unit: 'g' },
+      { name: 'Kokosmjölk', amount: 400, unit: 'ml' },
+      { name: 'Currypasta', amount: 2, unit: 'msk' },
+      { name: 'Spenat', amount: 200, unit: 'g' },
+      { name: 'Ris', amount: 4, unit: 'dl' }
+    ],
+    instructions: [
+      'Fräs currypastan i olja',
+      'Tillsätt kokosmjölk och kikärtor',
+      'Låt sjuda 15 min',
+      'Vänd ner spenaten',
+      'Servera med ris'
+    ]
+  },
+  {
+    id: 'rec_7',
+    name: 'Pizza',
+    servings: 4,
+    emoji: '🍕',
+    tags: ['fredagsmys', 'barn'],
+    ingredients: [
+      { name: 'Pizzadeg', amount: 1, unit: 'st' },
+      { name: 'Tomatsås', amount: 2, unit: 'dl' },
+      { name: 'Mozzarella', amount: 200, unit: 'g' },
+      { name: 'Skinka', amount: 150, unit: 'g' },
+      { name: 'Champinjoner', amount: 100, unit: 'g' }
+    ],
+    instructions: [
+      'Sätt ugnen på 250°C',
+      'Kavla ut degen',
+      'Bred på tomatsås',
+      'Lägg på topping och ost',
+      'Grädda 10-12 min'
+    ]
   }
 ]
 
@@ -141,11 +183,45 @@ export async function mockGetRecipe(id: string): Promise<Recipe> {
   return { ...recipe }
 }
 
-export async function mockCreateRecipe(_recipe: CreateRecipeRequest): Promise<{ id: string }> {
+export async function mockCreateRecipe(recipe: CreateRecipeRequest): Promise<{ id: string }> {
   await delay(500)
 
   const newId = 'rec_' + Date.now()
+  mockRecipes.push({
+    id: newId,
+    name: recipe.name,
+    servings: recipe.servings,
+    emoji: recipe.emoji,
+    tags: recipe.tags ?? [],
+    ingredients: recipe.ingredients,
+    instructions: recipe.instructions,
+  })
   return { id: newId }
+}
+
+export async function mockUpdateRecipe(id: string, recipe: CreateRecipeRequest): Promise<Recipe> {
+  await delay(400)
+
+  const existing = mockRecipes.find((r) => r.id === id)
+  if (!existing) {
+    throw { response: { status: 404, data: { error: 'not_found' } } }
+  }
+
+  const updated: Recipe = { ...existing, ...recipe }
+  const index = mockRecipes.indexOf(existing)
+  mockRecipes[index] = updated
+  return { ...updated }
+}
+
+export async function mockDeleteRecipe(id: string): Promise<void> {
+  await delay(300)
+
+  const index = mockRecipes.findIndex((r) => r.id === id)
+  if (index === -1) {
+    throw { response: { status: 404, data: { error: 'not_found' } } }
+  }
+
+  mockRecipes.splice(index, 1)
 }
 
 export async function mockParseRecipe(_req: ParseRecipeRequest): Promise<ParseRecipeResponse> {

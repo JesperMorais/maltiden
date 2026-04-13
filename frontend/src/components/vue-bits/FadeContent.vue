@@ -1,8 +1,8 @@
 <template>
   <div
     ref="elementRef"
-    :class="className"
-    :style="{
+    :class="[className, { 'reduced-motion': prefersReducedMotion }]"
+    :style="prefersReducedMotion ? {} : {
       opacity: inView ? 1 : initialOpacity,
       transition: `opacity ${duration}ms ${easing}, filter ${duration}ms ${easing}`,
       filter: blur ? (inView ? 'blur(0px)' : 'blur(10px)') : 'none',
@@ -38,6 +38,9 @@ const props = withDefaults(defineProps<Props>(), {
 const inView = ref(false)
 const elementRef = useTemplateRef<HTMLDivElement>('elementRef')
 let observer: IntersectionObserver | null = null
+const prefersReducedMotion = ref(
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+)
 
 onMounted(() => {
   const element = elementRef.value

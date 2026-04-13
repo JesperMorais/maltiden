@@ -83,7 +83,7 @@ const isWeekdays = computed(() => {
   background: transparent;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -100,7 +100,7 @@ const isWeekdays = computed(() => {
 .day-chip.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .presets {
@@ -130,6 +130,6 @@ const isWeekdays = computed(() => {
 .preset-btn.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
 }
 </style>

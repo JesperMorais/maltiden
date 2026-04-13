@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useLandingStore } from '@/stores/landing'
+import { useThemeStore } from '@/stores/theme'
 import HeroSection from '@/components/landing/HeroSection.vue'
 import FeaturesSection from '@/components/landing/FeaturesSection.vue'
 import CtaSection from '@/components/landing/CtaSection.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
+import { Loader2, AlertTriangle } from 'lucide-vue-next'
 const landingStore = useLandingStore()
+const themeStore = useThemeStore()
+
+const waveLineColor = computed(() =>
+  themeStore.isDarkMode ? 'rgba(255, 138, 125, 0.15)' : 'rgba(255, 107, 91, 0.12)',
+)
 
 onMounted(() => {
   landingStore.fetchLandingData()
@@ -13,10 +22,26 @@ onMounted(() => {
 
 <template>
   <main class="landing-page">
+    <!-- Single wave background covering entire page (fixed = viewport-sized only, no jank) -->
+    <WavesBackground
+      :line-color="waveLineColor"
+      background-color="transparent"
+      :wave-speed-x="0.01"
+      :wave-speed-y="0.004"
+      :wave-amp-x="40"
+      :wave-amp-y="20"
+      :x-gap="12"
+      :y-gap="36"
+      :friction="0.92"
+      :tension="0.006"
+      :max-cursor-move="120"
+      :style="{ position: 'fixed', zIndex: 0, pointerEvents: 'none' }"
+    />
+
     <!-- Loading state -->
-    <div v-if="landingStore.isLoading" class="loading-state">
+    <div v-if="landingStore.isLoading" class="loading-state" role="status" aria-label="Laddar sidan">
       <div class="loader">
-        <span class="loader-icon">🍳</span>
+        <Loader2 :size="40" class="loader-icon" aria-hidden="true" />
         <p class="loader-text">Laddar...</p>
       </div>
     </div>
@@ -24,12 +49,12 @@ onMounted(() => {
     <!-- Error state -->
     <div v-else-if="landingStore.error" class="error-state">
       <div class="error-content">
-        <span class="error-icon">😅</span>
+        <AlertTriangle :size="40" class="error-icon" aria-hidden="true" />
         <h2>Något gick fel</h2>
         <p>{{ landingStore.error }}</p>
-        <button class="retry-btn" @click="landingStore.fetchLandingData(true)">
+        <BaseButton variant="primary" size="md" @click="landingStore.fetchLandingData(true)">
           Försök igen
-        </button>
+        </BaseButton>
       </div>
     </div>
 
@@ -62,9 +87,16 @@ onMounted(() => {
 
 <style scoped>
 .landing-page {
+  position: relative;
   min-height: 100vh;
-  background: var(--bg-secondary);
-  overflow-x: hidden;
+  background: linear-gradient(
+    180deg,
+    var(--bg-secondary) 0%,
+    var(--bg-primary) 30%,
+    var(--bg-secondary) 60%,
+    var(--bg-secondary) 100%
+  );
+  overflow: clip;
 }
 
 /* Loading state */
@@ -81,9 +113,9 @@ onMounted(() => {
 }
 
 .loader-icon {
-  font-size: 4rem;
   display: block;
-  animation: bounce 1s ease-in-out infinite;
+  color: var(--accent);
+  animation: spin 1.5s linear infinite;
 }
 
 .loader-text {
@@ -110,8 +142,8 @@ onMounted(() => {
 }
 
 .error-icon {
-  font-size: 4rem;
   display: block;
+  color: var(--text-muted);
   margin-bottom: 1rem;
 }
 
@@ -129,26 +161,8 @@ onMounted(() => {
   margin: 0 0 1.5rem;
 }
 
-.retry-btn {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 1rem;
-  color: white;
-  background: var(--accent);
-  border: none;
-  border-radius: 100px;
-  padding: 0.85em 2em;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.retry-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-accent);
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

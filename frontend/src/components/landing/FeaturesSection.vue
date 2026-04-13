@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { Feature } from '@/api/types/landing.types'
 import FeatureCard from './FeatureCard.vue'
-import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
 
 interface Props {
   sectionTitle: string
@@ -13,22 +12,6 @@ defineProps<Props>()
 
 <template>
   <section class="features-section">
-    <WavesBackground
-      line-color="rgba(255, 140, 100, 0.06)"
-      background-color="transparent"
-      :wave-speed-x="0.005"
-      :wave-speed-y="0.002"
-      :wave-amp-x="20"
-      :wave-amp-y="10"
-      :x-gap="18"
-      :y-gap="48"
-      :friction="0.94"
-      :tension="0.003"
-    />
-    <div class="features-bg">
-      <div class="dot-pattern"></div>
-    </div>
-
     <div class="features-container">
       <div class="section-header">
         <span class="section-badge">Funktioner</span>
@@ -53,36 +36,9 @@ defineProps<Props>()
 <style scoped>
 .features-section {
   position: relative;
-  padding: 6rem 2rem;
-  padding-bottom: 12rem;
-  background: var(--bg-secondary);
+  padding: 4rem 2rem 6rem;
+  background: transparent;
   overflow: visible;
-}
-
-/* Curved bottom transition to CTA */
-.features-section::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 150px;
-  background: var(--bg-secondary);
-  clip-path: ellipse(70% 100% at 50% 100%);
-}
-
-.features-bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.dot-pattern {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(var(--accent) 1px, transparent 1px);
-  background-size: 40px 40px;
-  opacity: 0.03;
 }
 
 .features-container {
@@ -104,7 +60,7 @@ defineProps<Props>()
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--bg-hover);
   padding: 0.5rem 1.25rem;
   border-radius: 100px;
@@ -124,8 +80,8 @@ defineProps<Props>()
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
 }
 
 .feature-item {
@@ -144,30 +100,45 @@ defineProps<Props>()
   }
 }
 
+/* Tablet: 2 equal columns */
+@media (min-width: 768px) {
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+}
+
+/* Desktop: bento layout — row 1: 3/5 + 2/5, row 2: 2/5 + 3/5 */
+@media (min-width: 1280px) {
+  .features-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .feature-item:nth-child(1) { grid-column: span 3; }
+  .feature-item:nth-child(2) { grid-column: span 2; }
+  .feature-item:nth-child(3) { grid-column: span 2; }
+  .feature-item:nth-child(4) { grid-column: span 3; }
+}
+
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .features-section {
-    padding: 6rem 1.5rem;
+    padding: 3rem 1.5rem;
   }
 
   .section-header {
     margin-bottom: 3rem;
   }
-
-  .features-grid {
-    gap: 1.5rem;
-  }
 }
 
-@media (min-width: 1024px) {
-  .features-grid {
-    grid-template-columns: repeat(2, 1fr);
+@media (max-width: 480px) {
+  .features-section {
+    padding: 3rem 1rem;
+    padding-bottom: 6rem;
   }
-}
 
-@media (min-width: 1280px) {
-  .features-grid {
-    grid-template-columns: repeat(4, 1fr);
+  .section-header {
+    margin-bottom: 2rem;
   }
 }
 </style>

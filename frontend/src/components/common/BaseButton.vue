@@ -19,6 +19,7 @@ withDefaults(defineProps<Props>(), {
     class="base-button"
     :class="[`variant-${variant}`, `size-${size}`, { loading, disabled }]"
     :disabled="disabled || loading"
+    :aria-busy="loading"
   >
     <span class="button-content" :class="{ invisible: loading }">
       <slot />
@@ -40,7 +41,7 @@ withDefaults(defineProps<Props>(), {
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -68,7 +69,7 @@ withDefaults(defineProps<Props>(), {
 /* Variant: Primary */
 .variant-primary {
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-  color: white;
+  color: var(--text-on-accent);
   box-shadow: var(--shadow-accent);
 }
 
@@ -101,13 +102,13 @@ withDefaults(defineProps<Props>(), {
 /* Variant: Outline */
 .variant-outline {
   background: transparent;
-  color: var(--accent);
+  color: var(--accent-text);
   box-shadow: inset 0 0 0 2.5px var(--accent);
 }
 
 .variant-outline:hover:not(:disabled) {
   background: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
   box-shadow:
     inset 0 0 0 2.5px var(--accent),
     var(--shadow-accent);
@@ -127,11 +128,12 @@ withDefaults(defineProps<Props>(), {
 .size-lg {
   padding: 1em 2.5em;
   font-size: 1.125rem;
+  transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 /* States */
 .disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none !important;
 }

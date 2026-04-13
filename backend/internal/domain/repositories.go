@@ -10,6 +10,9 @@ type UserRepository interface {
 	GetByID(id string) (*User, error)
 	Create(user *User) error
 	CreateTx(tx *sql.Tx, user *User) error
+	GetTokenVersion(userID string) (int, error)
+	IncrementTokenVersion(userID string) error
+	IncrementTokenVersionTx(tx *sql.Tx, userID string) error
 }
 
 // HouseholdRepository defines the interface for household storage operations.
@@ -35,16 +38,19 @@ type HouseholdRepository interface {
 
 // RecipeRepository defines the interface for recipe storage operations.
 type RecipeRepository interface {
-	GetAll(filter *RecipeFilter) ([]RecipeSummary, error)
-	GetAllPaginated(filter *RecipeFilter, limit, offset int) ([]RecipeSummary, int, error)
+	GetAll(filter *RecipeFilter, householdID string) ([]RecipeSummary, error)
+	GetAllPaginated(filter *RecipeFilter, householdID string, limit, offset int) ([]RecipeSummary, int, error)
 	GetByID(id string) (*Recipe, error)
 	GetByIDs(ids []string) (map[string]*Recipe, error)
 	Create(recipe *Recipe) error
+	Update(recipe *Recipe) error
+	Delete(id string) error
 }
 
 // MenuRepository defines the interface for menu storage operations.
 type MenuRepository interface {
 	Create(menu *Menu) error
+	Update(menu *Menu) error
 	GetCurrentByHousehold(householdID string) (*Menu, error)
 	GetByID(id string) (*Menu, error)
 	GetHouseholdIDByMenuID(menuID string) (string, error)
