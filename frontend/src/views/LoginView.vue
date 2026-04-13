@@ -1,12 +1,26 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BackLink from '@/components/common/BackLink.vue'
+import { UtensilsCrossed } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/user'
+import { useThemeStore } from '@/stores/theme'
+import { useToast } from '@/composables/useToast'
 import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
+import BaseThemeToggle from '@/components/common/BaseThemeToggle.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
+const themeStore = useThemeStore()
+const toast = useToast()
+
+onMounted(() => {
+  if (sessionStorage.getItem('session_expired')) {
+    sessionStorage.removeItem('session_expired')
+    toast.info('Din session har löpt ut. Logga in igen.')
+  }
+})
 
 const email = ref('')
 const password = ref('')
@@ -15,6 +29,10 @@ const error = ref('')
 
 const canSubmit = computed(() =>
   email.value.includes('@') && password.value.length >= 8
+)
+
+const waveLineColor = computed(() =>
+  themeStore.isDarkMode ? 'rgba(255, 138, 125, 0.15)' : 'rgba(255, 107, 91, 0.12)',
 )
 
 async function handleLogin() {
@@ -40,7 +58,7 @@ async function handleLogin() {
   <main class="login-page">
     <!-- Animated wave background -->
     <WavesBackground
-      line-color="rgba(255, 107, 91, 0.12)"
+      :line-color="waveLineColor"
       background-color="transparent"
       :wave-speed-x="0.01"
       :wave-speed-y="0.004"
@@ -58,15 +76,17 @@ async function handleLogin() {
     </div>
 
     <div class="login-container">
-      <!-- Back link -->
-      <RouterLink v-prefetch="'landing'" to="/" class="back-link">
-        <span class="back-arrow">←</span>
-        <span>Tillbaka</span>
-      </RouterLink>
+      <!-- Top bar with back link and theme toggle -->
+      <div class="login-top-bar">
+        <BackLink to="/" />
+        <BaseThemeToggle />
+      </div>
 
       <!-- Login card -->
       <div class="login-card">
-        <div class="logo-icon">🍽️</div>
+        <div class="logo-icon">
+          <UtensilsCrossed :size="40" :stroke-width="1.75" />
+        </div>
         <h1>Välkommen tillbaka</h1>
         <p>Logga in på ditt Måltiden-konto</p>
 
@@ -76,8 +96,11 @@ async function handleLogin() {
             <input
               v-model="email"
               type="email"
+              name="email"
+              autocomplete="email"
               placeholder="din@email.se"
               class="form-input"
+              aria-describedby="login-error"
             />
           </label>
 
@@ -86,12 +109,19 @@ async function handleLogin() {
             <input
               v-model="password"
               type="password"
+              name="password"
+              autocomplete="current-password"
               placeholder="Ditt lösenord"
               class="form-input"
+              aria-describedby="login-error"
             />
           </label>
 
-          <p v-if="error" class="form-error">{{ error }}</p>
+          <p v-show="error" id="login-error" role="alert" class="form-error">{{ error }}</p>
+
+          <div class="forgot-password">
+            <a href="#" class="forgot-link" @click.prevent>Glömt lösenord?</a>
+          </div>
 
           <BaseButton
             type="submit"
@@ -117,16 +147,6 @@ async function handleLogin() {
 
 <style scoped>
 .login-page {
-  --coral: #ff6b5b;
-  --coral-dark: #e85a4a;
-  --coral-light: #ff8a7d;
-  --peach: #ffb599;
-  --cream: #fff8f0;
-  --warm-white: #fffcf7;
-  --text-dark: #3d2c29;
-  --text-muted: #6b5a56;
-  --yellow-soft: #ffd93d;
-
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -134,9 +154,9 @@ async function handleLogin() {
   padding: 2rem;
   background: linear-gradient(
     165deg,
-    var(--cream) 0%,
-    var(--warm-white) 50%,
-    #fff5eb 100%
+    var(--bg-secondary) 0%,
+    var(--bg-primary) 50%,
+    var(--bg-secondary) 100%
   );
   position: relative;
   overflow: hidden;
@@ -159,7 +179,7 @@ async function handleLogin() {
 .blob-1 {
   width: 500px;
   height: 500px;
-  background: linear-gradient(135deg, var(--peach) 0%, var(--coral-light) 100%);
+  background: linear-gradient(135deg, var(--peach) 0%, var(--accent-light) 100%);
   top: -200px;
   right: -150px;
 }
@@ -187,64 +207,40 @@ async function handleLogin() {
   max-width: 420px;
 }
 
-/* Back link */
-.back-link {
-  display: inline-flex;
+/* Top bar */
+.login-top-bar {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: var(--text-muted);
-  text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 100px;
-  transition: all 0.3s ease;
   margin-bottom: 2rem;
-}
-
-.back-link:hover {
-  color: var(--coral);
-  background: rgba(255, 107, 91, 0.1);
-}
-
-.back-arrow {
-  transition: transform 0.3s ease;
-}
-
-.back-link:hover .back-arrow {
-  transform: translateX(-4px);
 }
 
 /* Login card */
 .login-card {
-  background: var(--warm-white);
+  background: var(--bg-card);
   border-radius: 24px;
   padding: 2.5rem;
-  box-shadow:
-    0 20px 60px rgba(61, 44, 41, 0.08),
-    0 0 0 1px rgba(255, 107, 91, 0.08);
+  box-shadow: var(--shadow-lg);
   text-align: center;
 }
 
 .logo-icon {
-  font-size: 3rem;
+  color: var(--accent);
   margin-bottom: 1rem;
-  animation: float 3s ease-in-out infinite;
 }
 
 .login-card h1 {
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: 1.75rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin: 0 0 0.5rem;
 }
 
 .login-card > p {
   font-family: 'Nunito', sans-serif;
   font-size: 1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0 0 2rem;
 }
 
@@ -263,42 +259,59 @@ async function handleLogin() {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
-  color: var(--text-dark);
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
 }
 
 .form-input {
   width: 100%;
   padding: 0.9rem 1.25rem;
-  border: 2px solid rgba(61, 44, 41, 0.1);
+  border: 2px solid var(--border-color);
   border-radius: 14px;
   font-family: 'Nunito', sans-serif;
   font-size: 1rem;
-  color: var(--text-dark);
-  background: white;
+  color: var(--text-primary);
+  background: var(--bg-primary);
   transition: all 0.3s ease;
   box-sizing: border-box;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--coral);
-  box-shadow: 0 0 0 4px rgba(255, 107, 91, 0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-focus-ring);
 }
 
 .form-input::placeholder {
-  color: #bbb;
+  color: var(--text-muted);
 }
 
 .form-error {
   font-family: 'Nunito', sans-serif;
   font-size: 0.9rem;
-  color: #e53e3e;
+  color: var(--error);
   margin: -0.5rem 0 1.5rem;
   padding: 0.5rem 0.75rem;
-  background: rgba(229, 62, 62, 0.1);
+  background: var(--error-bg);
   border-radius: 8px;
   text-align: center;
+}
+
+.forgot-password {
+  text-align: right;
+  margin: -0.5rem 0 0.5rem;
+}
+
+.forgot-link {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
 }
 
 .login-form .base-button {
@@ -310,30 +323,25 @@ async function handleLogin() {
 .login-footer {
   margin-top: 2rem;
   padding-top: 1.5rem;
-  border-top: 1px solid rgba(61, 44, 41, 0.08);
+  border-top: 1px solid var(--border-color);
 }
 
 .login-footer p {
   font-family: 'Nunito', sans-serif;
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0;
 }
 
 .login-footer a {
-  color: var(--coral);
+  color: var(--accent-text);
   font-weight: 700;
+  font-size: 1rem;
   text-decoration: none;
 }
 
 .login-footer a:hover {
   text-decoration: underline;
-}
-
-/* Animation */
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
 }
 
 /* Responsive */

@@ -3,6 +3,24 @@ import { defineStore } from 'pinia'
 import type { User, UserRole } from '@/api/types/dashboard.types'
 import { tokenUtils } from '@/utils/token'
 import * as authApi from '@/api/auth.api'
+import { markAuthSuccess } from '@/api/client'
+import { isAxiosError } from 'axios'
+
+function getSwedishAuthError(e: unknown, fallback: string): string {
+  if (isAxiosError(e)) {
+    const status = e.response?.status
+    const code = e.response?.data?.error as string | undefined
+    if (status === 401 || code === 'invalid_credentials') return 'Fel e-post eller lösenord'
+    if (status === 409 || code === 'email_already_exists')
+      return 'E-postadressen är redan registrerad'
+    if (code === 'weak_password')
+      return 'Lösenordet måste innehålla minst 3 av: versaler, gemener, siffror, specialtecken'
+    if (code === 'invalid_email') return 'Ogiltig e-postadress'
+    if (status === 400) return 'Ogiltig förfrågan — kontrollera dina uppgifter'
+    if (!e.response) return 'Kunde inte nå servern — kontrollera din internetanslutning'
+  }
+  return fallback
+}
 
 /**
  * User Store
@@ -83,16 +101,16 @@ export const useUserStore = defineStore('user', () => {
     try {
       const response = await authApi.login(email, password)
       tokenUtils.set(response.token)
+      markAuthSuccess()
       setUser({
         id: response.user.id,
         name: response.user.name,
         email: response.user.email,
-        role: 'member' // Default role, will be updated when fetching household
+        role: 'member', // Default role, will be updated when fetching household
       })
       return true
     } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Inloggningen misslyckades'
-      error.value = errorMessage
+      error.value = getSwedishAuthError(e, 'Inloggningen misslyckades')
       return false
     } finally {
       isLoading.value = false
@@ -102,28 +120,23 @@ export const useUserStore = defineStore('user', () => {
   /**
    * Register a new user
    */
-  async function register(
-    name: string,
-    email: string,
-    password: string,
-    householdName?: string,
-  ): Promise<boolean> {
+  async function register(name: string, email: string, password: string): Promise<boolean> {
     isLoading.value = true
     error.value = null
 
     try {
-      const response = await authApi.register(name, email, password, householdName)
+      const response = await authApi.register(name, email, password)
       tokenUtils.set(response.token)
+      markAuthSuccess()
       setUser({
         id: response.user.id,
         name: response.user.name,
         email: response.user.email,
-        role: 'owner',
+        role: 'member',
       })
       return true
     } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Registreringen misslyckades'
-      error.value = errorMessage
+      error.value = getSwedishAuthError(e, 'Registreringen misslyckades')
       return false
     } finally {
       isLoading.value = false

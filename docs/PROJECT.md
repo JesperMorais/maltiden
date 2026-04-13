@@ -2,6 +2,10 @@
 
 Svensk receptapp för veckoplanering och smarta inköpslistor.
 
+**Status:** MVP-redo för soft launch — alla kritiska (K1–K5) och viktiga (V1–V5) uppgifter klara. 20 seed-recept, dagliga backups. Kvar: mobilpolish (M1–M6) och Philips QA-genomgång. Se `docs/TODO.md`.
+
+**Primär plattform: mobil.** Betafamiljerna (2–5 st) använder appen i telefonen — vid matlagning, i mataffären, vid middagsplanering i soffan. Responsiv design optimerad för 375px–414px (iPhone SE/12/13/14) som primärt mål, desktop som sekundärt.
+
 ## Team
 - **David** – Lead backend (Go)
 - **Jesper** – Lead frontend (Vue)
@@ -78,24 +82,37 @@ migrations/                 # SQL-migreringar
   5. När `dev` är stabil → merge till `main` för deploy
 
 ## Kärnfunktioner (MVP)
-1. Generera veckomenyer (5 dagar default)
-2. Flexibla dagar (skippa, fler personer, matlådor)
-3. Smart inköpslista med kategorier + offline
-4. Familje-inbjudan med kod (7 dagar giltighet)
 
-## Iteration 2+
+**Fungerar idag:**
+1. Registrera/logga in/logga ut med JWT-auth och roller (owner/member/guest)
+2. Skapa hushåll, bjud in med kod (kopiera till urklipp), gå med
+3. Lägg till, redigera och ta bort recept manuellt eller via AI-parsning (Claude)
+4. Generera veckomeny (5–7 dagar, skip-dagar, låsa dagar, anpassade portioner)
+5. Spara meny med exakta recept-val (PUT /menus/current)
+6. Interaktiv inköpslista med kategorier, avkryssning och progress
+7. Toast-notifikationer (success/error/info/warning) med svenska meddelanden
+8. Sessionshantering — tydligt meddelande vid JWT-utgång
+
+**Kvar innan lansering (se `docs/TODO.md`):**
+- Mobilpolish M1–M6 (CSS-justeringar för 375px–414px)
+- QA-genomgång (Philip)
+
+## Post-MVP
 - Preferensinlärning (gilla/ogilla)
-- Näringsbalans-varningar
+- Erbjudanden i inköpslista (Tjek API POC finns)
+- Näringsbalans (Livsmedelsverkets API)
 - Skafferi/inventory
 - Kylskåpsscan (Claude Vision)
+- PWA/offline-stöd
+- Google/Apple OAuth
 
 ## Datakällor
 - **Recept:** Egen databas (svenska klassiker) – Philip matar in via Claude
-- **Näringsvärden:** Livsmedelsverkets API (CC BY 4.0)
-- **Spoonacular:** Endast realtidssökning, får EJ lagra data
+- **Näringsvärden:** Livsmedelsverkets API (CC BY 4.0) — ej implementerat ännu
+- **Erbjudanden:** Tjek/etilbudsavis.dk API — POC klar, ej integrerad i inköpslista
 
 ## Auth-flöde
-1. Registrera med Google/Apple/Email
+1. Registrera med email/lösenord (OAuth planerat post-MVP)
 2. Skapa hushåll automatiskt
 3. Generera inbjudningskod för familjemedlemmar
 4. Kod gäller 7 dagar

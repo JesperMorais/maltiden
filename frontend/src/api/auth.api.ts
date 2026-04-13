@@ -16,7 +16,6 @@ export interface RegisterRequest {
   email: string
   password: string
   name: string
-  householdName?: string
 }
 
 export interface AuthResponse {
@@ -49,20 +48,11 @@ export async function login(email: string, password: string): Promise<AuthRespon
 /**
  * Register a new user
  */
-export async function register(
-  name: string,
-  email: string,
-  password: string,
-  householdName?: string,
-): Promise<AuthResponse> {
+export async function register(name: string, email: string, password: string): Promise<AuthResponse> {
   if (USE_MOCKS) {
     return mockRegister(name, email, password)
   }
 
-  const body: RegisterRequest = { name, email, password }
-  if (householdName) {
-    body.householdName = householdName
-  }
-  const { data } = await apiClient.post<AuthResponse>('/auth/register', body)
+  const { data } = await apiClient.post<AuthResponse>('/auth/register', { name, email, password })
   return data
 }

@@ -5,10 +5,11 @@ import {
   type ShoppingList,
   type ShoppingCategory,
 } from '@/api/shopping.api'
+import { useToast } from '@/composables/useToast'
 
 export function useShoppingList() {
+  const toast = useToast()
   const shoppingList = ref<ShoppingList | null>(null)
-  const activeMenuId = ref<string | undefined>(undefined)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
@@ -34,7 +35,6 @@ export function useShoppingList() {
   )
 
   async function fetchList(menuId?: string) {
-    activeMenuId.value = menuId
     isLoading.value = true
     error.value = null
     try {
@@ -47,6 +47,9 @@ export function useShoppingList() {
   }
 
   async function toggle(itemId: string, checked: boolean) {
+    const menuId = shoppingList.value?.menuId
+    if (!menuId) return
+
     // Optimistic update
     for (const cat of categories.value) {
       const item = cat.items.find((i) => i.id === itemId)
@@ -57,7 +60,7 @@ export function useShoppingList() {
     }
 
     try {
-      await toggleItem(itemId, checked, activeMenuId.value)
+      await toggleItem(itemId, checked, menuId)
     } catch {
       // Revert on failure
       for (const cat of categories.value) {
@@ -67,6 +70,7 @@ export function useShoppingList() {
           break
         }
       }
+      toast.error('Kunde inte uppdatera varan. Försök igen.')
     }
   }
 

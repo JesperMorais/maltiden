@@ -3,16 +3,26 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useMenuGeneratorStore } from '@/stores/menuGenerator'
 import { useSlotMachine, type DisplayRecipe } from '@/composables/useSlotMachine'
+import { useToast } from '@/composables/useToast'
+import { useFocusTrap } from '@/composables/useFocusTrap'
 import MenuDayCard from '@/components/menu/MenuDayCard.vue'
 import GenerateMenuEmptyState from '@/components/menu/GenerateMenuEmptyState.vue'
 import MenuGeneratorActions from '@/components/menu/MenuGeneratorActions.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
 
 const router = useRouter()
 const store = useMenuGeneratorStore()
 const slotMachine = useSlotMachine()
+const toast = useToast()
 
 // Local state
 const showUnsavedWarning = ref(false)
+const unsavedModalRef = ref<HTMLElement | null>(null)
+
+useFocusTrap(unsavedModalRef, {
+  isActive: showUnsavedWarning,
+  onEscape: cancelLeave,
+})
 const hasNavigatedFromSave = ref(false)
 
 // Computed
@@ -50,10 +60,10 @@ async function handleInitialGenerate() {
     // Build final recipes map from store data
     const finalRecipes = new Map<string, DisplayRecipe>()
     store.orderedDays.forEach((day) => {
-      if (day.recipeName && day.emoji) {
+      if (day.recipeId) {
         finalRecipes.set(day.date, {
-          recipeName: day.recipeName,
-          emoji: day.emoji,
+          recipeName: day.recipeName || 'Recept',
+          emoji: day.emoji || '🍽️',
         })
       }
     })
@@ -61,8 +71,8 @@ async function handleInitialGenerate() {
     // Land sequentially left-to-right
     await slotMachine.landSequentially(finalRecipes, store.lockedDays)
     store.onSlotAnimationComplete()
-  } catch (error) {
-    console.error('Generation failed:', error)
+  } catch {
+    toast.error('Kunde inte generera meny. Försök igen.')
     store.setError('Kunde inte generera meny. Försök igen.')
     slotMachine.reset()
     store.onSlotAnimationComplete()
@@ -88,18 +98,18 @@ async function handleRegenerate() {
     // Build final recipes map for unlocked days
     const finalRecipes = new Map<string, DisplayRecipe>()
     store.orderedDays.forEach((day) => {
-      if (!store.isDayLocked(day.date) && day.recipeName && day.emoji) {
+      if (!store.isDayLocked(day.date) && day.recipeId) {
         finalRecipes.set(day.date, {
-          recipeName: day.recipeName,
-          emoji: day.emoji,
+          recipeName: day.recipeName || 'Recept',
+          emoji: day.emoji || '🍽️',
         })
       }
     })
 
     await slotMachine.landSequentially(finalRecipes, store.lockedDays)
     store.onSlotAnimationComplete()
-  } catch (error) {
-    console.error('Regeneration failed:', error)
+  } catch {
+    toast.error('Kunde inte generera nya recept. Försök igen.')
     store.setError('Kunde inte generera nya recept. Försök igen.')
     slotMachine.reset()
     store.onSlotAnimationComplete()
@@ -120,13 +130,8 @@ function handleLockToggle(date: string) {
  */
 async function handleSave() {
   hasNavigatedFromSave.value = true
-  try {
-    const success = await store.saveMenu(router)
-    if (success) {
-      // Navigation handled by store
-    }
-  } catch (error) {
-    console.error('Save failed:', error)
+  const success = await store.saveDraftMenu(router)
+  if (!success) {
     hasNavigatedFromSave.value = false
   }
 }
@@ -218,13 +223,7 @@ onBeforeRouteLeave((to, from, next) => {
         </div>
 
         <!-- Error state -->
-        <div v-if="store.error" class="error-state">
-          <div class="error-icon">⚠️</div>
-          <p class="error-message">{{ store.error }}</p>
-          <button class="retry-button" @click="handleInitialGenerate">
-            Försök igen
-          </button>
-        </div>
+        <ErrorState v-if="store.error" :description="store.error" @retry="handleInitialGenerate" />
       </div>
     </main>
 
@@ -242,9 +241,9 @@ onBeforeRouteLeave((to, from, next) => {
     <!-- Unsaved changes warning modal -->
     <Teleport to="body">
       <div v-if="showUnsavedWarning" class="modal-overlay" @click="cancelLeave">
-        <div class="modal-card" @click.stop>
+        <div ref="unsavedModalRef" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="unsaved-modal-title" @click.stop>
           <div class="modal-header">
-            <h3 class="modal-title">Osparade ändringar</h3>
+            <h3 id="unsaved-modal-title" class="modal-title">Osparade ändringar</h3>
           </div>
           <div class="modal-body">
             <p class="modal-text">
@@ -303,7 +302,7 @@ onBeforeRouteLeave((to, from, next) => {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 1.25rem;
-  color: var(--accent);
+  color: var(--accent-text);
   margin: 0 0 1rem 0;
 }
 
@@ -338,48 +337,11 @@ onBeforeRouteLeave((to, from, next) => {
   gap: 1.5rem;
 }
 
-/* Error state */
-.error-state {
-  text-align: center;
-  padding: 3rem 2rem;
-}
-
-.error-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.error-message {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  font-size: 1.1rem;
-  color: var(--text-primary);
-  margin: 0 0 1.5rem 0;
-}
-
-.retry-button {
-  padding: 0.875rem 2rem;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 100px;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.retry-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(255, 107, 91, 0.4);
-}
-
 /* Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay-bg);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -457,7 +419,7 @@ onBeforeRouteLeave((to, from, next) => {
 
 .modal-btn-leave {
   background: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .modal-btn-leave:hover {
@@ -467,7 +429,7 @@ onBeforeRouteLeave((to, from, next) => {
 /* Responsive */
 @media (max-width: 1024px) {
   .menu-grid {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
   }
 
@@ -490,8 +452,15 @@ onBeforeRouteLeave((to, from, next) => {
   }
 
   .menu-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .menu-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
   .title {

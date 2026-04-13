@@ -8,13 +8,16 @@ import RecipeParseSuccess from '@/components/recipe-parser/RecipeParseSuccess.vu
 import ClickSpark from '@/components/vue-bits/ClickSpark.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
 import ProgressBar from '@/components/common/ProgressBar.vue'
+import { ChefHat } from 'lucide-vue-next'
 import { useProgressBar } from '@/composables/useProgressBar'
+import { useToast } from '@/composables/useToast'
 
 type EditableRecipe = CreateRecipeRequest & { emoji?: string }
 
 // Progress bar for AI parsing (Claude API can take up to 60s)
 const { progress: parseProgress, isActive: parseActive, start: parseStart, finish: parseFinish } =
   useProgressBar({ duration: 20000 })
+const toast = useToast()
 
 const emit = defineEmits<{
   (e: 'navigate-to-list'): void
@@ -79,7 +82,13 @@ async function handleParse() {
     step.value = 'ai-edit'
   } catch (err: unknown) {
     const e = err as { response?: { data?: { error?: string } } }
-    parseError.value = e?.response?.data?.error || 'Kunde inte tolka receptet. Försök igen.'
+    const code = e?.response?.data?.error
+    const errorMessages: Record<string, string> = {
+      rawText_required: 'Recepttext saknas',
+      input_too_long: 'Recepttexten är för lång',
+      failed_to_parse_recipe: 'Kunde inte tolka receptet — försök med en annan text',
+    }
+    parseError.value = (code && errorMessages[code]) || 'Kunde inte tolka receptet. Försök igen.'
   } finally {
     parseFinish()
     isParsing.value = false
@@ -108,8 +117,9 @@ async function handleSave() {
     savedName.value = editableRecipe.value.name
     savedEmoji.value = editableRecipe.value.emoji || '🍽️'
     step.value = 'success'
-  } catch (err: unknown) {
-    console.error('Save failed:', err)
+    toast.success('Receptet har sparats!')
+  } catch {
+    toast.error('Kunde inte spara receptet. Försök igen.')
   } finally {
     isSaving.value = false
   }
@@ -217,7 +227,7 @@ function handleViewRecipes() {
     <!-- Loading overlay -->
     <div v-if="isParsing" class="loading-overlay">
       <div class="loading-spinner">
-        <div class="spinner-emoji">🧑‍🍳</div>
+        <ChefHat :size="48" :stroke-width="1.5" class="spinner-icon" />
         <p class="loading-text">Claude tolkar ditt recept...</p>
         <ProgressBar :progress="parseProgress" :active="parseActive" />
       </div>
@@ -269,7 +279,7 @@ function handleViewRecipes() {
 .choose-card:hover {
   border-color: var(--accent);
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(255, 107, 91, 0.15);
+  box-shadow: 0 8px 24px var(--accent-focus-ring);
 }
 
 .choose-card-icon {
@@ -339,8 +349,8 @@ function handleViewRecipes() {
   width: 280px;
 }
 
-.spinner-emoji {
-  font-size: 4rem;
+.spinner-icon {
+  color: var(--accent);
   animation: spin 1.5s ease-in-out infinite;
 }
 

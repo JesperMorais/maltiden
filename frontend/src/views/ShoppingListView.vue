@@ -2,8 +2,12 @@
 import { onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useShoppingList } from '@/composables/useShoppingList'
-import { useSkeleton } from '@/composables/useSkeleton'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useSkeleton } from '@/composables/useSkeleton'
+import ErrorState from '@/components/common/ErrorState.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import BackLink from '@/components/common/BackLink.vue'
+import { ClipboardList, ShoppingCart } from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
@@ -24,17 +28,19 @@ const { showSkeleton } = useSkeleton(
   { minDuration: 300 }
 )
 
+const menuId = computed(() => {
+  const queryId = route.query.menuId
+  if (typeof queryId === 'string' && queryId) return queryId
+  return dashboardStore.menuId
+})
+
 onMounted(async () => {
-  // Get menuId from query param, or from dashboard store
-  const menuId = (route.query.menuId as string) || dashboardStore.currentMenuId
-  if (menuId) {
-    fetchList(menuId)
-  } else {
-    // Try to load dashboard first to get the current menu
+  // Ensure dashboard is loaded so we have menuId
+  if (!dashboardStore.dashboardData) {
     await dashboardStore.fetchDashboard()
-    if (dashboardStore.currentMenuId) {
-      fetchList(dashboardStore.currentMenuId)
-    }
+  }
+  if (menuId.value) {
+    fetchList(menuId.value)
   }
 })
 </script>
@@ -44,10 +50,7 @@ onMounted(async () => {
     <!-- Header -->
     <header class="header">
       <div class="header-content">
-        <button class="back-link" @click="router.push({ name: 'dashboard' })">
-          <span class="back-arrow">&larr;</span>
-          <span>Dashboard</span>
-        </button>
+        <BackLink :to="{ name: 'dashboard' }" label="Dashboard" />
         <h1 class="title">Inköpslista</h1>
         <p class="description">
           Alla ingredienser du behöver till veckans meny.
@@ -67,23 +70,30 @@ onMounted(async () => {
           </div>
         </div>
 
+        <!-- No menu state -->
+        <EmptyState
+          v-else-if="!menuId"
+          title="Ingen aktiv meny"
+          description="Generera en meny först så skapas din inköpslista automatiskt."
+          action-label="Generera meny"
+          @action="router.push({ name: 'generate-menu' })"
+        >
+          <template #icon><ClipboardList :size="48" color="var(--text-muted)" /></template>
+        </EmptyState>
+
         <!-- Error state -->
-        <div v-else-if="error" class="error-state">
-          <span class="error-icon">😅</span>
-          <h2>Något gick fel</h2>
-          <p>{{ error }}</p>
-          <button class="retry-btn" @click="fetchList(dashboardStore.currentMenuId ?? undefined)">Försök igen</button>
-        </div>
+        <ErrorState v-else-if="error" :description="error" @retry="fetchList(menuId!)" />
 
         <!-- Empty state -->
-        <div v-else-if="totalItems === 0" class="empty-state">
-          <span class="empty-icon">🛒</span>
-          <h2>Ingen inköpslista</h2>
-          <p>Generera en meny först så skapas din inköpslista automatiskt.</p>
-          <button class="action-btn" @click="router.push({ name: 'generate-menu' })">
-            Generera meny
-          </button>
-        </div>
+        <EmptyState
+          v-else-if="totalItems === 0"
+          title="Ingen inköpslista"
+          description="Generera en meny först så skapas din inköpslista automatiskt."
+          action-label="Generera meny"
+          @action="router.push({ name: 'generate-menu' })"
+        >
+          <template #icon><ShoppingCart :size="48" color="var(--text-muted)" /></template>
+        </EmptyState>
 
         <!-- Shopping list -->
         <template v-else>
@@ -157,28 +167,9 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: none;
-  border: none;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0;
-  margin-bottom: 1rem;
-  transition: color 0.2s ease;
-}
-
-.back-link:hover {
-  color: var(--accent);
-}
-
-.back-arrow {
-  font-size: 1.1rem;
+.header-content :deep(.back-link) {
+  margin-bottom: 0.5rem;
+  margin-left: -1rem;
 }
 
 .title {
@@ -270,24 +261,39 @@ onMounted(async () => {
 }
 
 .item-row.checked {
-  opacity: 0.5;
+  opacity: 0.65;
 }
 
 .item-label {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.65rem 0;
+  padding: 0.75rem 0;
   cursor: pointer;
-  border-bottom: 1px solid var(--border-color-light, rgba(0, 0, 0, 0.05));
+  border-bottom: 1px solid var(--border-color-light);
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.item-label:active {
+  background: var(--bg-hover);
+  border-radius: 8px;
+  margin: 0 -0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 .item-checkbox {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
   accent-color: var(--accent);
   cursor: pointer;
   flex-shrink: 0;
+  /* Expand touch target beyond visual size */
+  padding: 10px;
+  margin: -10px;
+  box-sizing: content-box;
 }
 
 .item-name {
@@ -310,94 +316,6 @@ onMounted(async () => {
   font-size: 0.9rem;
   color: var(--text-secondary);
   white-space: nowrap;
-}
-
-/* Error state */
-.error-state {
-  text-align: center;
-  padding: 4rem 2rem;
-}
-
-.error-icon {
-  font-size: 3rem;
-  display: block;
-  margin-bottom: 1rem;
-}
-
-.error-state h2 {
-  font-family: 'Fraunces', serif;
-  font-weight: 700;
-  font-size: 1.5rem;
-  color: var(--text-primary);
-  margin: 0 0 0.5rem;
-}
-
-.error-state p {
-  font-family: 'Nunito', sans-serif;
-  color: var(--text-secondary);
-  margin: 0 0 1.5rem;
-}
-
-.retry-btn {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 1rem;
-  color: white;
-  background: var(--accent);
-  border: none;
-  border-radius: 100px;
-  padding: 0.85em 2em;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.retry-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-accent);
-}
-
-/* Empty state */
-.empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-}
-
-.empty-icon {
-  font-size: 3rem;
-  display: block;
-  margin-bottom: 1rem;
-}
-
-.empty-state h2 {
-  font-family: 'Fraunces', serif;
-  font-weight: 700;
-  font-size: 1.5rem;
-  color: var(--text-primary);
-  margin: 0 0 0.5rem;
-}
-
-.empty-state p {
-  font-family: 'Nunito', sans-serif;
-  color: var(--text-secondary);
-  margin: 0 0 1.5rem;
-}
-
-.action-btn {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 1rem;
-  color: white;
-  background: var(--accent);
-  border: none;
-  border-radius: 100px;
-  padding: 0.85em 2em;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-accent);
 }
 
 /* Skeleton */

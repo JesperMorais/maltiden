@@ -4,13 +4,20 @@ import type { HouseholdMember } from '@/api/types/dashboard.types'
 import { useUserStore } from '@/stores/user'
 import { useDashboardStore } from '@/stores/dashboard'
 import { updateMemberStatus } from '@/api/household.api'
+import { useToast } from '@/composables/useToast'
+import { Settings, AlertTriangle, Link, Sandwich, UserPlus } from 'lucide-vue-next'
 
 interface Props {
   members: HouseholdMember[]
   inviteCode: string
+  horizontal?: boolean
+  selectedDate?: string | null
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  horizontal: false,
+  selectedDate: null,
+})
 
 const emit = defineEmits<{
   'show-invite': []
@@ -19,17 +26,49 @@ const emit = defineEmits<{
 
 const userStore = useUserStore()
 const dashboardStore = useDashboardStore()
+const toast = useToast()
 
 const showSettings = ref(false)
 const confirmRemove = ref<HouseholdMember | null>(null)
 
+const isViewingDay = computed(() => props.selectedDate !== null)
+
+const dayLabel = computed(() => {
+  if (!props.selectedDate) return null
+  const dayNames = ['söndag', 'måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag']
+  const d = new Date(props.selectedDate + 'T12:00:00')
+  return dayNames[d.getDay()]!
+})
+
+function isMemberEating(member: HouseholdMember): boolean {
+  if (props.selectedDate) {
+    return dashboardStore.isMemberEatingDay(props.selectedDate, member.id)
+  }
+  return member.isEatingToday
+}
+
 // Count members wanting lunch box
-const lunchBoxCount = computed(() =>
-  props.members.filter(m => m.wantsLunchBox && m.isEatingToday).length
-)
+const lunchBoxCount = computed(() => {
+  if (props.selectedDate) {
+    return dashboardStore.getDayLunchBoxCount(props.selectedDate)
+  }
+  return props.members.filter(m => m.wantsLunchBox && m.isEatingToday).length
+})
 
 function toggleSettings() {
   showSettings.value = !showSettings.value
+}
+
+/**
+ * Recalculate today's menu servings based on eating members + lunch boxes,
+ * then persist via the menu API and refresh the shopping list.
+ */
+function recalculateTodayServings() {
+  const members = props.members
+  const eaters = members.filter((m) => m.isEatingToday).length
+  const lunchBoxes = members.filter((m) => m.isEatingToday && m.wantsLunchBox).length
+  const today = new Date().toISOString().split('T')[0]!
+  dashboardStore.updateDayServings(today, eaters, lunchBoxes)
 }
 
 /**
@@ -37,14 +76,20 @@ function toggleSettings() {
  * Updates local state immediately, calls API in background, reverts on error.
  */
 function toggleEating(member: HouseholdMember) {
+  if (props.selectedDate) {
+    dashboardStore.toggleMemberDay(props.selectedDate, member.id)
+    return
+  }
+
   const newValue = !member.isEatingToday
   dashboardStore.updateMemberLocally(member.id, { isEatingToday: newValue })
 
-  updateMemberStatus(member.id, { isEatingToday: newValue }).catch((error: unknown) => {
-    dashboardStore.updateMemberLocally(member.id, { isEatingToday: !newValue })
-    // TODO: Show toast notification when toast system is added
-    console.error('Failed to update eating status:', error)
-  })
+  updateMemberStatus(member.id, { isEatingToday: newValue })
+    .then(() => recalculateTodayServings())
+    .catch(() => {
+      dashboardStore.updateMemberLocally(member.id, { isEatingToday: !newValue })
+      toast.error('Kunde inte uppdatera status. Försök igen.')
+    })
 }
 
 /**
@@ -55,11 +100,12 @@ function toggleLunchBox(member: HouseholdMember, event: Event) {
   const newValue = !member.wantsLunchBox
   dashboardStore.updateMemberLocally(member.id, { wantsLunchBox: newValue })
 
-  updateMemberStatus(member.id, { wantsLunchBox: newValue }).catch((error: unknown) => {
-    dashboardStore.updateMemberLocally(member.id, { wantsLunchBox: !newValue })
-    // TODO: Show toast notification when toast system is added
-    console.error('Failed to update lunchbox status:', error)
-  })
+  updateMemberStatus(member.id, { wantsLunchBox: newValue })
+    .then(() => recalculateTodayServings())
+    .catch(() => {
+      dashboardStore.updateMemberLocally(member.id, { wantsLunchBox: !newValue })
+      toast.error('Kunde inte uppdatera matlådestatus. Försök igen.')
+    })
 }
 
 function handleRemoveClick(member: HouseholdMember) {
@@ -80,19 +126,27 @@ function cancelRemove() {
 </script>
 
 <template>
-  <section class="household-widget">
+  <section class="household-widget" :class="{ horizontal: props.horizontal }">
     <header class="widget-header">
-      <h3 class="widget-title">Hushållet</h3>
+      <div class="header-left">
+        <h3 class="widget-title">Hushållet</h3>
+        <div v-if="horizontal && lunchBoxCount > 0" class="lunchbox-pill">
+          <Sandwich :size="14" />
+          <span>{{ lunchBoxCount }} {{ lunchBoxCount > 1 ? 'matlådor' : 'matlåda' }}</span>
+        </div>
+      </div>
       <div class="header-actions">
         <span class="member-count">{{ members.length }} personer</span>
         <button
           v-if="userStore.isMember"
           class="settings-btn"
           :class="{ active: showSettings }"
+          :aria-expanded="showSettings"
+          aria-haspopup="true"
           @click="toggleSettings"
           aria-label="Inställningar"
         >
-          ⚙️
+          <Settings :size="16" />
         </button>
       </div>
     </header>
@@ -118,12 +172,12 @@ function cancelRemove() {
       </div>
     </Transition>
 
-    <!-- Confirmation dialog (teleported to body for proper z-index) -->
+    <!-- Confirmation dialog -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="confirmRemove" class="confirm-overlay" @click.self="cancelRemove">
           <div class="confirm-dialog">
-            <div class="confirm-icon">⚠️</div>
+            <div class="confirm-icon"><AlertTriangle :size="48" color="var(--warning)" /></div>
             <h4>Ta bort {{ confirmRemove.name }}?</h4>
             <p>
               Är du säker att du vill ta bort <strong>{{ confirmRemove.name }}</strong> från hushållet?
@@ -138,10 +192,10 @@ function cancelRemove() {
       </Transition>
     </Teleport>
 
-    <!-- Lunch box summary -->
-    <div v-if="lunchBoxCount > 0" class="lunchbox-summary">
-      <span class="lunchbox-icon">🍱</span>
-      <span class="lunchbox-text">{{ lunchBoxCount }} matlåda{{ lunchBoxCount > 1 ? 'or' : '' }} imorgon</span>
+    <!-- Vertical-only lunchbox summary -->
+    <div v-if="!horizontal && lunchBoxCount > 0" class="lunchbox-summary">
+      <span class="lunchbox-icon"><Sandwich :size="18" /></span>
+      <span class="lunchbox-text">{{ lunchBoxCount }} {{ lunchBoxCount > 1 ? 'matlådor' : 'matlåda' }} imorgon</span>
     </div>
 
     <div class="members-list">
@@ -149,46 +203,67 @@ function cancelRemove() {
         v-for="member in members"
         :key="member.id"
         class="member-item"
-        :class="{ 'not-eating': !member.isEatingToday, tappable: userStore.isMember }"
-        :role="userStore.isMember ? 'button' : undefined"
-        :tabindex="userStore.isMember ? 0 : undefined"
-        :aria-label="userStore.isMember ? `${member.name}: ${member.isEatingToday ? 'äter idag' : 'äter inte idag'}. Klicka för att ändra.` : undefined"
-        @click="userStore.isMember ? toggleEating(member) : undefined"
-        @keydown.enter="userStore.isMember ? toggleEating(member) : undefined"
-        @keydown.space.prevent="userStore.isMember ? toggleEating(member) : undefined"
+        :class="{ 'not-eating': !isMemberEating(member) }"
       >
-        <div class="member-avatar" :class="member.role">
-          {{ member.name.charAt(0).toUpperCase() }}
+        <!-- Avatar with status ring -->
+        <div class="avatar-wrapper" :class="{ eating: isMemberEating(member) }">
+          <div class="member-avatar" :class="member.role">
+            {{ member.name.charAt(0).toUpperCase() }}
+          </div>
+          <div v-if="!isViewingDay && member.wantsLunchBox && member.isEatingToday" class="lunchbox-indicator">
+            <Sandwich :size="10" />
+          </div>
         </div>
         <div class="member-info">
           <span class="member-name">{{ member.name }}</span>
           <span class="member-status">
-            <template v-if="member.isEatingToday">
+            <template v-if="isMemberEating(member)">
               <span class="status-dot eating"></span>
-              Äter idag
+              {{ isViewingDay ? `Äter ${dayLabel}` : 'Äter idag' }}
             </template>
             <template v-else>
               <span class="status-dot"></span>
-              Äter inte idag
+              {{ isViewingDay ? `Äter inte ${dayLabel}` : 'Äter inte idag' }}
             </template>
           </span>
         </div>
-        <button
-          v-if="member.isEatingToday && userStore.isMember"
-          class="lunchbox-toggle"
-          :class="{ active: member.wantsLunchBox }"
-          :title="member.wantsLunchBox ? 'Ta bort matlåda' : 'Lägg till matlåda'"
-          @click="toggleLunchBox(member, $event)"
-        >
-          🍱
-        </button>
+        <div class="member-actions">
+          <button
+            v-if="userStore.isMember"
+            class="eating-toggle"
+            :class="{ active: isMemberEating(member) }"
+            :aria-label="`${member.name}: ${isMemberEating(member) ? 'äter' : 'äter inte'}. Klicka för att ändra.`"
+            @click="toggleEating(member)"
+          >
+            <span class="eating-toggle-icon">{{ isMemberEating(member) ? '✓' : '✕' }}</span>
+          </button>
+          <button
+            v-if="!isViewingDay && isMemberEating(member) && userStore.isMember"
+            class="lunchbox-toggle"
+            :class="{ active: member.wantsLunchBox }"
+            :title="member.wantsLunchBox ? 'Ta bort matlåda' : 'Lägg till matlåda'"
+            :aria-label="member.wantsLunchBox ? `Ta bort matlåda för ${member.name}` : `Lägg till matlåda för ${member.name}`"
+            @click="toggleLunchBox(member, $event)"
+          >
+            Matlåda
+          </button>
+        </div>
         <span v-if="member.role === 'owner'" class="owner-badge">Ägare</span>
         <span v-else-if="member.role === 'guest'" class="guest-badge">Gäst</span>
       </div>
+
+      <!-- Invite as last item in the row (horizontal only) -->
+      <button v-if="horizontal" class="invite-avatar" @click="emit('show-invite')" aria-label="Bjud in fler">
+        <div class="invite-circle">
+          <UserPlus :size="20" />
+        </div>
+        <span class="invite-label">Bjud in</span>
+      </button>
     </div>
 
-    <button class="invite-button" @click="emit('show-invite')">
-      <span class="invite-icon">🔗</span>
+    <!-- Vertical-only invite button -->
+    <button v-if="!horizontal" class="invite-button" @click="emit('show-invite')">
+      <span class="invite-icon"><Link :size="16" /></span>
       <span>Bjud in fler</span>
     </button>
   </section>
@@ -211,12 +286,31 @@ function cancelRemove() {
   margin-bottom: 1rem;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .widget-title {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 0.9rem;
   color: var(--text-primary);
   margin: 0;
+}
+
+.lunchbox-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  background: linear-gradient(135deg, var(--warning-surface) 0%, var(--warning-surface-end) 100%);
+  border-radius: 100px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+  color: var(--warning-dark);
 }
 
 .header-actions {
@@ -245,6 +339,7 @@ function cancelRemove() {
   border: none;
   border-radius: 8px;
   cursor: pointer;
+  color: var(--text-secondary);
   font-size: 1rem;
   transition: all 0.2s ease;
   opacity: 0.6;
@@ -300,13 +395,21 @@ function cancelRemove() {
 }
 
 .remove-member-btn:hover {
-  background: rgba(229, 62, 62, 0.08);
+  background: var(--error-bg);
 }
 
 .remove-member-btn .member-initial {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
   font-size: 0.7rem;
+  color: var(--text-on-accent);
+  flex-shrink: 0;
 }
 
 .remove-member-btn .member-name {
@@ -331,26 +434,56 @@ function cancelRemove() {
   opacity: 1;
 }
 
-/* Lunch box summary */
+/* Lunch box summary (vertical only) */
 .lunchbox-summary {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 0.85rem;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: linear-gradient(135deg, var(--warning-surface) 0%, var(--warning-surface-end) 100%);
   border-radius: 10px;
   margin-bottom: 1rem;
 }
 
 .lunchbox-icon {
   font-size: 1.1rem;
+  color: var(--warning-dark);
 }
 
 .lunchbox-text {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.8rem;
-  color: #92400e;
+  color: var(--warning-dark);
+}
+
+/* ═══ Avatar wrapper with status ring ═══ */
+.avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.avatar-wrapper.eating {
+  border-color: var(--success);
+}
+
+.lunchbox-indicator {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--warning);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-primary);
+  border: 2px solid var(--bg-card);
 }
 
 /* Members list */
@@ -371,21 +504,16 @@ function cancelRemove() {
   transition: all 0.2s ease;
 }
 
-.member-item.not-eating {
-  opacity: 0.6;
+.member-item.not-eating .avatar-wrapper {
+  opacity: 0.5;
 }
 
-.member-item.tappable {
-  cursor: pointer;
-  user-select: none;
+.member-item.not-eating .member-name {
+  color: var(--text-muted);
 }
 
-.member-item.tappable:hover {
-  background: var(--bg-hover);
-}
-
-.member-item.tappable:active {
-  transform: scale(0.98);
+.member-item.not-eating .member-status {
+  color: var(--text-muted);
 }
 
 .member-avatar {
@@ -398,7 +526,7 @@ function cancelRemove() {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 0.9rem;
-  color: white;
+  color: var(--text-on-accent);
   flex-shrink: 0;
 }
 
@@ -414,7 +542,7 @@ function cancelRemove() {
 
 .member-avatar.guest,
 .member-initial.guest {
-  background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+  background: var(--role-guest-avatar);
 }
 
 .member-info {
@@ -440,11 +568,12 @@ function cancelRemove() {
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--text-secondary);
   opacity: 0.4;
+  position: relative;
 }
 
 .status-dot.eating {
@@ -452,41 +581,65 @@ function cancelRemove() {
   opacity: 1;
 }
 
+.status-dot.eating::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  width: 3px;
+  height: 5px;
+  border: solid white;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+/* Action buttons wrapper */
+.member-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .lunchbox-toggle {
-  width: 32px;
-  height: 32px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
+  padding: 0 0.65rem;
+  background: var(--bg-hover);
   border: 1.5px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 0.9rem;
+  border-radius: 10px;
   cursor: pointer;
-  opacity: 0.35;
+  color: var(--text-secondary);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.72rem;
+  white-space: nowrap;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .lunchbox-toggle:hover {
-  opacity: 0.7;
   border-color: var(--border-color-hover);
+  color: var(--text-primary);
 }
 
 .lunchbox-toggle.active {
   opacity: 1;
-  background: rgba(237, 197, 63, 0.12);
-  border-color: #edc53f;
+  background: var(--warning-bg);
+  border-color: var(--yellow-soft);
+  color: var(--warning-dark);
 }
 
 .owner-badge {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #c05621;
-  background: rgba(237, 137, 54, 0.15);
+  color: var(--role-owner-text);
+  background: var(--role-owner-text-bg);
   padding: 0.2rem 0.5rem;
   border-radius: 100px;
 }
@@ -494,13 +647,48 @@ function cancelRemove() {
 .guest-badge {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-secondary);
-  background: var(--bg-hover);
+  color: var(--role-guest-text);
+  background: var(--role-guest-bg);
   padding: 0.2rem 0.5rem;
   border-radius: 100px;
+}
+
+.eating-toggle {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.eating-toggle .eating-toggle-icon {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.eating-toggle.active {
+  background: var(--success-bg);
+  border-color: var(--success);
+}
+
+.eating-toggle.active .eating-toggle-icon {
+  color: var(--success-dark);
+}
+
+.eating-toggle:hover {
+  border-color: var(--accent);
 }
 
 .invite-button {
@@ -517,12 +705,11 @@ function cancelRemove() {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
-  color: var(--accent);
+  color: var(--accent-text);
   transition: all 0.3s ease;
 }
 
 .invite-button:hover {
-  background: var(--bg-hover);
   border-color: var(--accent);
 }
 
@@ -540,6 +727,170 @@ function cancelRemove() {
 .dropdown-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+/* ═══ Horizontal layout ═══ */
+.household-widget.horizontal {
+  border-radius: 24px;
+  padding: 1.25rem 1.5rem;
+}
+
+.horizontal .widget-header {
+  margin-bottom: 0.75rem;
+}
+
+.horizontal .members-list {
+  flex-direction: row;
+  gap: 0.5rem;
+  margin-bottom: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  align-items: stretch;
+}
+
+.horizontal .members-list::-webkit-scrollbar {
+  display: none;
+}
+
+.horizontal .member-item {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+  padding: 0.75rem 0.5rem 0.6rem;
+  border-radius: 16px;
+  min-width: 0;
+  flex: 1;
+}
+
+.horizontal .avatar-wrapper {
+  padding: 3px;
+  border-width: 2.5px;
+}
+
+.horizontal .member-avatar {
+  width: 42px;
+  height: 42px;
+  font-size: 1rem;
+}
+
+.horizontal .member-info {
+  flex: none;
+  min-width: 0;
+  width: 100%;
+}
+
+.horizontal .member-name {
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.horizontal .member-status {
+  justify-content: center;
+  font-size: 0.65rem;
+}
+
+.horizontal .member-actions {
+  justify-content: center;
+}
+
+.horizontal .member-item .eating-toggle {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.horizontal .member-item .lunchbox-toggle {
+  height: 30px;
+  border-radius: 8px;
+  font-size: 0.6rem;
+  padding: 0 0.45rem;
+}
+
+.horizontal .member-item .eating-toggle-icon {
+  font-size: 0.65rem;
+}
+
+.horizontal .owner-badge,
+.horizontal .guest-badge {
+  font-size: 0.6rem;
+  padding: 0.1rem 0.35rem;
+}
+
+/* Invite circle — lives inside the members row */
+.invite-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 72px;
+  padding: 0.75rem 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.invite-avatar:hover .invite-circle {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.invite-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 2px dashed var(--border-color-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-text);
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.invite-avatar:hover .invite-circle {
+  opacity: 1;
+}
+
+.invite-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.7rem;
+  color: var(--accent-text);
+  opacity: 0.6;
+}
+
+.invite-avatar:hover .invite-label {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .household-widget.horizontal {
+    padding: 1rem;
+  }
+
+  .horizontal .member-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
+  }
+
+  .invite-circle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .invite-circle :deep(svg) {
+    width: 16px;
+    height: 16px;
+  }
 }
 </style>
 
@@ -620,13 +971,13 @@ function cancelRemove() {
 }
 
 .btn-confirm {
-  background: #e53e3e;
+  background: var(--error);
   border: none;
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .btn-confirm:hover {
-  background: #c53030;
+  background: var(--error-dark);
   transform: translateY(-1px);
 }
 

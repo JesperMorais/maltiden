@@ -61,6 +61,47 @@ func (s *MenuStorage) Create(menu *domain.Menu) error {
 	return tx.Commit()
 }
 
+func (s *MenuStorage) Update(menu *domain.Menu) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete existing menu days
+	_, err = tx.ExecContext(ctx, `DELETE FROM menu_days WHERE menu_id = ?`, menu.ID)
+	if err != nil {
+		return err
+	}
+
+	// Insert new menu days
+	for _, day := range menu.Days {
+		skip := 0
+		if day.Skip {
+			skip = 1
+		}
+
+		var recipeID *string
+		if day.RecipeID != "" {
+			recipeID = &day.RecipeID
+		}
+
+		_, err = tx.ExecContext(ctx,
+			`INSERT INTO menu_days (id, menu_id, date, recipe_id, servings, skip)
+			 VALUES (?, ?, ?, ?, ?, ?)`,
+			"md_"+uuid.New().String(), menu.ID, day.Date, recipeID, day.Servings, skip,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
 func (s *MenuStorage) GetCurrentByHousehold(householdID string) (*domain.Menu, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

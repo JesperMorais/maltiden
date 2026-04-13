@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import { UtensilsCrossed, Sprout, UsersRound } from 'lucide-vue-next'
+import BackLink from '@/components/common/BackLink.vue'
+import SpotlightCard from '@/components/vue-bits/SpotlightCard.vue'
+import FadeContent from '@/components/vue-bits/FadeContent.vue'
 </script>
 
 <template>
@@ -8,36 +12,22 @@ import { RouterLink } from 'vue-router'
     <div class="bg-decorations">
       <div class="blob blob-1"></div>
       <div class="blob blob-2"></div>
-      <div class="blob blob-3"></div>
       <div class="grain"></div>
     </div>
 
     <!-- Navigation -->
     <nav class="about-nav">
-      <RouterLink v-prefetch="'landing'" to="/" class="back-link">
-        <span class="back-arrow">←</span>
-        <span>Tillbaka</span>
-      </RouterLink>
+      <BackLink to="/" />
     </nav>
 
     <!-- Hero Section -->
     <section class="hero-section">
       <div class="hero-content-simple">
-        <div class="hero-badge">
-          <span class="badge-icon">💝</span>
-          <span>Vår historia</span>
-        </div>
+        <div class="hero-badge">Vår historia</div>
         <h1 class="hero-title">Om Måltiden</h1>
         <p class="hero-subtitle">
           Vi gör måltidsplanering till en fröjd för svenska familjer
         </p>
-      </div>
-
-      <!-- Decorative food elements -->
-      <div class="hero-floats">
-        <span class="float-item float-1">🥗</span>
-        <span class="float-item float-2">🍲</span>
-        <span class="float-item float-3">🥘</span>
       </div>
     </section>
 
@@ -45,7 +35,6 @@ import { RouterLink } from 'vue-router'
     <section class="mission-section">
       <div class="mission-container">
         <div class="mission-header">
-          <span class="section-icon">✨</span>
           <h2>Vår Mission</h2>
         </div>
 
@@ -57,19 +46,25 @@ import { RouterLink } from 'vue-router'
 
         <div class="values-grid">
           <div class="value-card">
-            <div class="value-icon">🍽️</div>
+            <div class="value-icon">
+              <UtensilsCrossed :size="28" :stroke-width="1.75" />
+            </div>
             <h3>Enklare vardag</h3>
             <p>Slipp frågan "vad ska vi äta?" – vi hjälper dig planera hela veckans måltider på några minuter.</p>
           </div>
 
           <div class="value-card">
-            <div class="value-icon">🌱</div>
+            <div class="value-icon">
+              <Sprout :size="28" :stroke-width="1.75" />
+            </div>
             <h3>Mindre matsvinn</h3>
             <p>Smarta inköpslistor och portion­sberäkning så att du köper precis det du behöver.</p>
           </div>
 
           <div class="value-card">
-            <div class="value-icon">👨‍👩‍👧‍👦</div>
+            <div class="value-icon">
+              <UsersRound :size="28" :stroke-width="1.75" />
+            </div>
             <h3>Familjetid</h3>
             <p>Samla familjen kring middags­bordet med måltider alla älskar. Mindre stress, mer gemenskap.</p>
           </div>
@@ -79,11 +74,6 @@ import { RouterLink } from 'vue-router'
           <blockquote>
             "Vi vill att varje familj ska kunna njuta av god mat utan krångel"
           </blockquote>
-          <div class="quote-decoration">
-            <span>🍳</span>
-            <span>❤️</span>
-            <span>🥄</span>
-          </div>
         </div>
       </div>
     </section>
@@ -92,55 +82,37 @@ import { RouterLink } from 'vue-router'
     <section class="team-section">
       <div class="team-container">
         <div class="team-header">
-          <span class="section-icon">👥</span>
           <h2>Teamet bakom Måltiden</h2>
-          <p>Tre passionerade utvecklare med en gemensam kärlek för god mat och smart teknik</p>
         </div>
 
         <div class="team-grid">
-          <article class="team-card team-card-david">
-            <div class="card-accent"></div>
-            <div class="member-avatar">
-              <img src="@/assets/images/david.jpeg" alt="David" class="avatar-image" />
-              <div class="avatar-ring"></div>
-            </div>
-            <h3 class="member-name">David</h3>
-            <p class="member-role">Backend-utvecklare</p>
-            <p class="member-desc">
-              Ser till att allt fungerar smidigt bakom kulisserna.
-            </p>
-          </article>
+          <FadeContent :blur="true" :duration="800" :delay="100">
+            <SpotlightCard
+              spotlight-color="rgba(74, 144, 217, 0.15)"
+              border-radius="24px"
+              class-name="team-card"
+            >
+              <div class="team-card-inner">
+                <div class="member-initial member-initial-david">D</div>
+                <h3 class="member-name">David</h3>
+                <span class="member-role">Utvecklare</span>
+              </div>
+            </SpotlightCard>
+          </FadeContent>
 
-          <article class="team-card team-card-jesper">
-            <div class="card-accent"></div>
-            <div class="member-avatar">
-              <img src="@/assets/images/jesper.jpeg" alt="Jesper" class="avatar-image" />
-              <div class="avatar-ring"></div>
-            </div>
-            <h3 class="member-name">Jesper</h3>
-            <p class="member-role">Frontend-utvecklare</p>
-            <p class="member-desc">
-              Skapar den användarvänliga upplevelsen du ser framför dig.
-            </p>
-          </article>
-
-          <article class="team-card team-card-philip">
-            <div class="card-accent"></div>
-            <div class="member-avatar">
-              <img src="@/assets/images/philip.jpeg" alt="Philip" class="avatar-image" />
-              <div class="avatar-ring"></div>
-            </div>
-            <h3 class="member-name">Philip</h3>
-            <p class="member-role">Testare</p>
-            <p class="member-desc">
-              Ser till att allt fungerar perfekt och felfritt.
-            </p>
-          </article>
-        </div>
-
-        <div class="team-footer">
-          <div class="footer-emoji">🍝</div>
-          <p>Tillsammans gör vi måltidsplanering roligare!</p>
+          <FadeContent :blur="true" :duration="800" :delay="250">
+            <SpotlightCard
+              spotlight-color="rgba(255, 107, 91, 0.15)"
+              border-radius="24px"
+              class-name="team-card"
+            >
+              <div class="team-card-inner">
+                <div class="member-initial member-initial-jesper">J</div>
+                <h3 class="member-name">Jesper</h3>
+                <span class="member-role">Utvecklare</span>
+              </div>
+            </SpotlightCard>
+          </FadeContent>
         </div>
       </div>
     </section>
@@ -149,7 +121,7 @@ import { RouterLink } from 'vue-router'
     <section class="cta-section">
       <div class="cta-container">
         <h2>Redo att förenkla din matvardag?</h2>
-        <p>Gå med tusentals svenska familjer som redan använder Måltiden</p>
+        <p>Gör måltidsplaneringen enklare för hela familjen</p>
         <RouterLink to="/register" class="cta-button">
           Kom igång gratis
           <span class="btn-arrow">→</span>
@@ -179,7 +151,7 @@ import { RouterLink } from 'vue-router'
   position: absolute;
   border-radius: 50%;
   filter: blur(100px);
-  opacity: 0.5;
+  opacity: 0.3;
 }
 
 .blob-1 {
@@ -200,15 +172,6 @@ import { RouterLink } from 'vue-router'
   animation: float-slow 30s ease-in-out infinite reverse;
 }
 
-.blob-3 {
-  width: 400px;
-  height: 400px;
-  background: linear-gradient(135deg, var(--accent-light) 0%, var(--peach) 100%);
-  top: 60%;
-  right: -100px;
-  animation: float-slow 20s ease-in-out infinite;
-}
-
 .grain {
   position: absolute;
   inset: 0;
@@ -223,33 +186,13 @@ import { RouterLink } from 'vue-router'
   padding: 1.5rem 2rem;
 }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-  text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 100px;
-  transition: all 0.3s ease;
+.about-nav :deep(.back-link) {
   background: var(--bg-card);
   backdrop-filter: blur(10px);
 }
 
-.back-link:hover {
-  color: var(--accent);
+.about-nav :deep(.back-link:hover) {
   background: var(--accent-bg);
-}
-
-.back-arrow {
-  transition: transform 0.3s ease;
-}
-
-.back-link:hover .back-arrow {
-  transform: translateX(-4px);
 }
 
 /* Hero Section */
@@ -267,22 +210,16 @@ import { RouterLink } from 'vue-router'
 }
 
 .hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
+  display: inline-block;
   background: var(--accent-bg);
   color: var(--accent);
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1.25rem;
   border-radius: 100px;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.875rem;
   margin-bottom: 1.5rem;
   animation: fade-in-up 0.8s ease-out 0.1s backwards;
-}
-
-.badge-icon {
-  animation: pulse 2s ease-in-out infinite;
 }
 
 .hero-title {
@@ -305,23 +242,6 @@ import { RouterLink } from 'vue-router'
   animation: fade-in-up 0.8s ease-out 0.3s backwards;
 }
 
-.hero-floats {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.float-item {
-  position: absolute;
-  font-size: 2.5rem;
-  animation: float 6s ease-in-out infinite;
-  filter: drop-shadow(0 4px 8px rgba(61, 44, 41, 0.2));
-}
-
-.float-1 { top: 10%; left: 5%; animation-delay: 0s; }
-.float-2 { top: 20%; right: 8%; animation-delay: 1s; }
-.float-3 { bottom: 15%; left: 10%; animation-delay: 2s; }
-
 /* Mission Section */
 .mission-section {
   position: relative;
@@ -341,13 +261,6 @@ import { RouterLink } from 'vue-router'
   margin-bottom: 3rem;
 }
 
-.section-icon {
-  font-size: 3rem;
-  display: block;
-  margin-bottom: 1rem;
-  animation: bounce 2s ease-in-out infinite;
-}
-
 .mission-header h2,
 .team-header h2 {
   font-family: 'Fraunces', serif;
@@ -355,15 +268,6 @@ import { RouterLink } from 'vue-router'
   font-size: clamp(2rem, 4vw, 2.75rem);
   color: var(--text-primary);
   margin: 0;
-}
-
-.team-header p {
-  font-family: 'Nunito', sans-serif;
-  font-size: 1.1rem;
-  color: var(--text-secondary);
-  margin: 1rem 0 0;
-  max-width: 500px;
-  margin-inline: auto;
 }
 
 .mission-text {
@@ -400,8 +304,15 @@ import { RouterLink } from 'vue-router'
 }
 
 .value-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  margin: 0 auto 1rem;
 }
 
 .value-card h3 {
@@ -434,23 +345,9 @@ import { RouterLink } from 'vue-router'
   font-size: clamp(1.25rem, 3vw, 1.5rem);
   color: var(--text-primary);
   font-style: italic;
-  margin: 0 0 1.5rem;
+  margin: 0;
   line-height: 1.5;
 }
-
-.quote-decoration {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  font-size: 1.5rem;
-}
-
-.quote-decoration span {
-  animation: bounce 2s ease-in-out infinite;
-}
-
-.quote-decoration span:nth-child(2) { animation-delay: 0.2s; }
-.quote-decoration span:nth-child(3) { animation-delay: 0.4s; }
 
 /* Team Section */
 .team-section {
@@ -461,100 +358,56 @@ import { RouterLink } from 'vue-router'
 }
 
 .team-container {
-  max-width: 1100px;
+  max-width: 640px;
   margin: 0 auto;
 }
 
 .team-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 2rem;
-  margin-bottom: 4rem;
 }
 
 .team-card {
-  position: relative;
   background: var(--bg-card);
-  border-radius: 28px;
-  padding: 2.5rem 2rem;
-  text-align: center;
-  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  overflow: hidden;
 }
 
 .team-card:hover {
-  transform: translateY(-10px) scale(1.02);
+  transform: translateY(-8px);
   box-shadow: var(--shadow-lg);
   border-color: var(--accent);
 }
 
-.card-accent {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: linear-gradient(90deg, var(--accent) 0%, var(--peach) 100%);
+.team-card-inner {
+  padding: 3rem 2rem;
+  text-align: center;
 }
 
-.team-card-david .card-accent {
-  background: linear-gradient(90deg, #4a90d9 0%, #7ab8ff 100%);
-}
-
-.team-card-philip .card-accent {
-  background: linear-gradient(90deg, #4ade80 0%, #86efac 100%);
-}
-
-.member-avatar {
-  position: relative;
-  width: 140px;
-  height: 140px;
-  margin: 0 auto 1.5rem;
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
-  box-shadow:
-    0 8px 25px rgba(61, 44, 41, 0.15);
-}
-
-.avatar-emoji {
+.member-initial {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-size: 3rem;
-  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
-  box-shadow: var(--shadow-sm);
+  margin: 0 auto 1.5rem;
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 2.25rem;
+  color: var(--text-on-accent);
+  letter-spacing: -0.02em;
 }
 
-.avatar-ring {
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 3px solid transparent;
-  background: linear-gradient(135deg, var(--accent), var(--peach)) border-box;
-  -webkit-mask:
-    linear-gradient(#fff 0 0) padding-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: spin 8s linear infinite;
+.member-initial-david {
+  background: var(--avatar-david);
+  box-shadow: 0 8px 24px var(--avatar-david-shadow);
 }
 
-.team-card-david .avatar-ring {
-  background: linear-gradient(135deg, #4a90d9, #7ab8ff) border-box;
-}
-
-.team-card-philip .avatar-ring {
-  background: linear-gradient(135deg, #4ade80, #86efac) border-box;
+.member-initial-jesper {
+  background: var(--accent-gradient);
+  box-shadow: var(--shadow-accent);
 }
 
 .member-name {
@@ -562,58 +415,17 @@ import { RouterLink } from 'vue-router'
   font-weight: 800;
   font-size: 1.5rem;
   color: var(--text-primary);
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.5rem;
 }
 
 .member-role {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: var(--accent);
-  margin: 0 0 1rem;
-}
-
-.team-card-david .member-role { color: #4a90d9; }
-.team-card-philip .member-role { color: #22c55e; }
-
-.member-desc {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.member-decoration {
-  position: absolute;
-  bottom: 1rem;
-  right: 1.5rem;
-  font-size: 1.5rem;
-  opacity: 0.3;
-  transition: all 0.3s ease;
-}
-
-.team-card:hover .member-decoration {
-  opacity: 0.6;
-  transform: scale(1.2) rotate(10deg);
-}
-
-.team-footer {
-  text-align: center;
-}
-
-.footer-emoji {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  animation: wiggle 3s ease-in-out infinite;
-}
-
-.team-footer p {
+  display: inline-block;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--text-secondary);
-  margin: 0;
 }
 
 /* CTA Section */
@@ -634,7 +446,7 @@ import { RouterLink } from 'vue-router'
   font-family: 'Fraunces', serif;
   font-weight: 800;
   font-size: clamp(1.75rem, 4vw, 2.5rem);
-  color: white;
+  color: var(--text-on-accent);
   margin: 0 0 1rem;
 }
 
@@ -675,11 +487,6 @@ import { RouterLink } from 'vue-router'
 }
 
 /* Animations */
-@keyframes float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-15px) rotate(5deg); }
-}
-
 @keyframes float-slow {
   0%, 100% { transform: translate(0, 0); }
   50% { transform: translate(30px, 30px); }
@@ -696,34 +503,10 @@ import { RouterLink } from 'vue-router'
   }
 }
 
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes wiggle {
-  0%, 100% { transform: rotate(-5deg); }
-  50% { transform: rotate(5deg); }
-}
-
 /* Responsive */
 @media (max-width: 768px) {
   .hero-section {
     padding: 2rem 1.5rem 4rem;
-  }
-
-  .float-item {
-    display: none;
   }
 
   .mission-section,
@@ -734,7 +517,7 @@ import { RouterLink } from 'vue-router'
 
   .team-grid {
     grid-template-columns: 1fr;
-    max-width: 400px;
+    max-width: 360px;
     margin-inline: auto;
   }
 }

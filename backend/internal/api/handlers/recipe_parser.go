@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
+	"maltiden/pkg/middleware"
 	"net/http"
 )
 
@@ -71,14 +72,14 @@ func (h *RecipeParserHandler) ParseAndSave(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	created, err := h.recipeService.Create(parsed.Recipe)
+	householdID := middleware.GetHouseholdID(r)
+	created, err := h.recipeService.Create(parsed.Recipe, householdID)
 	if err != nil {
-		slog.Error("ParseAndSave save failed", "error", err)
 		WriteError(w, http.StatusInternalServerError, "save_failed")
 		return
 	}
 
-	WriteJSON(w, http.StatusCreated, map[string]interface{}{
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"id":         created.ID,
 		"recipe":     parsed.Recipe,
 		"confidence": parsed.Confidence,

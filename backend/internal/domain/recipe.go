@@ -16,6 +16,7 @@ type Recipe struct {
 	Tags         []string     `json:"tags"`
 	Ingredients  []Ingredient `json:"ingredients"`
 	Instructions []string     `json:"instructions"`
+	HouseholdID  string       `json:"householdId,omitempty"`
 	CreatedAt    time.Time    `json:"createdAt"`
 }
 
@@ -28,6 +29,15 @@ type RecipeSummary struct {
 }
 
 type CreateRecipeRequest struct {
+	Name         string       `json:"name"`
+	Servings     int          `json:"servings"`
+	Emoji        string       `json:"emoji,omitempty"`
+	Tags         []string     `json:"tags"`
+	Ingredients  []Ingredient `json:"ingredients"`
+	Instructions []string     `json:"instructions"`
+}
+
+type UpdateRecipeRequest struct {
 	Name         string       `json:"name"`
 	Servings     int          `json:"servings"`
 	Emoji        string       `json:"emoji,omitempty"`

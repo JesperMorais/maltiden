@@ -33,3 +33,32 @@ Thumbs.db
 
 # === Tools ===
 .serena/
+.swarm/
+.claude-flow/
+.mcp.json
+
+# Root-level node
+node_modules/
+dist/
+
+# Playwright
+test-results/
+playwright-report/
+/playwright-report-e2e/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Python
+__pycache__/
+*.pyc
+
+# Lighthouse
+tests/lighthouse-*.report.json
+tests/lighthouse-*.report.html
+tests/lighthouse-desktop-after/
+tests/lighthouse-mobile-after/
+
+# E2E build artifacts
+backend/static/
+tools/.venv/

@@ -1,8 +1,21 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import { generateMenu } from '@/api/menu.api'
+import { generateMenu, saveMenu } from '@/api/menu.api'
+import type { SaveMenuDay } from '@/api/menu.api'
 import { useDashboardStore } from './dashboard'
+import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'
+import { isAxiosError } from 'axios'
+
+function getSwedishMenuError(e: unknown, fallback: string): string {
+  if (isAxiosError(e)) {
+    const code = e.response?.data?.error as string | undefined
+    if (code === 'no_recipes_available') return 'Inga recept tillgängliga — lägg till recept först'
+    if (code === 'invalid_days') return 'Ogiltigt antal dagar'
+    if (code === 'invalid_servings') return 'Ogiltigt antal portioner'
+  }
+  return fallback
+}
 
 /**
  * Menu Generator Store
@@ -93,6 +106,7 @@ function getDayShort(date: Date): string {
 
 export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   const dashboardStore = useDashboardStore()
+  const toast = useToast()
 
   // ============================================
   // STATE
@@ -155,7 +169,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
    * Check if menu exists
    */
   const hasMenu = computed(() => {
-    return draftMenu.value !== null && draftMenu.value.days.length > 0
+    return draftMenu.value !== null && draftMenu.value.days.some((day) => day.recipeId)
   })
 
   /**
@@ -246,7 +260,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       }
     } catch (e: unknown) {
       console.error('Failed to generate menu:', e)
-      error.value = 'Kunde inte generera meny. Försök igen.'
+      error.value = getSwedishMenuError(e, 'Kunde inte generera meny. Försök igen.')
       throw e
     } finally {
       isGenerating.value = false
@@ -296,7 +310,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       }
     } catch (e: unknown) {
       console.error('Failed to regenerate menu:', e)
-      error.value = 'Kunde inte generera nya recept. Försök igen.'
+      error.value = getSwedishMenuError(e, 'Kunde inte generera nya recept. Försök igen.')
       throw e
     } finally {
       isRegenerating.value = false
@@ -317,7 +331,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   /**
    * Save menu to backend and navigate back
    */
-  async function saveMenu(router: ReturnType<typeof useRouter>): Promise<boolean> {
+  async function saveDraftMenu(router: ReturnType<typeof useRouter>): Promise<boolean> {
     if (!draftMenu.value || !isReadyToSave.value) {
       return false
     }
@@ -326,16 +340,19 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     error.value = null
 
     try {
-      // For MVP: Call generateMenu to create a new menu
-      // In the future, this should call a PUT /menus/current endpoint with exact recipes
-      await generateMenu({
-        days: 5,
-        servings: servings.value,
-        skipDays: []
-      })
+      const days: SaveMenuDay[] = draftMenu.value.days.map((day) => ({
+        date: day.date,
+        recipeId: day.recipeId,
+        servings: day.servings,
+        skip: !day.recipeId,
+      }))
+
+      await saveMenu(days)
 
       // Refresh dashboard to show new menu
       await dashboardStore.fetchDashboard(true)
+
+      toast.success('Menyn har sparats!')
 
       // Clear draft
       clearDraft()
@@ -344,9 +361,9 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       router.push({ name: 'dashboard' })
 
       return true
-    } catch (e: unknown) {
-      console.error('Failed to save menu:', e)
+    } catch {
       error.value = 'Kunde inte spara menyn. Försök igen.'
+      toast.error('Kunde inte spara menyn. Försök igen.')
       return false
     } finally {
       isSaving.value = false
@@ -423,7 +440,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     generateInitialMenu,
     regenerateUnlockedDays,
     toggleDayLock,
-    saveMenu,
+    saveDraftMenu,
     clearDraft,
     setError,
     clearError,

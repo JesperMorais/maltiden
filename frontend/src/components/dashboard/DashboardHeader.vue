@@ -2,6 +2,8 @@
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { UserRole } from '@/api/types/dashboard.types'
+import { Home, Settings, LogOut, UtensilsCrossed } from 'lucide-vue-next'
+import { useClickOutside } from '@/composables/useClickOutside'
 
 interface Props {
   householdName: string
@@ -17,6 +19,11 @@ const emit = defineEmits<{
 }>()
 
 const isDropdownOpen = ref(false)
+const userMenuRef = ref<HTMLElement | null>(null)
+
+useClickOutside(userMenuRef, () => {
+  isDropdownOpen.value = false
+})
 
 function toggleDropdown() {
   isDropdownOpen.value = !isDropdownOpen.value
@@ -42,18 +49,18 @@ function handleSettings() {
     <div class="header-content">
       <!-- Logo (link to landing) -->
       <RouterLink v-prefetch="'landing'" to="/" class="logo">
-        <span class="logo-icon">🍽️</span>
+        <UtensilsCrossed :size="20" :stroke-width="2" class="logo-icon" />
         <span class="logo-text">Måltiden</span>
       </RouterLink>
 
       <!-- Household name -->
       <div class="household-badge">
-        <span class="household-icon">🏠</span>
+        <span class="household-icon"><Home :size="16" /></span>
         <span class="household-name">{{ householdName }}</span>
       </div>
 
       <!-- User menu -->
-      <div class="user-menu" v-click-outside="closeDropdown">
+      <div ref="userMenuRef" class="user-menu">
         <button class="user-button" @click="toggleDropdown">
           <div class="avatar">
             <span>{{ userName.charAt(0).toUpperCase() }}</span>
@@ -70,12 +77,12 @@ function handleSettings() {
         <Transition name="dropdown">
           <div v-if="isDropdownOpen" class="dropdown">
             <button class="dropdown-item" @click="handleSettings">
-              <span class="dropdown-icon">⚙️</span>
+              <span class="dropdown-icon"><Settings :size="18" /></span>
               <span>Inställningar</span>
             </button>
             <div class="dropdown-divider"></div>
             <button class="dropdown-item logout" @click="handleLogout">
-              <span class="dropdown-icon">👋</span>
+              <span class="dropdown-icon"><LogOut :size="18" /></span>
               <span>Logga ut</span>
             </button>
           </div>
@@ -121,7 +128,7 @@ function handleSettings() {
 }
 
 .logo-icon {
-  font-size: 1.75rem;
+  color: var(--accent);
 }
 
 .logo-text {
@@ -187,7 +194,7 @@ function handleSettings() {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
   font-size: 1rem;
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .user-name {
@@ -200,7 +207,7 @@ function handleSettings() {
 .role-badge {
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.2rem 0.5rem;
@@ -209,12 +216,12 @@ function handleSettings() {
 
 .role-badge.owner {
   background: var(--role-owner-bg);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .role-badge.member {
   background: var(--role-member-bg);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .role-badge.guest {
@@ -270,7 +277,7 @@ function handleSettings() {
 }
 
 .dropdown-item.logout:hover {
-  background: rgba(229, 62, 62, 0.1);
+  background: var(--error-bg);
   color: var(--error);
 }
 
@@ -321,6 +328,9 @@ function handleSettings() {
 
   .user-button {
     padding: 0.35rem;
+    min-height: 44px;
+    min-width: 44px;
+    justify-content: center;
   }
 }
 </style>

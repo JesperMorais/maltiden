@@ -16,11 +16,11 @@ defineEmits<{
 
 <template>
   <SpotlightCard
-    spotlight-color="rgba(255, 107, 91, 0.12)"
+    :spotlight-color="'var(--accent-bg-subtle)'"
     class-name="recipe-spotlight"
   >
     <BaseCard class="recipe-card" padding="md" @click="$emit('click')">
-      <div class="recipe-emoji">{{ recipe.emoji || '🍽️' }}</div>
+      <div class="recipe-emoji" aria-hidden="true">{{ recipe.emoji || '🍽️' }}</div>
       <h3 class="recipe-name">{{ recipe.name }}</h3>
       <p class="recipe-servings">{{ recipe.servings }} portioner</p>
       <div v-if="recipe.tags.length" class="recipe-tags">
@@ -62,6 +62,10 @@ defineEmits<{
   color: var(--text-primary);
   margin: 0;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .recipe-servings {
@@ -102,6 +106,22 @@ defineEmits<{
 
   .recipe-name {
     font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .recipe-card {
+    min-height: 150px;
+    gap: 0.35rem;
+  }
+
+  .recipe-emoji {
+    font-size: 2rem;
+  }
+
+  .recipe-tags {
+    max-height: 1.6rem;
+    overflow: hidden;
   }
 }
 </style>

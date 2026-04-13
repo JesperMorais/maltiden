@@ -168,7 +168,8 @@ func (s *HouseholdService) UpdateMemberStatus(householdID, memberID string, req 
 }
 
 // RemoveMember removes a member from the household. Owners cannot be removed, and
-// only owners/members can remove others.
+// only owners/members can remove others. Increments the removed user's token_version
+// to instantly invalidate all their existing JWTs.
 func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUserID string) error {
 	// Can't remove yourself
 	if requestingUserID == targetUserID {
@@ -196,7 +197,24 @@ func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUse
 		return domain.ErrCannotRemove
 	}
 
-	return s.householdStorage.RemoveMember(householdID, targetUserID)
+	// Run both writes in a transaction to prevent inconsistent state
+	// (member removed but JWT not invalidated if second write fails)
+	tx, err := s.householdStorage.DB().Begin()
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if err := s.householdStorage.RemoveMemberTx(tx, householdID, targetUserID); err != nil {
+		return err
+	}
+
+	// Invalidate all existing JWTs for the removed user
+	if err := s.userStorage.IncrementTokenVersionTx(tx, targetUserID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // generateInviteCode creates a random 8-character alphanumeric code (~40 bits of entropy).

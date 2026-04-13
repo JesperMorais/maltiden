@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import type { RecipeSummary } from '@/api/recipes.api'
+import type { RecipeSummary, Recipe } from '@/api/recipes.api'
 import { getRecipes } from '@/api/recipes.api'
 import RecipeCard from '@/components/recipes/RecipeCard.vue'
 import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
 import SkeletonSwitch from '@/components/skeleton/SkeletonSwitch.vue'
 import RecipesSkeleton from '@/components/skeleton/layouts/RecipesSkeleton.vue'
+import ErrorState from '@/components/common/ErrorState.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
+import { BookOpen, Search } from 'lucide-vue-next'
 
 const emit = defineEmits<{
   (e: 'navigate-to-add'): void
@@ -83,6 +86,24 @@ function closeDetail() {
   selectedRecipeId.value = null
 }
 
+function handleRecipeUpdated(updated: Recipe) {
+  const index = recipes.value.findIndex((r) => r.id === updated.id)
+  if (index !== -1) {
+    recipes.value[index] = {
+      id: updated.id,
+      name: updated.name,
+      servings: updated.servings,
+      tags: updated.tags,
+      emoji: updated.emoji,
+    }
+  }
+}
+
+function handleRecipeDeleted(recipeId: string) {
+  recipes.value = recipes.value.filter((r) => r.id !== recipeId)
+  selectedRecipeId.value = null
+}
+
 function refresh() {
   fetchRecipes()
 }
@@ -95,13 +116,7 @@ onMounted(fetchRecipes)
 <template>
   <div class="recipe-list-panel">
     <!-- Error state -->
-    <div v-if="error" class="error-state">
-      <div class="error-icon">⚠️</div>
-      <p class="error-message">{{ error }}</p>
-      <button class="retry-button" @click="fetchRecipes">
-        Försök igen
-      </button>
-    </div>
+    <ErrorState v-if="error" :description="error" @retry="fetchRecipes" />
 
     <!-- Skeleton / Content switch -->
     <SkeletonSwitch v-else :loading="showSkeleton">
@@ -141,31 +156,32 @@ onMounted(fetchRecipes)
       </div>
 
       <!-- Empty state: no recipes at all -->
-      <div v-else-if="!recipes.length" class="empty-state">
-        <div class="empty-emoji">📖</div>
-        <h2 class="empty-title">Inga recept ännu</h2>
-        <p class="empty-text">
-          Börja med att lägga till ditt första recept.
-        </p>
-        <button class="cta-button" @click="emit('navigate-to-add')">
-          Lägg till recept
-        </button>
-      </div>
+      <EmptyState
+        v-else-if="!recipes.length"
+        title="Inga recept ännu"
+        description="Börja med att lägga till ditt första recept."
+        action-label="Lägg till recept"
+        @action="emit('navigate-to-add')"
+      >
+        <template #icon><BookOpen :size="48" color="var(--text-muted)" /></template>
+      </EmptyState>
 
       <!-- Empty state: no search results -->
-      <div v-else class="empty-state">
-        <div class="empty-emoji">🔍</div>
-        <h2 class="empty-title">Inga träffar</h2>
-        <p class="empty-text">
-          Försök med andra sökord eller ta bort filter.
-        </p>
-      </div>
+      <EmptyState
+        v-else
+        title="Inga träffar"
+        description="Försök med andra sökord eller ta bort filter."
+      >
+        <template #icon><Search :size="48" color="var(--text-muted)" /></template>
+      </EmptyState>
     </SkeletonSwitch>
 
     <!-- Detail modal -->
     <RecipeDetailModal
       :recipe-id="selectedRecipeId"
       @close="closeDetail"
+      @updated="handleRecipeUpdated"
+      @deleted="handleRecipeDeleted"
     />
   </div>
 </template>
@@ -200,7 +216,7 @@ onMounted(fetchRecipes)
 .search-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(255, 107, 91, 0.1);
+  box-shadow: 0 0 0 4px var(--accent-bg);
 }
 
 .search-input::placeholder {
@@ -234,105 +250,28 @@ onMounted(fetchRecipes)
 
 .filter-chip.active {
   background: var(--accent);
-  color: white;
+  color: var(--text-on-accent);
   border-color: var(--accent);
 }
 
 /* Recipe grid */
 .recipe-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.5rem;
-}
-
-/* Error state */
-.error-state {
-  text-align: center;
-  padding: 3rem 2rem;
-}
-
-.error-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.error-message {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  font-size: 1.1rem;
-  color: var(--text-primary);
-  margin: 0 0 1.5rem;
-}
-
-.retry-button {
-  padding: 0.875rem 2rem;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 100px;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.retry-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(255, 107, 91, 0.4);
-}
-
-/* Empty state */
-.empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-}
-
-.empty-emoji {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-}
-
-.empty-title {
-  font-family: 'Fraunces', serif;
-  font-weight: 800;
-  font-size: 1.75rem;
-  color: var(--text-primary);
-  margin: 0 0 0.5rem;
-}
-
-.empty-text {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  font-size: 1.05rem;
-  color: var(--text-secondary);
-  margin: 0 0 1.5rem;
-  line-height: 1.6;
-}
-
-.cta-button {
-  padding: 0.875rem 2rem;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 100px;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.cta-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(255, 107, 91, 0.4);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
   .recipe-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .recipe-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
