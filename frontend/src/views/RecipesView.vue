@@ -70,7 +70,7 @@ function switchToList() {
             />
           </div>
         </FadeContent>
-        <FadeContent v-if="activeTab === 'add'" :duration="500" :blur="true">
+        <FadeContent v-show="activeTab === 'add'" :duration="500" :blur="true">
           <div id="panel-add" role="tabpanel" aria-labelledby="tab-add">
             <AddRecipePanel
               @navigate-to-list="switchToList"

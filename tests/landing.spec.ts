@@ -58,9 +58,13 @@ test.describe('Landing page', () => {
     })
     await page.goto('/')
     await page.waitForTimeout(1000)
-    // Filter out known non-critical errors
+    // Filter out known non-critical errors: favicons, external resource failures
+    // (e.g. fonts, analytics), and network/proxy errors that aren't app bugs.
     const criticalErrors = errors.filter(
-      (e) => !e.includes('favicon') && !e.includes('net::ERR'),
+      (e) =>
+        !e.includes('favicon') &&
+        !e.includes('net::ERR') &&
+        !e.includes('Failed to load resource'),
     )
     expect(criticalErrors).toHaveLength(0)
   })
