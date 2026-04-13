@@ -8,9 +8,13 @@ version: 2
 #   2. Bundle patch + minor updates into a single weekly PR per ecosystem to
 #      reduce noise. A failing update doesn't block unrelated bumps.
 #   3. Keep major-version bumps as individual PRs so each one can be evaluated
-#      against breaking changes. These should rarely auto-merge.
+#      against breaking changes (except GitHub Actions — see ci-actions group).
 #   4. Consistent commit message prefixes that match the repo's conventional
 #      commits style.
+#
+# Note: `patterns: ["*"]` is required on every group, even though docs claim
+# it defaults to "*". Without it, dependabot may silently fall back to
+# individual PRs (observed in practice on first deployment).
 
 updates:
   # ─── Backend (Go modules) ──────────────────────────────────────────────
@@ -30,6 +34,7 @@ updates:
     groups:
       backend-minor-patch:
         applies-to: version-updates
+        patterns: ["*"]
         update-types: ["patch", "minor"]
       backend-security:
         applies-to: security-updates
@@ -56,18 +61,19 @@ updates:
       # so a runtime bump doesn't mix with a tooling bump in the same PR.
       frontend-prod-minor-patch:
         applies-to: version-updates
+        patterns: ["*"]
         dependency-type: production
         update-types: ["patch", "minor"]
       frontend-dev-minor-patch:
         applies-to: version-updates
+        patterns: ["*"]
         dependency-type: development
         update-types: ["patch", "minor"]
       frontend-security:
         applies-to: security-updates
         patterns: ["*"]
     # Majors get individual PRs (no group matches them) so each breaking
-    # change can be evaluated separately. No ignore rule — we still want
-    # visibility into major releases.
+    # change can be evaluated separately.
 
   # ─── Root-level npm (Playwright test runner) ──────────────────────────
   - package-ecosystem: npm
@@ -87,6 +93,7 @@ updates:
     groups:
       tests-minor-patch:
         applies-to: version-updates
+        patterns: ["*"]
         update-types: ["patch", "minor"]
 
   # ─── GitHub Actions ────────────────────────────────────────────────────
@@ -104,8 +111,9 @@ updates:
       prefix: "chore(ci)"
       include: scope
     groups:
-      # Actions rarely break — bundle everything, including majors, into one
+      # Actions rarely break — bundle everything (including majors) into one
       # PR per week. CI failures will catch regressions before merge.
       ci-actions:
         applies-to: version-updates
         patterns: ["*"]
+        update-types: ["patch", "minor", "major"]
