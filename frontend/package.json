@@ -41,7 +41,7 @@
     "axios-mock-adapter": "^2.1.0",
     "eslint": "^10.2.0",
     "eslint-plugin-vue": "~10.8.0",
-    "happy-dom": "^20.7.0",
+    "happy-dom": "^20.9.0",
     "jiti": "^2.6.1",
     "npm-run-all2": "^8.0.4",
     "prettier": "3.8.2",
