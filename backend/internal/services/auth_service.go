@@ -32,6 +32,7 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 	// Trim whitespace from inputs (VALID-15)
 	req.Email = strings.TrimSpace(req.Email)
 	req.Name = strings.TrimSpace(req.Name)
+	req.LastName = strings.TrimSpace(req.LastName)
 
 	// Email format validation using net/mail
 	if _, err := mail.ParseAddress(req.Email); err != nil {
@@ -92,17 +93,16 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 	defer tx.Rollback()
 
 	// Create household with provided name or default.
-	// Swedish genitive: names ending in s/x/z don't take an extra -s.
+	// Prefer last name for the default ("Anderssons hushåll" reads more naturally
+	// than "Annas hushåll" for a shared space). Fall back to first name if no
+	// last name was given. Swedish genitive: names ending in s/x/z don't take an extra -s.
 	householdName := req.HouseholdName
 	if householdName == "" {
-		lowerName := strings.ToLower(req.Name)
-		if strings.HasSuffix(lowerName, "s") ||
-			strings.HasSuffix(lowerName, "x") ||
-			strings.HasSuffix(lowerName, "z") {
-			householdName = req.Name + " hushåll"
-		} else {
-			householdName = req.Name + "s hushåll"
+		base := req.LastName
+		if base == "" {
+			base = req.Name
 		}
+		householdName = base + genitiveSuffix(base) + " hushåll"
 	}
 	household := &domain.Household{
 		ID:        householdID,
@@ -153,6 +153,16 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 		Token: token,
 		User:  *user,
 	}, nil
+}
+
+// genitiveSuffix returns the Swedish genitive "s" suffix for a name, or an empty
+// string for names ending in s/x/z (which don't take an extra -s).
+func genitiveSuffix(name string) string {
+	lower := strings.ToLower(name)
+	if strings.HasSuffix(lower, "s") || strings.HasSuffix(lower, "x") || strings.HasSuffix(lower, "z") {
+		return ""
+	}
+	return "s"
 }
 
 func (s *AuthService) Login(req domain.LoginRequest) (*domain.AuthResponse, error) {
