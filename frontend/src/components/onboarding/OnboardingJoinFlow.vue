@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { Eye, EyeOff, Star, User, Lightbulb } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
+import PasswordStrength from '@/components/common/PasswordStrength.vue'
 import { useUserStore } from '@/stores/user'
 import { joinHousehold } from '@/api/household.api'
 import { isAxiosError } from 'axios'
@@ -279,12 +280,10 @@ async function handleJoinAsGuest() {
             <component :is="showJoinPassword ? EyeOff : Eye" :size="18" :stroke-width="2" />
           </button>
         </div>
-        <span
-          v-if="joinForm.password.length > 0 && !passwordStrongEnoughJoin"
-          class="field-hint"
-        >
-          Minst 8 tecken med minst 3 av: versaler, gemener, siffror, specialtecken
-        </span>
+        <PasswordStrength
+          v-if="joinForm.password.length > 0"
+          :password="joinForm.password"
+        />
       </label>
 
       <label class="form-label">
