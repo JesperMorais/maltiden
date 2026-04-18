@@ -43,6 +43,14 @@ onMounted(async () => {
     fetchList(menuId.value)
   }
 })
+
+// Swedish locale: comma as decimal separator. Trim trailing zeros so "3.00"
+// shows as "3" while "3.50" becomes "3,5". Backend already rounds the value;
+// this is purely presentational.
+function formatAmount(amount: number): string {
+  return Number(amount.toFixed(2))
+    .toLocaleString('sv-SE', { maximumFractionDigits: 2 })
+}
 </script>
 
 <template>
@@ -132,7 +140,9 @@ onMounted(async () => {
                     @change="toggle(item.id, !item.checked)"
                   />
                   <span class="item-name">{{ item.name }}</span>
-                  <span class="item-amount">{{ item.amount }} {{ item.unit }}</span>
+                  <span v-if="item.amount > 0" class="item-amount">
+                    {{ formatAmount(item.amount) }} {{ item.unit }}
+                  </span>
                 </label>
               </li>
             </ul>
