@@ -10,7 +10,6 @@ import WeeklyMenuGrid from '@/components/dashboard/WeeklyMenuGrid.vue'
 import QuickActions from '@/components/dashboard/QuickActions.vue'
 import HouseholdWidget from '@/components/dashboard/HouseholdWidget.vue'
 import ShoppingListWidget from '@/components/dashboard/ShoppingListWidget.vue'
-import SettingsModal from '@/components/dashboard/SettingsModal.vue'
 import InviteModal from '@/components/dashboard/InviteModal.vue'
 import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
 import DashboardSkeleton from '@/components/skeleton/layouts/DashboardSkeleton.vue'
@@ -32,7 +31,6 @@ const userStore = useUserStore()
 const prefsStore = usePlanningPreferencesStore()
 
 // Modal state
-const showSettings = ref(false)
 const showInvite = ref(false)
 const selectedRecipeId = ref<string | null>(null)
 
@@ -62,11 +60,7 @@ function handleLogout() {
 }
 
 function handleSettings() {
-  showSettings.value = true
-}
-
-function handleCloseSettings() {
-  showSettings.value = false
+  router.push({ name: 'account' })
 }
 
 function handleGenerateMenu() {
@@ -188,14 +182,6 @@ function handleViewShoppingList() {
           </aside>
         </div>
       </main>
-
-      <!-- Settings Modal -->
-      <SettingsModal
-        :user="userStore.currentUser"
-        :is-open="showSettings"
-        @close="handleCloseSettings"
-        @logout="handleLogout"
-      />
 
       <!-- Invite Modal -->
       <InviteModal
