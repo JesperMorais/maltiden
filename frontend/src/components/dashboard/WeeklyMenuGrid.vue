@@ -33,8 +33,15 @@ useClickOutside(sectionRef, () => {
   dashboardStore.setSelectedDate(null)
 })
 
+// Derive the day-of-week from the date itself (Mon=0..Sun=6) rather than
+// the array position — the API may return fewer or out-of-order days, and
+// the user's active-day preferences are keyed to the weekday, not the slot.
 const filteredMenu = computed(() =>
-  props.weeklyMenu.filter((_, index) => prefsStore.isDayActive(index as DayIndex))
+  props.weeklyMenu.filter((day) => {
+    const jsDay = new Date(day.date + 'T12:00:00').getDay()
+    const mondayFirst = ((jsDay + 6) % 7) as DayIndex
+    return prefsStore.isDayActive(mondayFirst)
+  }),
 )
 
 const gridColumns = computed(() => filteredMenu.value.length)
