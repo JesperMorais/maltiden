@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, toRefs } from 'vue'
+import { ref, toRefs, watch } from 'vue'
 import { useFocusTrap } from '@/composables/useFocusTrap'
+import { createInvite } from '@/api/household.api'
 
 interface Props {
   isOpen: boolean
-  inviteCode: string
 }
 
 const props = defineProps<Props>()
@@ -21,8 +21,28 @@ useFocusTrap(inviteModalRef, {
   onEscape: () => emit('close'),
 })
 
+const inviteCode = ref('')
+const isLoading = ref(false)
+const errorMessage = ref('')
 const copied = ref(false)
 let copyTimer: ReturnType<typeof setTimeout> | undefined
+
+// Fetch a fresh invite each time the modal opens — invites are single-use
+// on the backend, so the user expects a new code per "Bjud in" click.
+watch(isOpen, async (open) => {
+  if (!open) return
+  inviteCode.value = ''
+  errorMessage.value = ''
+  isLoading.value = true
+  try {
+    const resp = await createInvite()
+    inviteCode.value = resp.code
+  } catch {
+    errorMessage.value = 'Kunde inte skapa en inbjudningskod. Försök igen.'
+  } finally {
+    isLoading.value = false
+  }
+})
 
 async function copyCode(code: string) {
   try {
@@ -76,14 +96,19 @@ function handleOverlayClick(e: MouseEvent) {
               Dela denna kod med din familj så de kan gå med i hushållet.
             </p>
 
-            <div class="code-display">
+            <div class="code-display" :class="{ loading: isLoading, 'has-error': !!errorMessage }">
               <span class="code-label">Inbjudningskod</span>
-              <span class="code-value">{{ inviteCode }}</span>
+              <span v-if="isLoading" class="code-value code-skeleton" aria-label="Laddar">••••••••</span>
+              <span v-else-if="errorMessage" class="code-value code-error">—</span>
+              <span v-else class="code-value">{{ inviteCode }}</span>
             </div>
+
+            <p v-if="errorMessage" role="alert" class="error-msg">{{ errorMessage }}</p>
 
             <button
               class="copy-btn"
               :class="{ copied }"
+              :disabled="isLoading || !!errorMessage || !inviteCode"
               @click="copyCode(inviteCode)"
             >
               {{ copied ? 'Kopierad!' : 'Kopiera kod' }}
@@ -91,6 +116,7 @@ function handleOverlayClick(e: MouseEvent) {
 
             <p class="hint">
               Den inbjudna personen väljer "Gå med i hushåll" vid registrering och anger koden.
+              Koden gäller i 7 dagar och kan bara användas en gång.
             </p>
           </div>
         </div>
@@ -198,6 +224,39 @@ function handleOverlayClick(e: MouseEvent) {
   color: var(--accent-text);
   letter-spacing: 0.15em;
   user-select: all;
+}
+
+.code-skeleton {
+  color: var(--text-secondary);
+  opacity: 0.5;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.code-error {
+  color: var(--text-secondary);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.error-msg {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  color: var(--error);
+  margin: 0 0 1rem;
+}
+
+.copy-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
 .copy-btn {
