@@ -200,7 +200,6 @@ function handleViewShoppingList() {
       <!-- Invite Modal -->
       <InviteModal
         :is-open="showInvite"
-        :invite-code="dashboardStore.inviteCode"
         @close="handleCloseInvite"
       />
 

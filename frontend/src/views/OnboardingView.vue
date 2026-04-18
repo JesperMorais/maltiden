@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { UtensilsCrossed, UsersRound, Sparkles, PartyPopper } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
@@ -10,10 +11,10 @@ import OnboardingCreateForm from '@/components/onboarding/OnboardingCreateForm.v
 
 type Choice = 'none' | 'join' | 'create'
 
+const router = useRouter()
 const selectedChoice = ref<Choice>('none')
 const submitSuccess = ref(false)
 const joinedAsMember = ref(false)
-const matchedFamily = ref('')
 
 function selectChoice(choice: Choice) {
   selectedChoice.value = choice
@@ -21,13 +22,17 @@ function selectChoice(choice: Choice) {
 }
 
 function handleJoinSuccess(payload: { type: 'member' | 'guest'; family: string }) {
+  void payload.family
   joinedAsMember.value = payload.type === 'member'
-  matchedFamily.value = payload.family
   submitSuccess.value = true
 }
 
 function handleCreateSuccess() {
   submitSuccess.value = true
+}
+
+function goToDashboard() {
+  router.push('/dashboard')
 }
 </script>
 
@@ -57,10 +62,7 @@ function handleCreateSuccess() {
       <!-- Success state -->
       <div v-if="submitSuccess" class="success-state">
         <div class="success-icon"><PartyPopper :size="36" :stroke-width="1.75" /></div>
-        <h2>{{ selectedChoice === 'join'
-          ? `Välkommen till ${matchedFamily}!`
-          : 'Konto skapat!'
-        }}</h2>
+        <h2>{{ selectedChoice === 'join' ? 'Välkommen!' : 'Konto skapat!' }}</h2>
         <p v-if="selectedChoice === 'join' && joinedAsMember">
           Du har gått med som medlem. Du har full tillgång till alla funktioner!
         </p>
@@ -70,7 +72,7 @@ function handleCreateSuccess() {
         <p v-else>
           Ditt hushåll är redo. Bjud in familjen!
         </p>
-        <BaseButton variant="primary" size="lg">
+        <BaseButton variant="primary" size="lg" @click="goToDashboard">
           Gå till dashboard →
         </BaseButton>
       </div>
