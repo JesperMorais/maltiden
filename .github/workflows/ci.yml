@@ -116,4 +116,6 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@1.5
 
       - name: Validate fly.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: flyctl config validate --config fly.toml
