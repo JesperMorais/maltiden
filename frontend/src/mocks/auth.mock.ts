@@ -33,7 +33,12 @@ export async function mockLogin(email: string, password: string): Promise<AuthRe
 /**
  * Mock register - creates a new user
  */
-export async function mockRegister(name: string, email: string, password: string): Promise<AuthResponse> {
+export async function mockRegister(
+  name: string,
+  email: string,
+  password: string,
+  _lastName?: string,
+): Promise<AuthResponse> {
   await delay(800)
 
   // Simulate email taken

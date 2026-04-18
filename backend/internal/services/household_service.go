@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"maltiden/internal/domain"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+const maxHouseholdNameLen = 100
 
 type HouseholdService struct {
 	householdStorage domain.HouseholdRepository
@@ -135,6 +138,31 @@ func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHousehold
 	return &domain.JoinHouseholdResponse{
 		HouseholdID: invite.HouseholdID,
 	}, nil
+}
+
+// UpdateName changes a household's display name. Only owners and members (not guests)
+// may rename a household they belong to.
+func (s *HouseholdService) UpdateName(householdID, userID string, req domain.UpdateHouseholdRequest) error {
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return domain.ErrHouseholdNameRequired
+	}
+	if len(name) > maxHouseholdNameLen {
+		return domain.ErrHouseholdNameTooLong
+	}
+
+	role, err := s.householdStorage.GetMemberRole(householdID, userID)
+	if err != nil {
+		return err
+	}
+	if role == "" {
+		return domain.ErrNotFound
+	}
+	if role == "guest" {
+		return domain.ErrForbidden
+	}
+
+	return s.householdStorage.UpdateName(householdID, name)
 }
 
 // GetMemberStatuses returns the eating/lunch-box status of all household members.

@@ -101,6 +101,9 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.Handle("GET /households/me", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.household.GetMyHousehold),
 	))
+	mux.Handle("PATCH /households/me", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.household.UpdateMyHousehold),
+	))
 	mux.Handle("POST /households/invite", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.household.CreateInvite),
 	))

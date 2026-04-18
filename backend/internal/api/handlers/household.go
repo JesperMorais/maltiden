@@ -39,6 +39,40 @@ func (h *HouseholdHandler) GetMyHousehold(w http.ResponseWriter, r *http.Request
 	WriteJSON(w, http.StatusOK, household)
 }
 
+func (h *HouseholdHandler) UpdateMyHousehold(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+	householdID := middleware.GetHouseholdID(r)
+	if userID == "" || householdID == "" {
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var req domain.UpdateHouseholdRequest
+	if !DecodeJSON(w, r, maxBodySize, &req) {
+		return
+	}
+
+	err := h.householdService.UpdateName(householdID, userID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrHouseholdNameRequired):
+			WriteError(w, http.StatusBadRequest, "household_name_required")
+		case errors.Is(err, domain.ErrHouseholdNameTooLong):
+			WriteError(w, http.StatusBadRequest, "household_name_too_long")
+		case errors.Is(err, domain.ErrForbidden):
+			WriteError(w, http.StatusForbidden, "forbidden")
+		case errors.Is(err, domain.ErrNotFound):
+			WriteError(w, http.StatusNotFound, "not_found")
+		default:
+			log.Printf("ERROR [UpdateMyHousehold] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
 func (h *HouseholdHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	householdID := middleware.GetHouseholdID(r)
