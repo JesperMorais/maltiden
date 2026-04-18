@@ -1,6 +1,9 @@
 package services
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func TestCategorizeIngredient_KnownCategory(t *testing.T) {
 	tests := []struct {
@@ -16,6 +19,11 @@ func TestCategorizeIngredient_KnownCategory(t *testing.T) {
 		{"potatis", "Frukt & Grönt"},
 		{"spaghetti", "Skafferi"},
 		{"ris", "Skafferi"},
+		{"salt", "Kryddor"},
+		{"svartpeppar", "Kryddor"},
+		{"oregano", "Kryddor"},
+		{"paprikapulver", "Kryddor"},
+		{"kanel", "Kryddor"},
 	}
 	for _, tt := range tests {
 		got := categorizeIngredient(tt.input)
@@ -82,5 +90,27 @@ func TestGenerateItemID_CaseInsensitiveName(t *testing.T) {
 	id2 := generateItemID("menu_1", "tomato", "st")
 	if id1 != id2 {
 		t.Errorf("expected same ID for different case, got %q and %q", id1, id2)
+	}
+}
+
+func TestRoundAmount(t *testing.T) {
+	tests := []struct {
+		amount float64
+		unit   string
+		want   float64
+	}{
+		{3.6666666666666665, "st", 4},       // countable rounds to integer
+		{3.4, "st", 3},                      // countable rounds down
+		{2.5, "stycken", 3},                 // alternate countable spelling
+		{3.6666666666666665, "g", 3.67},     // weight keeps 2 decimals
+		{100.125, "ml", 100.13},             // volume rounds to 2
+		{1, "tsk", 1},                       // exact integer stays exact
+		{1.0 / 3.0, "kg", 0.33},             // pathological float
+	}
+	for _, tt := range tests {
+		got := roundAmount(tt.amount, tt.unit)
+		if math.Abs(got-tt.want) > 1e-9 {
+			t.Errorf("roundAmount(%v, %q) = %v, want %v", tt.amount, tt.unit, got, tt.want)
+		}
 	}
 }
