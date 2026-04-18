@@ -49,6 +49,9 @@ playwright-report/
 /playwright/.cache/
 /playwright/.auth/
 
+# Dev screenshot artifacts
+/.artifacts/
+
 # Python
 __pycache__/
 *.pyc
