@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
+import PasswordStrength from '@/components/common/PasswordStrength.vue'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -143,12 +144,10 @@ async function handleCreate() {
           <component :is="showCreatePassword ? EyeOff : Eye" :size="18" :stroke-width="2" />
         </button>
       </div>
-      <span
-        v-if="createForm.password.length > 0 && !passwordStrongEnoughCreate"
-        class="field-hint"
-      >
-        Minst 8 tecken med minst 3 av: versaler, gemener, siffror, specialtecken
-      </span>
+      <PasswordStrength
+        v-if="createForm.password.length > 0"
+        :password="createForm.password"
+      />
     </label>
 
     <label class="form-label">
