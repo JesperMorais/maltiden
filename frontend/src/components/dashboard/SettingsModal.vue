@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, toRefs } from 'vue'
+import { ref, toRefs, watch, computed } from 'vue'
 import type { User } from '@/api/types/dashboard.types'
 import { useThemeStore } from '@/stores/theme'
+import { useDashboardStore } from '@/stores/dashboard'
+import { useUserStore } from '@/stores/user'
 import { useFocusTrap } from '@/composables/useFocusTrap'
-import { User as UserIcon, Bell, Palette, Settings, LogOut, MessageCircle } from 'lucide-vue-next'
+import { User as UserIcon, Bell, Palette, Settings, LogOut, MessageCircle, Home, Check, X } from 'lucide-vue-next'
 
 interface Props {
   user: User | null
@@ -20,6 +22,8 @@ const emit = defineEmits<{
 
 // Theme store for dark mode
 const themeStore = useThemeStore()
+const dashboardStore = useDashboardStore()
+const userStore = useUserStore()
 
 const settingsModalRef = ref<HTMLElement | null>(null)
 
@@ -32,6 +36,61 @@ useFocusTrap(settingsModalRef, {
 const notificationsEnabled = ref(true)
 const mealReminders = ref(true)
 const shoppingReminders = ref(true)
+
+// Household name editing
+const isEditingHouseholdName = ref(false)
+const draftHouseholdName = ref('')
+const householdNameError = ref('')
+const isSavingHouseholdName = ref(false)
+
+const canEditHousehold = computed(
+  () => userStore.isOwner || userStore.currentUser?.role === 'member',
+)
+
+watch(isOpen, (open) => {
+  if (!open) {
+    isEditingHouseholdName.value = false
+    householdNameError.value = ''
+  }
+})
+
+function startEditHouseholdName() {
+  draftHouseholdName.value = dashboardStore.householdName
+  householdNameError.value = ''
+  isEditingHouseholdName.value = true
+}
+
+function cancelEditHouseholdName() {
+  isEditingHouseholdName.value = false
+  householdNameError.value = ''
+}
+
+async function saveHouseholdName() {
+  const name = draftHouseholdName.value.trim()
+  if (!name) {
+    householdNameError.value = 'Ange ett namn för hushållet'
+    return
+  }
+  if (name.length > 100) {
+    householdNameError.value = 'Namnet får vara högst 100 tecken'
+    return
+  }
+  if (name === dashboardStore.householdName) {
+    isEditingHouseholdName.value = false
+    return
+  }
+
+  isSavingHouseholdName.value = true
+  const ok = await dashboardStore.updateHouseholdName(name)
+  isSavingHouseholdName.value = false
+
+  if (ok) {
+    isEditingHouseholdName.value = false
+    householdNameError.value = ''
+  } else {
+    householdNameError.value = 'Kunde inte spara — försök igen'
+  }
+}
 
 function handleClose() {
   emit('close')
@@ -79,6 +138,67 @@ function handleOverlayClick(e: MouseEvent) {
                   <span class="profile-role" :class="user?.role">
                     {{ user?.role === 'owner' ? 'Ägare' : user?.role === 'member' ? 'Medlem' : 'Gäst' }}
                   </span>
+                </div>
+              </div>
+            </section>
+
+            <!-- Household Section -->
+            <section class="settings-section">
+              <h3>
+                <span class="section-icon"><Home :size="16" /></span>
+                Hushåll
+              </h3>
+              <div class="household-card">
+                <div v-if="!isEditingHouseholdName" class="household-display">
+                  <div class="household-info">
+                    <span class="household-label">Namn</span>
+                    <span class="household-name">{{ dashboardStore.householdName }}</span>
+                  </div>
+                  <button
+                    v-if="canEditHousehold"
+                    type="button"
+                    class="edit-btn"
+                    @click="startEditHouseholdName"
+                  >
+                    Ändra
+                  </button>
+                </div>
+                <div v-else class="household-edit">
+                  <label class="household-label" for="household-name-input">Namn</label>
+                  <div class="household-edit-row">
+                    <input
+                      id="household-name-input"
+                      v-model="draftHouseholdName"
+                      type="text"
+                      class="household-input"
+                      maxlength="100"
+                      placeholder="Ange hushållsnamn"
+                      :disabled="isSavingHouseholdName"
+                      @keydown.enter.prevent="saveHouseholdName"
+                      @keydown.esc.prevent="cancelEditHouseholdName"
+                    />
+                    <button
+                      type="button"
+                      class="icon-btn save-btn"
+                      :disabled="isSavingHouseholdName"
+                      aria-label="Spara"
+                      @click="saveHouseholdName"
+                    >
+                      <Check :size="18" />
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-btn cancel-btn"
+                      :disabled="isSavingHouseholdName"
+                      aria-label="Avbryt"
+                      @click="cancelEditHouseholdName"
+                    >
+                      <X :size="18" />
+                    </button>
+                  </div>
+                  <p v-if="householdNameError" role="alert" class="household-error">
+                    {{ householdNameError }}
+                  </p>
                 </div>
               </div>
             </section>
@@ -368,6 +488,144 @@ function handleOverlayClick(e: MouseEvent) {
 .profile-role.guest {
   background: var(--role-guest-bg);
   color: var(--role-guest-text);
+}
+
+/* Household Card */
+.household-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1rem;
+}
+
+.household-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.household-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.household-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.household-name {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.edit-btn {
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.edit-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.household-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.household-edit-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.household-input {
+  flex: 1;
+  padding: 0.65rem 0.9rem;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  transition: border-color 0.2s ease;
+  min-width: 0;
+}
+
+.household-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.household-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.save-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: var(--error-bg);
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.household-error {
+  margin: 0;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  color: var(--error);
 }
 
 /* Toggle Options */
