@@ -13,6 +13,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      deploy: ${{ steps.filter.outputs.deploy }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v4
@@ -24,6 +25,11 @@ jobs:
               - '.github/workflows/ci.yml'
             frontend:
               - 'frontend/**'
+              - '.github/workflows/ci.yml'
+            deploy:
+              - 'fly.toml'
+              - 'Dockerfile'
+              - '.dockerignore'
               - '.github/workflows/ci.yml'
 
   backend:
@@ -94,3 +100,20 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  deploy-config:
+    name: Deploy config
+    needs: changes
+    if: needs.changes.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
+
+      - name: Validate fly.toml
+        run: flyctl config validate --config fly.toml
