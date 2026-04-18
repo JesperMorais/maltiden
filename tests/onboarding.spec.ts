@@ -119,7 +119,7 @@ test.describe('Onboarding page', () => {
 
     // Should show simple guest form (just name)
     await expect(page.getByText('Gå med som gäst').first()).toBeVisible({ timeout: 3000 })
-    await expect(page.getByPlaceholder('Anna')).toBeVisible()
+    await expect(page.getByPlaceholder('Anna', { exact: true })).toBeVisible()
   })
 
   test('create household flow shows registration form', async ({ page }) => {
@@ -133,7 +133,8 @@ test.describe('Onboarding page', () => {
     await page.getByText('Skapa nytt hushåll').click()
     await page.waitForTimeout(800)
 
-    await expect(page.getByPlaceholder('Anna Andersson').first()).toBeVisible({ timeout: 3000 })
+    await expect(page.getByPlaceholder('Anna', { exact: true }).first()).toBeVisible({ timeout: 3000 })
+    await expect(page.getByPlaceholder('Andersson').first()).toBeVisible()
     await expect(page.getByPlaceholder('anna@exempel.se').first()).toBeVisible()
     await expect(page.getByPlaceholder('Minst 8 tecken').first()).toBeVisible()
     await expect(page.getByPlaceholder('Skriv lösenordet igen').first()).toBeVisible()
@@ -149,7 +150,8 @@ test.describe('Onboarding page', () => {
     await page.getByText('Skapa nytt hushåll').click()
     await page.waitForTimeout(800)
 
-    await page.getByPlaceholder('Anna Andersson').first().fill('Test User')
+    await page.getByPlaceholder('Anna', { exact: true }).first().fill('Test')
+    await page.getByPlaceholder('Andersson').first().fill('User')
     await page.getByPlaceholder('anna@exempel.se').first().fill('test@test.se')
     await page.getByPlaceholder('Minst 8 tecken').first().fill('password123')
     await page.getByPlaceholder('Skriv lösenordet igen').first().fill('different')
@@ -168,7 +170,8 @@ test.describe('Onboarding page', () => {
     // Wait for form-slide CSS transition to complete before filling inputs
     await expect(page.locator('.form-slide-enter-active')).toHaveCount(0, { timeout: 3000 })
 
-    await form.getByPlaceholder('Anna Andersson').fill('Test User')
+    await form.getByPlaceholder('Anna', { exact: true }).fill('Test')
+    await form.getByPlaceholder('Andersson').fill('User')
     await form.getByPlaceholder('anna@exempel.se').fill('test@test.se')
     await form.getByPlaceholder('Minst 8 tecken').fill('Password123!')
     await form.getByPlaceholder('Skriv lösenordet igen').fill('Password123!')
@@ -191,7 +194,8 @@ test.describe('Onboarding page', () => {
     // Wait for form-slide CSS transition to complete before filling inputs
     await expect(page.locator('.form-slide-enter-active')).toHaveCount(0, { timeout: 3000 })
 
-    await form.getByPlaceholder('Anna Andersson').fill('Test User')
+    await form.getByPlaceholder('Anna', { exact: true }).fill('Test')
+    await form.getByPlaceholder('Andersson').fill('User')
     await form.getByPlaceholder('anna@exempel.se').fill('test@test.se')
     await form.getByPlaceholder('Minst 8 tecken').fill('Password123!')
     await form.getByPlaceholder('Skriv lösenordet igen').fill('Password123!')

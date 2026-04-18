@@ -28,6 +28,19 @@ export async function mockGetHousehold(): Promise<Household> {
   return { ...mockHousehold }
 }
 
+export async function mockUpdateHousehold(payload: { name: string }): Promise<{ ok: boolean }> {
+  await delay(300)
+  const name = payload.name.trim()
+  if (!name) {
+    throw { response: { status: 400, data: { error: 'household_name_required' } } }
+  }
+  if (name.length > 100) {
+    throw { response: { status: 400, data: { error: 'household_name_too_long' } } }
+  }
+  mockHousehold.name = name
+  return { ok: true }
+}
+
 export async function mockCreateInvite(): Promise<InviteResponse> {
   await delay(400)
   const code = Math.random().toString(36).substring(2, 8).toUpperCase()

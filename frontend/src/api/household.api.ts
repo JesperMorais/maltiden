@@ -11,7 +11,8 @@ import {
   mockJoinHousehold,
   mockGetMemberStatus,
   mockUpdateMemberStatus,
-  mockRemoveMember
+  mockRemoveMember,
+  mockUpdateHousehold
 } from '@/mocks/household.mock'
 import type { UserRole } from './types/dashboard.types'
 
@@ -49,6 +50,18 @@ export async function getHousehold(): Promise<Household> {
   }
 
   const { data } = await apiClient.get<Household>('/households/me')
+  return data
+}
+
+/**
+ * Update the current user's household (name for now)
+ */
+export async function updateHousehold(payload: { name: string }): Promise<{ ok: boolean }> {
+  if (USE_MOCKS) {
+    return mockUpdateHousehold(payload)
+  }
+
+  const { data } = await apiClient.patch<{ ok: boolean }>('/households/me', payload)
   return data
 }
 
