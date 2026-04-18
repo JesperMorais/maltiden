@@ -10,11 +10,11 @@ test.describe('Menu generator', () => {
 
   test('shows page title and subtitle', async ({ page }) => {
     await expect(page.getByText('Generera veckomeny')).toBeVisible({ timeout: 5000 })
-    await expect(page.getByText('Måndag - Fredag')).toBeVisible()
+    await expect(page.locator('.subtitle')).toContainText(/Måndag\s*[-–]\s*Söndag/)
   })
 
   test('shows description text', async ({ page }) => {
-    await expect(page.getByText(/Skapa en meny för 5 dagar/)).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(/Skapa en meny för hela veckan/)).toBeVisible({ timeout: 5000 })
   })
 
   test('shows empty state or generate option initially', async ({ page }) => {
@@ -31,14 +31,14 @@ test.describe('Menu generator', () => {
     }
   })
 
-  test('generated menu shows 5 day cards', async ({ page }) => {
+  test('generated menu shows 7 day cards', async ({ page }) => {
     const genBtn = page.locator('.generate-button')
     if (await genBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await genBtn.click()
       await page.waitForTimeout(3000)
       const dayCards = page.locator('.menu-grid > *')
       const count = await dayCards.count()
-      expect(count).toBe(5)
+      expect(count).toBe(7)
     }
   })
 

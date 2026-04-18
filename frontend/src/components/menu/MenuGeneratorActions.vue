@@ -7,7 +7,7 @@ interface Props {
 }
 
 withDefaults(defineProps<Props>(), {
-  totalDays: 5
+  totalDays: 7
 })
 
 const emit = defineEmits<{
