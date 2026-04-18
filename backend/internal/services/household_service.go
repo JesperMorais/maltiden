@@ -63,12 +63,15 @@ func (s *HouseholdService) CreateInvite(householdID string) (*domain.CreateInvit
 // The entire operation runs inside a database transaction to prevent race conditions.
 // Users can only belong to one household — joining a new one removes them from the old one.
 func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHouseholdRequest) (*domain.JoinHouseholdResponse, error) {
-	if req.Code == "" {
+	// Invite codes are generated uppercase (see generateInviteCode); normalize the
+	// incoming code so pasted lowercase / whitespace-wrapped input still resolves.
+	code := strings.ToUpper(strings.TrimSpace(req.Code))
+	if code == "" {
 		return nil, domain.ErrCodeRequired
 	}
 
 	// Validate invite code before starting the transaction
-	invite, err := s.householdStorage.GetInviteByCode(req.Code)
+	invite, err := s.householdStorage.GetInviteByCode(code)
 	if err != nil {
 		return nil, err
 	}

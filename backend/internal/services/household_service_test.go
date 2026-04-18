@@ -6,6 +6,7 @@ import (
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/utils"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -150,6 +151,31 @@ func TestJoinHousehold(t *testing.T) {
 	}
 	if isMember {
 		t.Error("expected joiner to be removed from their original household")
+	}
+}
+
+func TestJoinHousehold_CodeNormalization(t *testing.T) {
+	db := setupTestDB(t)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	userStorage := sqlite.NewUserStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+	householdService := NewHouseholdService(householdStorage, userStorage)
+
+	owner := createTestUser(t, authService, "anna@test.com", "Anna")
+	invite, err := householdService.CreateInvite(owner.User.HouseholdID)
+	if err != nil {
+		t.Fatalf("CreateInvite failed: %v", err)
+	}
+
+	// Lowercase variant + surrounding whitespace should still resolve — the
+	// service is expected to upper-case and trim the incoming code.
+	joiner := createTestUser(t, authService, "erik@test.com", "Erik")
+	_, err = householdService.JoinHousehold(joiner.User.ID, domain.JoinHouseholdRequest{
+		Code: "  " + strings.ToLower(invite.Code) + "  ",
+	})
+	if err != nil {
+		t.Fatalf("expected lowercase/whitespace code to be accepted, got %v", err)
 	}
 }
 
