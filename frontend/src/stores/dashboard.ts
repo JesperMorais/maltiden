@@ -108,6 +108,15 @@ export const useDashboardStore = defineStore('dashboard', () => {
       }
     })
 
+    // Always present Monday first, Sunday last — regardless of the order
+    // the API happens to return days in (JS getDay() is 0=Sun..6=Sat, so
+    // shift Sunday to the end).
+    weeklyMenu.sort((a, b) => {
+      const aDay = (new Date(a.date + 'T12:00:00').getDay() + 6) % 7
+      const bDay = (new Date(b.date + 'T12:00:00').getDay() + 6) % 7
+      return aDay - bDay
+    })
+
     return { weeklyMenu, todaysMeal }
   }
 

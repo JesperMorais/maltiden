@@ -18,15 +18,15 @@ const emit = defineEmits<{
     <div class="content">
       <h2 class="title">Skapa din veckomeny</h2>
       <p class="description">
-        Generera en meny för 5 dagar med slumpmässiga recept. Du kan låsa dagar du vill behålla och
-        generera nya för resten.
+        Generera en meny för hela veckan med slumpmässiga recept. Du kan låsa dagar du vill behålla
+        och generera nya för resten.
       </p>
 
       <!-- Features list -->
       <ul class="features">
         <li class="feature">
           <CalendarDays :size="20" :stroke-width="2" class="feature-icon" />
-          <span class="feature-text">5 måltider (Måndag-Fredag)</span>
+          <span class="feature-text">7 måltider (Måndag–Söndag)</span>
         </li>
         <li class="feature">
           <Dices :size="20" :stroke-width="2" class="feature-icon" />
