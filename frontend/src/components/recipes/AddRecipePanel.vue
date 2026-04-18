@@ -48,10 +48,6 @@ const isSaving = ref(false)
 const savedName = ref('')
 const savedEmoji = ref('')
 
-function chooseAI() {
-  step.value = 'ai-input'
-}
-
 function chooseManual() {
   editableRecipe.value = {
     name: '',
@@ -146,15 +142,21 @@ function handleViewRecipes() {
 
       <div class="choose-cards">
         <FadeContent :duration="500" :delay="100">
-          <ClickSpark spark-color="#ff6b5b" :spark-radius="30" :spark-count="10" :duration="500">
-            <button class="choose-card" @click="chooseAI">
-              <span class="choose-card-icon">🤖</span>
-              <span class="choose-card-title">Tolka med AI</span>
-              <span class="choose-card-desc">
-                Klistra in en recepttext så tolkar vi det automatiskt
-              </span>
-            </button>
-          </ClickSpark>
+          <button
+            type="button"
+            class="choose-card disabled"
+            disabled
+            aria-disabled="true"
+            title="Kommer snart"
+          >
+            <span class="wip-badge">WIP</span>
+            <span class="choose-card-icon">🤖</span>
+            <span class="choose-card-title">Tolka med AI</span>
+            <span class="choose-card-desc">
+              Klistra in en recepttext så tolkar vi det automatiskt
+            </span>
+            <span class="coming-soon">Kommer snart</span>
+          </button>
         </FadeContent>
 
         <FadeContent :duration="500" :delay="200">
@@ -263,6 +265,7 @@ function handleViewRecipes() {
 }
 
 .choose-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -274,12 +277,49 @@ function handleViewRecipes() {
   cursor: pointer;
   text-align: center;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
 }
 
-.choose-card:hover {
+.choose-card:hover:not(.disabled) {
   border-color: var(--accent);
   transform: translateY(-4px);
   box-shadow: 0 8px 24px var(--accent-focus-ring);
+}
+
+.choose-card.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  filter: saturate(0.7);
+}
+
+.choose-card.disabled .choose-card-title,
+.choose-card.disabled .choose-card-desc {
+  color: var(--text-secondary);
+}
+
+.wip-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  text-transform: uppercase;
+}
+
+.coming-soon {
+  margin-top: 0.25rem;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--accent);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .choose-card-icon {
