@@ -68,3 +68,7 @@ type UpdateMemberStatusRequest struct {
 	IsEatingToday *bool `json:"isEatingToday,omitempty"`
 	WantsLunchBox *bool `json:"wantsLunchBox,omitempty"`
 }
+
+type UpdateHouseholdRequest struct {
+	Name string `json:"name"`
+}
