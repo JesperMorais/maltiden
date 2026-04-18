@@ -19,6 +19,7 @@ const actions: {
   description: string
   event: 'generate-menu' | 'view-recipes' | 'invite-member' | 'parse-recipe'
   requiresMember: boolean
+  wip?: boolean
 }[] = [
   {
     id: 'generate',
@@ -48,13 +49,18 @@ const actions: {
     id: 'parse',
     icon: FileText,
     label: 'Tolka recept',
-    description: 'Klistra in & tolka',
+    description: 'Kommer snart',
     event: 'parse-recipe',
-    requiresMember: true
+    requiresMember: true,
+    wip: true
   }
 ]
 
-function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-member' | 'parse-recipe') {
+function handleAction(
+  eventName: 'generate-menu' | 'view-recipes' | 'invite-member' | 'parse-recipe',
+  wip?: boolean,
+) {
+  if (wip) return
   if (userStore.isMember) {
     emit(eventName)
   }
@@ -83,11 +89,18 @@ function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-memb
           >
             <button
               class="action-button"
-              @click="handleAction(action.event)"
+              :class="{ 'is-wip': action.wip }"
+              :disabled="action.wip"
+              :aria-disabled="action.wip"
+              :title="action.wip ? 'Kommer snart' : undefined"
+              @click="handleAction(action.event, action.wip)"
             >
               <span class="action-icon"><component :is="action.icon" :size="24" /></span>
               <div class="action-text">
-                <span class="action-label">{{ action.label }}</span>
+                <span class="action-label">
+                  {{ action.label }}
+                  <span v-if="action.wip" class="wip-pill">WIP</span>
+                </span>
                 <span class="action-desc">{{ action.description }}</span>
               </div>
             </button>
@@ -135,10 +148,28 @@ function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-memb
   transition: all 0.3s ease;
 }
 
-.action-button:hover {
+.action-button:hover:not(:disabled) {
   border-color: var(--accent);
   box-shadow: var(--shadow-sm);
   transform: translateX(4px);
+}
+
+.action-button.is-wip {
+  cursor: not-allowed;
+  opacity: 0.65;
+  filter: saturate(0.7);
+}
+
+.wip-pill {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  text-transform: uppercase;
 }
 
 .action-icon {
@@ -158,6 +189,9 @@ function handleAction(eventName: 'generate-menu' | 'view-recipes' | 'invite-memb
 }
 
 .action-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
