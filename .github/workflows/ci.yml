@@ -113,7 +113,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@1.5
+        uses: superfly/flyctl-actions/setup-flyctl@1.6
 
       - name: Validate fly.toml
         env:
