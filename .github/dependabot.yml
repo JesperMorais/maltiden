@@ -3,18 +3,15 @@ version: 2
 # Dependency update automation.
 #
 # Philosophy:
-#   1. Target `dev` — never open PRs against `main`, since all work flows
-#      through dev first.
-#   2. Bundle patch + minor updates into a single weekly PR per ecosystem to
-#      reduce noise. A failing update doesn't block unrelated bumps.
-#   3. Keep major-version bumps as individual PRs so each one can be evaluated
-#      against breaking changes (except GitHub Actions — see ci-actions group).
-#   4. Consistent commit message prefixes that match the repo's conventional
-#      commits style.
+#   1. Target `dev` — never open PRs against `main`.
+#   2. Bundle ALL updates (including majors) into one weekly PR per ecosystem.
+#      CI catches regressions; if one dep breaks the build, split it out
+#      manually via `@dependabot recreate`.
+#   3. Don't add a commit-message prefix — dependabot already generates good
+#      titles and adding `prefix:` causes ugly double-prefix like
+#      `chore(deps)(deps): ...`.
 #
-# Note: `patterns: ["*"]` is required on every group, even though docs claim
-# it defaults to "*". Without it, dependabot may silently fall back to
-# individual PRs (observed in practice on first deployment).
+# Note: `patterns: ["*"]` is required on every group.
 
 updates:
   # ─── Backend (Go modules) ──────────────────────────────────────────────
@@ -28,15 +25,12 @@ updates:
       timezone: Europe/Stockholm
     open-pull-requests-limit: 5
     labels: ["dependencies", "backend"]
-    commit-message:
-      prefix: "chore(deps)"
-      include: scope
     groups:
-      backend-minor-patch:
+      all-go:
         applies-to: version-updates
         patterns: ["*"]
-        update-types: ["patch", "minor"]
-      backend-security:
+        update-types: ["patch", "minor", "major"]
+      go-security:
         applies-to: security-updates
         patterns: ["*"]
 
@@ -49,31 +43,17 @@ updates:
       day: monday
       time: "06:00"
       timezone: Europe/Stockholm
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     labels: ["dependencies", "frontend"]
-    commit-message:
-      prefix: "chore(deps)"
-      prefix-development: "chore(deps-dev)"
-      include: scope
     versioning-strategy: increase
     groups:
-      # Production dependencies — bundle patch + minor separately from devDeps
-      # so a runtime bump doesn't mix with a tooling bump in the same PR.
-      frontend-prod-minor-patch:
+      all-frontend:
         applies-to: version-updates
         patterns: ["*"]
-        dependency-type: production
-        update-types: ["patch", "minor"]
-      frontend-dev-minor-patch:
-        applies-to: version-updates
-        patterns: ["*"]
-        dependency-type: development
-        update-types: ["patch", "minor"]
+        update-types: ["patch", "minor", "major"]
       frontend-security:
         applies-to: security-updates
         patterns: ["*"]
-    # Majors get individual PRs (no group matches them) so each breaking
-    # change can be evaluated separately.
 
   # ─── Root-level npm (Playwright test runner) ──────────────────────────
   - package-ecosystem: npm
@@ -86,15 +66,12 @@ updates:
       timezone: Europe/Stockholm
     open-pull-requests-limit: 3
     labels: ["dependencies", "tests"]
-    commit-message:
-      prefix: "chore(deps-dev)"
-      include: scope
     versioning-strategy: increase
     groups:
-      tests-minor-patch:
+      all-tests:
         applies-to: version-updates
         patterns: ["*"]
-        update-types: ["patch", "minor"]
+        update-types: ["patch", "minor", "major"]
 
   # ─── GitHub Actions ────────────────────────────────────────────────────
   - package-ecosystem: github-actions
@@ -107,13 +84,8 @@ updates:
       timezone: Europe/Stockholm
     open-pull-requests-limit: 3
     labels: ["dependencies", "ci"]
-    commit-message:
-      prefix: "chore(ci)"
-      include: scope
     groups:
-      # Actions rarely break — bundle everything (including majors) into one
-      # PR per week. CI failures will catch regressions before merge.
-      ci-actions:
+      all-actions:
         applies-to: version-updates
         patterns: ["*"]
         update-types: ["patch", "minor", "major"]
