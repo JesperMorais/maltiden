@@ -200,9 +200,9 @@ onBeforeRouteLeave((to, from, next) => {
     <header class="header">
       <div class="header-content">
         <h1 class="title">Generera veckomeny</h1>
-        <p class="subtitle">Måndag - Fredag</p>
+        <p class="subtitle">Måndag – Söndag</p>
         <p class="description">
-          Skapa en meny för 5 dagar med slumpmässiga recept. Lås dagar du vill behålla och generera nya för resten.
+          Skapa en meny för hela veckan med slumpmässiga recept. Lås dagar du vill behålla och generera nya för resten.
         </p>
       </div>
     </header>

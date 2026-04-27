@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"maltiden/internal/domain"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+const maxHouseholdNameLen = 100
 
 type HouseholdService struct {
 	householdStorage domain.HouseholdRepository
@@ -60,12 +63,15 @@ func (s *HouseholdService) CreateInvite(householdID string) (*domain.CreateInvit
 // The entire operation runs inside a database transaction to prevent race conditions.
 // Users can only belong to one household — joining a new one removes them from the old one.
 func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHouseholdRequest) (*domain.JoinHouseholdResponse, error) {
-	if req.Code == "" {
+	// Invite codes are generated uppercase (see generateInviteCode); normalize the
+	// incoming code so pasted lowercase / whitespace-wrapped input still resolves.
+	code := strings.ToUpper(strings.TrimSpace(req.Code))
+	if code == "" {
 		return nil, domain.ErrCodeRequired
 	}
 
 	// Validate invite code before starting the transaction
-	invite, err := s.householdStorage.GetInviteByCode(req.Code)
+	invite, err := s.householdStorage.GetInviteByCode(code)
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +141,31 @@ func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHousehold
 	return &domain.JoinHouseholdResponse{
 		HouseholdID: invite.HouseholdID,
 	}, nil
+}
+
+// UpdateName changes a household's display name. Only owners and members (not guests)
+// may rename a household they belong to.
+func (s *HouseholdService) UpdateName(householdID, userID string, req domain.UpdateHouseholdRequest) error {
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return domain.ErrHouseholdNameRequired
+	}
+	if len(name) > maxHouseholdNameLen {
+		return domain.ErrHouseholdNameTooLong
+	}
+
+	role, err := s.householdStorage.GetMemberRole(householdID, userID)
+	if err != nil {
+		return err
+	}
+	if role == "" {
+		return domain.ErrNotFound
+	}
+	if role == "guest" {
+		return domain.ErrForbidden
+	}
+
+	return s.householdStorage.UpdateName(householdID, name)
 }
 
 // GetMemberStatuses returns the eating/lunch-box status of all household members.

@@ -175,7 +175,11 @@ Appen är desktop-first idag men betafamiljerna använder primärt mobil. Dessa 
 - [x] 🟡 V5 klar (20 seed-recept)
 - [x] Minst 15 seed-recept finns (20 st)
 - [x] Fly.io volume snapshots verifierade (dagliga, 5d retention)
+<<<<<<< HEAD
 - [x] 🟠 M1–M6 mobilpolish klar
+=======
+- [ ] 🟠 M1–M6 mobilpolish klar
+>>>>>>> origin/dev
 - [ ] Testat på riktig telefon (iPhone SE 375px + Android ~390px)
 - [ ] Philip gör en komplett QA-genomgång av alla flöden
 

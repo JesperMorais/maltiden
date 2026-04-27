@@ -23,11 +23,11 @@ test.describe('Authentication E2E', () => {
     await page.goto('/register')
     await page.getByText('Skapa nytt hushåll').click()
 
-    await page.getByPlaceholder('Anna Andersson').fill('Duplicate User')
+    await page.getByPlaceholder('Anna', { exact: true }).fill('Duplicate')
+    await page.getByPlaceholder('Andersson').fill('User')
     await page.getByPlaceholder('anna@exempel.se').fill(registeredEmail)
     await page.getByPlaceholder('Minst 8 tecken').fill('TestPassword123!')
     await page.getByPlaceholder('Skriv lösenordet igen').fill('TestPassword123!')
-    await page.getByPlaceholder('Familjen Andersson').fill('Duplicate Hushåll')
 
     await page.getByRole('button', { name: 'Skapa konto' }).click()
 

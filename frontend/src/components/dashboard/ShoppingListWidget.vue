@@ -55,7 +55,16 @@ const topCategories = computed(() => {
       <div v-if="shoppingList" class="widget-body">
         <!-- Circular progress ring -->
         <div class="ring-container">
-          <svg :width="RING_SIZE" :height="RING_SIZE" class="progress-ring">
+          <svg
+            :width="RING_SIZE"
+            :height="RING_SIZE"
+            class="progress-ring"
+            role="progressbar"
+            :aria-valuenow="progressPercent"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-label="`Inköpslista ${progressPercent}% klart`"
+          >
             <circle
               class="ring-bg"
               :cx="RING_SIZE / 2"
@@ -104,7 +113,7 @@ const topCategories = computed(() => {
       </div>
 
       <!-- CTA -->
-      <button class="view-list-cta">
+      <button type="button" class="view-list-cta" @click.stop="emit('view-list')">
         <span>Visa hela listan</span>
         <ArrowRight :size="16" :stroke-width="2.5" class="cta-arrow" />
       </button>
@@ -204,8 +213,8 @@ const topCategories = computed(() => {
 .stat-row {
   display: flex;
   align-items: baseline;
-  gap: 0.35rem;
-  margin-bottom: 0.5rem;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
 }
 
 .stat-remaining {

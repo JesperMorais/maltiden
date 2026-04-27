@@ -15,16 +15,18 @@ export function generateUniqueName(prefix: string): string {
 /** Register a new user via the Onboarding "Create household" UI flow. */
 export async function registerUser(
   page: Page,
-  options?: { email?: string; password?: string; name?: string },
+  options?: { email?: string; password?: string; name?: string; lastName?: string },
 ): Promise<{ email: string; password: string; name: string }> {
   const email = options?.email ?? generateUniqueEmail()
   const password = options?.password ?? 'TestPassword123!'
-  const name = options?.name ?? 'Test User'
+  const name = options?.name ?? 'Test'
+  const lastName = options?.lastName ?? 'User'
 
   await page.goto('/register')
   await page.getByText('Skapa nytt hushåll').click()
 
-  await page.getByPlaceholder('Anna Andersson').fill(name)
+  await page.getByPlaceholder('Anna', { exact: true }).fill(name)
+  await page.getByPlaceholder('Andersson').fill(lastName)
   await page.getByPlaceholder('anna@exempel.se').fill(email)
   await page.getByPlaceholder('Minst 8 tecken').fill(password)
   await page.getByPlaceholder('Skriv lösenordet igen').fill(password)

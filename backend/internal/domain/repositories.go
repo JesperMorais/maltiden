@@ -19,6 +19,7 @@ type UserRepository interface {
 type HouseholdRepository interface {
 	Create(household *Household) error
 	CreateTx(tx *sql.Tx, household *Household) error
+	UpdateName(householdID, name string) error
 	GetByUserID(userID string) (*HouseholdResponse, error)
 	CreateInviteCode(invite *InviteCode) error
 	GetInviteByCode(code string) (*InviteCode, error)

@@ -9,6 +9,7 @@ import { getCurrentMenu, saveMenu } from '@/api/menu.api'
 import type { Menu, SaveMenuDay } from '@/api/menu.api'
 import { getShoppingList } from '@/api/shopping.api'
 import type { ShoppingList } from '@/api/shopping.api'
+import { updateHousehold as apiUpdateHousehold } from '@/api/household.api'
 
 /**
  * Dashboard Store
@@ -105,6 +106,15 @@ export const useDashboardStore = defineStore('dashboard', () => {
         isToday,
         isSkipped: apiDay.skip ?? false,
       }
+    })
+
+    // Always present Monday first, Sunday last — regardless of the order
+    // the API happens to return days in (JS getDay() is 0=Sun..6=Sat, so
+    // shift Sunday to the end).
+    weeklyMenu.sort((a, b) => {
+      const aDay = (new Date(a.date + 'T12:00:00').getDay() + 6) % 7
+      const bDay = (new Date(b.date + 'T12:00:00').getDay() + 6) % 7
+      return aDay - bDay
     })
 
     return { weeklyMenu, todaysMeal }
@@ -376,6 +386,22 @@ export const useDashboardStore = defineStore('dashboard', () => {
     error.value = null
   }
 
+  async function updateHouseholdName(name: string): Promise<boolean> {
+    const trimmed = name.trim()
+    if (!trimmed || !dashboardData.value?.household) return false
+
+    const prev = dashboardData.value.household.name
+    dashboardData.value.household.name = trimmed
+    try {
+      await apiUpdateHousehold({ name: trimmed })
+      return true
+    } catch (e) {
+      dashboardData.value.household.name = prev
+      error.value = e instanceof Error ? e.message : 'Kunde inte uppdatera hushållsnamn'
+      return false
+    }
+  }
+
   return {
     // State
     dashboardData,
@@ -432,6 +458,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     // Actions
     fetchDashboard,
     updateMemberLocally,
+    updateHouseholdName,
     clearError
   }
 })

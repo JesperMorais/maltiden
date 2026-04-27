@@ -7,10 +7,10 @@ COPY frontend/package*.json ./
 RUN npm ci
 
 COPY frontend/ .
-RUN npm run build-only
+RUN npm run build
 
 # Backend build stage
-FROM golang:1.24-bookworm AS builder
+FROM golang:1.26-bookworm AS builder
 
 WORKDIR /build
 

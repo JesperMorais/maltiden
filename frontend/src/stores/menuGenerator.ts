@@ -62,13 +62,13 @@ function getMonday(date: Date = new Date()): Date {
 }
 
 /**
- * Get Monday-Friday dates for a given week
+ * Get Monday–Sunday dates for a given week (full 7-day week).
  */
 function getWeekDates(startDate?: Date): Date[] {
   const monday = getMonday(startDate)
   const dates: Date[] = []
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 7; i++) {
     const date = new Date(monday)
     date.setDate(monday.getDate() + i)
     dates.push(date)
@@ -225,7 +225,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   }
 
   /**
-   * Generate initial menu (all 5 days)
+   * Generate initial menu (full week, Mon–Sun)
    */
   async function generateInitialMenu(): Promise<void> {
     isGenerating.value = true
@@ -239,7 +239,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
 
       // Call API to generate menu
       const menu = await generateMenu({
-        days: 5,
+        days: 7,
         servings: servings.value,
         skipDays: []
       })
@@ -279,9 +279,9 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     error.value = null
 
     try {
-      // Generate new menu with all 5 days
+      // Generate new menu across the full week
       const newMenu = await generateMenu({
-        days: 5,
+        days: 7,
         servings: servings.value,
         skipDays: []
       })

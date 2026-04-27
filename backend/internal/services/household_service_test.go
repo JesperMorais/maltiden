@@ -6,6 +6,7 @@ import (
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/utils"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -150,6 +151,31 @@ func TestJoinHousehold(t *testing.T) {
 	}
 	if isMember {
 		t.Error("expected joiner to be removed from their original household")
+	}
+}
+
+func TestJoinHousehold_CodeNormalization(t *testing.T) {
+	db := setupTestDB(t)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	userStorage := sqlite.NewUserStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+	householdService := NewHouseholdService(householdStorage, userStorage)
+
+	owner := createTestUser(t, authService, "anna@test.com", "Anna")
+	invite, err := householdService.CreateInvite(owner.User.HouseholdID)
+	if err != nil {
+		t.Fatalf("CreateInvite failed: %v", err)
+	}
+
+	// Lowercase variant + surrounding whitespace should still resolve — the
+	// service is expected to upper-case and trim the incoming code.
+	joiner := createTestUser(t, authService, "erik@test.com", "Erik")
+	_, err = householdService.JoinHousehold(joiner.User.ID, domain.JoinHouseholdRequest{
+		Code: "  " + strings.ToLower(invite.Code) + "  ",
+	})
+	if err != nil {
+		t.Fatalf("expected lowercase/whitespace code to be accepted, got %v", err)
 	}
 }
 
@@ -440,6 +466,110 @@ func TestRemoveMember_GuestCannotRemove(t *testing.T) {
 	}
 	if err.Error() != "forbidden" {
 		t.Errorf("expected forbidden error, got: %v", err)
+	}
+}
+
+func TestUpdateName_Success(t *testing.T) {
+	db := setupTestDB(t)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	userStorage := sqlite.NewUserStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+	householdService := NewHouseholdService(householdStorage, userStorage)
+
+	owner := createTestUser(t, authService, "anna@test.com", "Anna")
+
+	err := householdService.UpdateName(owner.User.HouseholdID, owner.User.ID, domain.UpdateHouseholdRequest{
+		Name: "  Villa Solsidan  ",
+	})
+	if err != nil {
+		t.Fatalf("UpdateName failed: %v", err)
+	}
+
+	hh, _ := householdService.GetMyHousehold(owner.User.ID)
+	if hh.Name != "Villa Solsidan" {
+		t.Errorf("expected trimmed name %q, got %q", "Villa Solsidan", hh.Name)
+	}
+}
+
+func TestUpdateName_EmptyRejected(t *testing.T) {
+	db := setupTestDB(t)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	userStorage := sqlite.NewUserStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+	householdService := NewHouseholdService(householdStorage, userStorage)
+
+	owner := createTestUser(t, authService, "anna@test.com", "Anna")
+
+	err := householdService.UpdateName(owner.User.HouseholdID, owner.User.ID, domain.UpdateHouseholdRequest{
+		Name: "   ",
+	})
+	if err != domain.ErrHouseholdNameRequired {
+		t.Errorf("expected ErrHouseholdNameRequired, got %v", err)
+	}
+}
+
+func TestUpdateName_TooLongRejected(t *testing.T) {
+	db := setupTestDB(t)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	userStorage := sqlite.NewUserStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+	householdService := NewHouseholdService(householdStorage, userStorage)
+
+	owner := createTestUser(t, authService, "anna@test.com", "Anna")
+
+	long := ""
+	for i := 0; i < 101; i++ {
+		long += "x"
+	}
+	err := householdService.UpdateName(owner.User.HouseholdID, owner.User.ID, domain.UpdateHouseholdRequest{
+		Name: long,
+	})
+	if err != domain.ErrHouseholdNameTooLong {
+		t.Errorf("expected ErrHouseholdNameTooLong, got %v", err)
+	}
+}
+
+func TestUpdateName_NonMemberForbidden(t *testing.T) {
+	db := setupTestDB(t)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	userStorage := sqlite.NewUserStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+	householdService := NewHouseholdService(householdStorage, userStorage)
+
+	anna := createTestUser(t, authService, "anna@test.com", "Anna")
+	erik := createTestUser(t, authService, "erik@test.com", "Erik")
+
+	err := householdService.UpdateName(anna.User.HouseholdID, erik.User.ID, domain.UpdateHouseholdRequest{
+		Name: "Not my house",
+	})
+	if err != domain.ErrNotFound {
+		t.Errorf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestUpdateName_GuestForbidden(t *testing.T) {
+	db := setupTestDB(t)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	userStorage := sqlite.NewUserStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+	householdService := NewHouseholdService(householdStorage, userStorage)
+
+	owner := createTestUser(t, authService, "anna@test.com", "Anna")
+	invite, _ := householdService.CreateInvite(owner.User.HouseholdID)
+	guest := createTestUser(t, authService, "lisa@test.com", "Lisa")
+	householdService.JoinHousehold(guest.User.ID, domain.JoinHouseholdRequest{Code: invite.Code})
+	db.Exec(`UPDATE household_members SET role = 'guest' WHERE user_id = ?`, guest.User.ID)
+
+	err := householdService.UpdateName(owner.User.HouseholdID, guest.User.ID, domain.UpdateHouseholdRequest{
+		Name: "Guest rename attempt",
+	})
+	if err != domain.ErrForbidden {
+		t.Errorf("expected ErrForbidden for guest, got %v", err)
 	}
 }
 
