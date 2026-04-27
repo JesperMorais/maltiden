@@ -8,7 +8,7 @@ interface Props {
   extraPortions?: number
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   extraPortions: 0,
 })
 
