@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"maltiden/internal/domain"
+	"math"
 	"sort"
 	"strings"
 
@@ -68,7 +69,32 @@ var ingredientCategories = map[string]string{
 	"sojasås":          "Skafferi",
 	"tacokrydda":       "Skafferi",
 	"tacoskal":         "Skafferi",
-	"svartpeppar":      "Skafferi",
+
+	// Kryddor (dried herbs and seasonings; fresh herbs like dill/persilja stay in Frukt & Grönt)
+	"salt":          "Kryddor",
+	"havssalt":      "Kryddor",
+	"flingsalt":     "Kryddor",
+	"koksalt":       "Kryddor",
+	"peppar":        "Kryddor",
+	"svartpeppar":   "Kryddor",
+	"vitpeppar":     "Kryddor",
+	"oregano":       "Kryddor",
+	"basilika":      "Kryddor",
+	"timjan":        "Kryddor",
+	"rosmarin":      "Kryddor",
+	"paprikapulver": "Kryddor",
+	"chiliflakes":   "Kryddor",
+	"chilipulver":   "Kryddor",
+	"kanel":         "Kryddor",
+	"muskot":        "Kryddor",
+	"kardemumma":    "Kryddor",
+	"lagerblad":     "Kryddor",
+	"kryddpeppar":   "Kryddor",
+	"spiskummin":    "Kryddor",
+	"gurkmeja":      "Kryddor",
+	"curry":         "Kryddor",
+	"currypulver":   "Kryddor",
+	"kajennpeppar":  "Kryddor",
 }
 
 func (s *ShoppingService) GetShoppingList(menuID string) (*domain.ShoppingList, error) {
@@ -140,15 +166,34 @@ func (s *ShoppingService) GetShoppingList(menuID string) (*domain.ShoppingList, 
 		}
 	}
 
-	// Group by category
+	// Group by category; for spices we drop amounts (a shopping list just needs
+	// "buy salt", not "3.66 st"), and dedupe by name since the same spice may
+	// have been entered with different units (tsk + krm + st) across recipes.
 	categoryMap := make(map[string][]domain.ShoppingItem)
+	seenSpice := make(map[string]bool)
 	for _, item := range aggregated {
 		category := categorizeIngredient(item.Name)
-		categoryMap[category] = append(categoryMap[category], *item)
+		if category == "Kryddor" {
+			nameKey := strings.ToLower(item.Name)
+			if seenSpice[nameKey] {
+				continue
+			}
+			seenSpice[nameKey] = true
+			it := *item
+			it.Amount = 0
+			it.Unit = ""
+			it.ID = generateItemID(menuID, it.Name, "")
+			it.Checked = checkedItems[it.ID]
+			categoryMap[category] = append(categoryMap[category], it)
+			continue
+		}
+		it := *item
+		it.Amount = roundAmount(it.Amount, it.Unit)
+		categoryMap[category] = append(categoryMap[category], it)
 	}
 
 	// Build response with sorted categories
-	categoryOrder := []string{"Kött & Fisk", "Mejeri", "Frukt & Grönt", "Skafferi", "Övrigt"}
+	categoryOrder := []string{"Kött & Fisk", "Mejeri", "Frukt & Grönt", "Skafferi", "Kryddor", "Övrigt"}
 	var categories []domain.ShoppingCategory
 
 	for _, catName := range categoryOrder {
@@ -237,6 +282,18 @@ func categorizeIngredient(name string) string {
 		return cat
 	}
 	return "Övrigt"
+}
+
+// roundAmount keeps shopping-list amounts human-readable: integers for
+// countable units like "st" (you don't buy 3.6 eggs) and 2-decimal precision
+// for weight/volume. Raw scaling from float math would otherwise print things
+// like "3.6666666666666665".
+func roundAmount(amount float64, unit string) float64 {
+	u := strings.ToLower(strings.TrimSpace(unit))
+	if u == "st" || u == "styck" || u == "stycken" {
+		return math.Round(amount)
+	}
+	return math.Round(amount*100) / 100
 }
 
 func generateItemID(menuID, name, unit string) string {

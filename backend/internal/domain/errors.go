@@ -16,10 +16,12 @@ var (
 	ErrDuplicateEmail = errors.New("email_already_exists")
 
 	// Household
-	ErrInvalidCode  = errors.New("invalid_code")
-	ErrAlreadyMember = errors.New("already_member")
-	ErrCannotRemove = errors.New("cannot_remove")
-	ErrCodeRequired = errors.New("code_required")
+	ErrInvalidCode            = errors.New("invalid_code")
+	ErrAlreadyMember          = errors.New("already_member")
+	ErrCannotRemove           = errors.New("cannot_remove")
+	ErrCodeRequired           = errors.New("code_required")
+	ErrHouseholdNameRequired  = errors.New("household_name_required")
+	ErrHouseholdNameTooLong   = errors.New("household_name_too_long")
 
 	// Resource
 	ErrNotFound = errors.New("not_found")

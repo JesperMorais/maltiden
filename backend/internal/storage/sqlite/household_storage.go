@@ -31,6 +31,18 @@ func (s *HouseholdStorage) Create(household *domain.Household) error {
 	return err
 }
 
+// UpdateName changes the display name of a household.
+func (s *HouseholdStorage) UpdateName(householdID, name string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE households SET name = ? WHERE id = ?`,
+		name, householdID,
+	)
+	return err
+}
+
 // CreateTx inserts a household within a transaction.
 func (s *HouseholdStorage) CreateTx(tx *sql.Tx, household *domain.Household) error {
 	query := `

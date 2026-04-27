@@ -47,9 +47,21 @@ const categoryMap: Record<string, string> = {
   Vitlök: 'Grönsaker',
   Spenat: 'Grönsaker',
   Champinjoner: 'Grönsaker',
+  // Kryddor (mirrors backend categorization)
+  Salt: 'Kryddor',
+  Svartpeppar: 'Kryddor',
+  Peppar: 'Kryddor',
+  Oregano: 'Kryddor',
+  Basilika: 'Kryddor',
+  Timjan: 'Kryddor',
+  Rosmarin: 'Kryddor',
+  Paprikapulver: 'Kryddor',
+  Chiliflakes: 'Kryddor',
+  Kanel: 'Kryddor',
+  Muskot: 'Kryddor',
 }
 
-const categoryOrder = ['Kött & Fisk', 'Mejeri', 'Grönsaker', 'Skafferi', 'Egna varor']
+const categoryOrder = ['Kött & Fisk', 'Mejeri', 'Grönsaker', 'Skafferi', 'Kryddor', 'Egna varor']
 
 /** Custom items storage */
 let customItems: ShoppingItem[] = [
@@ -105,11 +117,14 @@ function buildShoppingList(menuId: string): ShoppingList {
       groups.set(category, items)
     }
     idx++
+    // Spices collapse to name-only (shopping list just needs "buy salt",
+    // not "3.6 st"); mirrors backend behaviour so mock mode looks the same.
+    const isSpice = category === 'Kryddor'
     items.push({
       id: `item_${idx}`,
       name,
-      amount,
-      unit,
+      amount: isSpice ? 0 : amount,
+      unit: isSpice ? '' : unit,
       checked: checkedByName.get(name) ?? false,
       isCustom: false,
     })

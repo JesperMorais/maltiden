@@ -63,30 +63,26 @@ test.describe('Onboarding page', () => {
     await expect(continueBtn).toBeEnabled()
   })
 
-  test('join household flow: valid code shows welcome message', async ({ page }) => {
+  test('join household flow: valid code advances to join-type choice', async ({ page }) => {
     await page.getByText(/gå med/i).first().click()
     await page.waitForTimeout(500)
     await page.getByPlaceholder(/ABC123/).fill('ABC123')
     await page.getByRole('button', { name: /Fortsätt/ }).click()
-    // Should show the matched family name
-    await expect(page.getByText('Familjen Andersson')).toBeVisible({ timeout: 5000 })
-  })
-
-  test('join household flow: invalid code shows error', async ({ page }) => {
-    await page.getByText(/gå med/i).first().click()
-    await page.waitForTimeout(500)
-    await page.getByPlaceholder(/ABC123/).fill('WRONG1')
-    await page.getByRole('button', { name: /Fortsätt/ }).click()
-    await expect(page.getByText(/hittades inte/i)).toBeVisible({ timeout: 5000 })
-  })
-
-  test('join household flow: shows member-or-guest choice after valid code', async ({ page }) => {
-    await page.getByText(/gå med/i).first().click()
-    await page.waitForTimeout(500)
-    await page.getByPlaceholder(/ABC123/).fill('ABC123')
-    await page.getByRole('button', { name: /Fortsätt/ }).click()
-    // Wait for welcome step and then auto-advance
+    // The code is no longer pre-validated client-side — a format-valid code
+    // advances straight to the member-or-guest choice, and invalid codes
+    // surface as errors during the real register+join submit.
     await expect(page.getByText(/Hur vill du gå med/i)).toBeVisible({ timeout: 5000 })
+  })
+
+  test('join household flow: Fortsätt is disabled until code is long enough', async ({ page }) => {
+    await page.getByText(/gå med/i).first().click()
+    await page.waitForTimeout(500)
+    const continueBtn = page.getByRole('button', { name: /Fortsätt/ })
+    await expect(continueBtn).toBeDisabled()
+    await page.getByPlaceholder(/ABC123/).fill('ABC')
+    await expect(continueBtn).toBeDisabled()
+    await page.getByPlaceholder(/ABC123/).fill('ABCD')
+    await expect(continueBtn).toBeEnabled()
   })
 
   test('join household flow: member choice shows form', async ({ page }) => {
@@ -119,7 +115,7 @@ test.describe('Onboarding page', () => {
 
     // Should show simple guest form (just name)
     await expect(page.getByText('Gå med som gäst').first()).toBeVisible({ timeout: 3000 })
-    await expect(page.getByPlaceholder('Anna')).toBeVisible()
+    await expect(page.getByPlaceholder('Anna', { exact: true })).toBeVisible()
   })
 
   test('create household flow shows registration form', async ({ page }) => {
@@ -133,7 +129,8 @@ test.describe('Onboarding page', () => {
     await page.getByText('Skapa nytt hushåll').click()
     await page.waitForTimeout(800)
 
-    await expect(page.getByPlaceholder('Anna Andersson').first()).toBeVisible({ timeout: 3000 })
+    await expect(page.getByPlaceholder('Anna', { exact: true }).first()).toBeVisible({ timeout: 3000 })
+    await expect(page.getByPlaceholder('Andersson').first()).toBeVisible()
     await expect(page.getByPlaceholder('anna@exempel.se').first()).toBeVisible()
     await expect(page.getByPlaceholder('Minst 8 tecken').first()).toBeVisible()
     await expect(page.getByPlaceholder('Skriv lösenordet igen').first()).toBeVisible()
@@ -149,7 +146,8 @@ test.describe('Onboarding page', () => {
     await page.getByText('Skapa nytt hushåll').click()
     await page.waitForTimeout(800)
 
-    await page.getByPlaceholder('Anna Andersson').first().fill('Test User')
+    await page.getByPlaceholder('Anna', { exact: true }).first().fill('Test')
+    await page.getByPlaceholder('Andersson').first().fill('User')
     await page.getByPlaceholder('anna@exempel.se').first().fill('test@test.se')
     await page.getByPlaceholder('Minst 8 tecken').first().fill('password123')
     await page.getByPlaceholder('Skriv lösenordet igen').first().fill('different')
@@ -168,7 +166,8 @@ test.describe('Onboarding page', () => {
     // Wait for form-slide CSS transition to complete before filling inputs
     await expect(page.locator('.form-slide-enter-active')).toHaveCount(0, { timeout: 3000 })
 
-    await form.getByPlaceholder('Anna Andersson').fill('Test User')
+    await form.getByPlaceholder('Anna', { exact: true }).fill('Test')
+    await form.getByPlaceholder('Andersson').fill('User')
     await form.getByPlaceholder('anna@exempel.se').fill('test@test.se')
     await form.getByPlaceholder('Minst 8 tecken').fill('Password123!')
     await form.getByPlaceholder('Skriv lösenordet igen').fill('Password123!')
@@ -191,7 +190,8 @@ test.describe('Onboarding page', () => {
     // Wait for form-slide CSS transition to complete before filling inputs
     await expect(page.locator('.form-slide-enter-active')).toHaveCount(0, { timeout: 3000 })
 
-    await form.getByPlaceholder('Anna Andersson').fill('Test User')
+    await form.getByPlaceholder('Anna', { exact: true }).fill('Test')
+    await form.getByPlaceholder('Andersson').fill('User')
     await form.getByPlaceholder('anna@exempel.se').fill('test@test.se')
     await form.getByPlaceholder('Minst 8 tecken').fill('Password123!')
     await form.getByPlaceholder('Skriv lösenordet igen').fill('Password123!')

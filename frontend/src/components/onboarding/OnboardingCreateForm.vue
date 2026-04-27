@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
+import PasswordStrength from '@/components/common/PasswordStrength.vue'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -14,6 +15,7 @@ const emit = defineEmits<{
 
 const createForm = ref({
   name: '',
+  lastName: '',
   email: '',
   password: '',
   passwordConfirm: '',
@@ -65,6 +67,7 @@ async function handleCreate() {
     createForm.value.name,
     createForm.value.email,
     createForm.value.password,
+    createForm.value.lastName || undefined,
   )
 
   isSubmitting.value = false
@@ -83,17 +86,31 @@ async function handleCreate() {
 
 <template>
   <form class="form-card" @submit.prevent="handleCreate">
-    <label class="form-label">
-      <span>Ditt namn</span>
-      <input
-        v-model="createForm.name"
-        type="text"
-        name="name"
-        autocomplete="name"
-        placeholder="Anna Andersson"
-        class="form-input"
-      />
-    </label>
+    <div class="form-row">
+      <label class="form-label">
+        <span>Förnamn</span>
+        <input
+          v-model="createForm.name"
+          type="text"
+          name="given-name"
+          autocomplete="given-name"
+          placeholder="Anna"
+          class="form-input"
+        />
+      </label>
+
+      <label class="form-label">
+        <span>Efternamn <span class="field-hint-inline">(valfritt)</span></span>
+        <input
+          v-model="createForm.lastName"
+          type="text"
+          name="family-name"
+          autocomplete="family-name"
+          placeholder="Andersson"
+          class="form-input"
+        />
+      </label>
+    </div>
 
     <label class="form-label">
       <span>E-post</span>
@@ -127,12 +144,10 @@ async function handleCreate() {
           <component :is="showCreatePassword ? EyeOff : Eye" :size="18" :stroke-width="2" />
         </button>
       </div>
-      <span
-        v-if="createForm.password.length > 0 && !passwordStrongEnoughCreate"
-        class="field-hint"
-      >
-        Minst 8 tecken med minst 3 av: versaler, gemener, siffror, specialtecken
-      </span>
+      <PasswordStrength
+        v-if="createForm.password.length > 0"
+        :password="createForm.password"
+      />
     </label>
 
     <label class="form-label">
@@ -191,6 +206,31 @@ async function handleCreate() {
 .form-label {
   display: block;
   margin-bottom: 1.25rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-row .form-label {
+  margin-bottom: 1.25rem;
+}
+
+.field-hint-inline {
+  font-weight: 400;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  font-size: 0.8rem;
+  margin-left: 0.25rem;
+}
+
+@media (max-width: 520px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
 }
 
 .form-label span {

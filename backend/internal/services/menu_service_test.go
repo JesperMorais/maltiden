@@ -54,17 +54,17 @@ func (env *menuTestEnv) seedRecipes(t *testing.T, count int) []string {
 
 func TestMenuGenerate_DefaultDays(t *testing.T) {
 	env := newMenuTestEnv(t)
-	env.seedRecipes(t, 5)
+	env.seedRecipes(t, 7)
 
 	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{
-		Days:     0, // should default to 5
+		Days:     0, // should default to 7 (full Mon–Sun week)
 		Servings: 4,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(resp.Days) != 5 {
-		t.Errorf("expected 5 days (default), got %d", len(resp.Days))
+	if len(resp.Days) != 7 {
+		t.Errorf("expected 7 days (default), got %d", len(resp.Days))
 	}
 }
 

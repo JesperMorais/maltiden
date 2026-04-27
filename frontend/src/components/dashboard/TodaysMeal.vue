@@ -8,7 +8,7 @@ interface Props {
   extraPortions?: number
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   extraPortions: 0,
 })
 
@@ -54,10 +54,11 @@ const emit = defineEmits<{
       <!-- Has meal -->
       <template v-else-if="meal">
         <div class="meal-emoji">
-          <UtensilsCrossed :size="32" :stroke-width="1.75" />
+          <span v-if="meal.emoji" role="img" :aria-label="meal.name">{{ meal.emoji }}</span>
+          <UtensilsCrossed v-else :size="32" :stroke-width="1.75" />
         </div>
         <h2 class="meal-name">{{ meal.name }}</h2>
-        <p class="meal-portions">{{ meal.portions }} portioner</p>
+        <p class="meal-portions">{{ meal.portions + props.extraPortions }} portioner</p>
         <div class="meal-action">
           <span>Se recept</span>
           <span class="arrow">→</span>

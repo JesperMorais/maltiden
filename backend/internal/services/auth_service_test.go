@@ -199,6 +199,72 @@ func TestJWT_MalformedToken(t *testing.T) {
 	}
 }
 
+func TestRegister_HouseholdDefaultName_UsesLastNameWhenProvided(t *testing.T) {
+	db := setupTestDB(t)
+	userStorage := sqlite.NewUserStorage(db)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+
+	cases := []struct {
+		name, firstName, lastName, want string
+	}{
+		{"regular last name", "Anna", "Andersson", "Anderssons hushåll"},
+		{"last name ending in s", "Erik", "Morais", "Morais hushåll"},
+		{"last name ending in x", "Max", "Marx", "Marx hushåll"},
+		{"last name ending in z", "Klas", "Cruz", "Cruz hushåll"},
+		{"falls back to first name when last is empty", "Anna", "", "Annas hushåll"},
+		{"first name ending in s falls back correctly", "Mats", "", "Mats hushåll"},
+	}
+
+	for i, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			email := "hhtest" + string(rune('a'+i)) + "@example.com"
+			resp, err := authService.Register(domain.RegisterRequest{
+				Email:    email,
+				Password: "Testpassword123",
+				Name:     tc.firstName,
+				LastName: tc.lastName,
+			})
+			if err != nil {
+				t.Fatalf("register failed: %v", err)
+			}
+
+			household, err := householdStorage.GetByUserID(resp.User.ID)
+			if err != nil || household == nil {
+				t.Fatalf("failed to load household: %v", err)
+			}
+			if household.Name != tc.want {
+				t.Errorf("household name: got %q, want %q", household.Name, tc.want)
+			}
+		})
+	}
+}
+
+func TestRegister_ExplicitHouseholdNameWins(t *testing.T) {
+	db := setupTestDB(t)
+	userStorage := sqlite.NewUserStorage(db)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+
+	resp, err := authService.Register(domain.RegisterRequest{
+		Email:         "explicit@example.com",
+		Password:      "Testpassword123",
+		Name:          "Anna",
+		LastName:      "Andersson",
+		HouseholdName: "Villa Kattegatt",
+	})
+	if err != nil {
+		t.Fatalf("register failed: %v", err)
+	}
+
+	household, _ := householdStorage.GetByUserID(resp.User.ID)
+	if household.Name != "Villa Kattegatt" {
+		t.Errorf("expected explicit name to win, got %q", household.Name)
+	}
+}
+
 // IDOR: User from household A cannot update member status in household B
 func TestIDOR_CrossHouseholdStatusUpdate(t *testing.T) {
 	db := setupTestDB(t)

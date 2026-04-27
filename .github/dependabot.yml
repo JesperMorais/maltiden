@@ -1,22 +1,91 @@
 version: 2
+
+# Dependency update automation.
+#
+# Philosophy:
+#   1. Target `dev` — never open PRs against `main`.
+#   2. Bundle ALL updates (including majors) into one weekly PR per ecosystem.
+#      CI catches regressions; if one dep breaks the build, split it out
+#      manually via `@dependabot recreate`.
+#   3. Don't add a commit-message prefix — dependabot already generates good
+#      titles and adding `prefix:` causes ugly double-prefix like
+#      `chore(deps)(deps): ...`.
+#
+# Note: `patterns: ["*"]` is required on every group.
+
 updates:
+  # ─── Backend (Go modules) ──────────────────────────────────────────────
   - package-ecosystem: gomod
     directory: /backend
     target-branch: dev
     schedule:
       interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Stockholm
+    open-pull-requests-limit: 5
     labels: ["dependencies", "backend"]
+    groups:
+      all-go:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["patch", "minor", "major"]
+      go-security:
+        applies-to: security-updates
+        patterns: ["*"]
 
+  # ─── Frontend (npm) ────────────────────────────────────────────────────
   - package-ecosystem: npm
     directory: /frontend
     target-branch: dev
     schedule:
       interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Stockholm
+    open-pull-requests-limit: 5
     labels: ["dependencies", "frontend"]
+    versioning-strategy: increase
+    groups:
+      all-frontend:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["patch", "minor", "major"]
+      frontend-security:
+        applies-to: security-updates
+        patterns: ["*"]
 
+  # ─── Root-level npm (Playwright test runner) ──────────────────────────
+  - package-ecosystem: npm
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Stockholm
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "tests"]
+    versioning-strategy: increase
+    groups:
+      all-tests:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["patch", "minor", "major"]
+
+  # ─── GitHub Actions ────────────────────────────────────────────────────
   - package-ecosystem: github-actions
     directory: /
     target-branch: dev
     schedule:
       interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Stockholm
+    open-pull-requests-limit: 3
     labels: ["dependencies", "ci"]
+    groups:
+      all-actions:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["patch", "minor", "major"]

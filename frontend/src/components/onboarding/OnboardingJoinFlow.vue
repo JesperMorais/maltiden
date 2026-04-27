@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Eye, EyeOff, Home, Star, User, Lightbulb } from 'lucide-vue-next'
+import { Eye, EyeOff, Star, User, Lightbulb } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
+import PasswordStrength from '@/components/common/PasswordStrength.vue'
+import { useUserStore } from '@/stores/user'
+import { joinHousehold } from '@/api/household.api'
+import { isAxiosError } from 'axios'
 
-type JoinStep = 'code' | 'welcome' | 'member-or-guest' | 'member-form' | 'guest-form'
+type JoinStep = 'code' | 'member-or-guest' | 'member-form' | 'guest-form'
+
+const router = useRouter()
+const userStore = useUserStore()
 
 const emit = defineEmits<{
   success: [payload: { type: 'member' | 'guest'; family: string }]
@@ -25,16 +33,13 @@ const joinForm = ref({
 const showJoinPassword = ref(false)
 const showJoinPasswordConfirm = ref(false)
 const isSubmitting = ref(false)
+const submitError = ref('')
 
-// Mock family database
-const mockFamilies: Record<string, string> = {
-  ABC123: 'Familjen Andersson',
-  FAM456: 'Johanssons Hushåll',
-  TEST99: 'Testfamiljen',
-  DEMO01: 'Demo Hushåll',
-}
+// Normalize to match backend: codes are uppercase alphanumerics. Trim + upper
+// so pasted values with casing/whitespace variations still resolve.
+const normalizedCode = computed(() => joinCode.value.trim().toUpperCase())
 
-const canSubmitCode = computed(() => joinCode.value.length >= 4)
+const canSubmitCode = computed(() => normalizedCode.value.length >= 4)
 
 function passwordCharTypes(pw: string): number {
   let upper = false,
@@ -68,48 +73,72 @@ const canSubmitJoinMember = computed(
 
 const canSubmitJoinGuest = computed(() => joinForm.value.name.length >= 2)
 
-async function validateCode() {
+// There's no pre-join "preview by code" endpoint on the backend yet, so we
+// skip the welcome-preview step and only validate the code at submit time
+// (when the user registers + joins in the same flow).
+function validateCode() {
   if (!canSubmitCode.value) return
-  isValidatingCode.value = true
   codeError.value = ''
-
-  // Mock API call - check if code exists
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  const upperCode = joinCode.value.toUpperCase()
-  if (mockFamilies[upperCode]) {
-    matchedFamily.value = mockFamilies[upperCode]!
-    joinStep.value = 'welcome'
-
-    // Auto-advance to choice after showing welcome
-    setTimeout(() => {
-      joinStep.value = 'member-or-guest'
-    }, 1500)
-  } else {
-    codeError.value = 'Koden hittades inte. Kontrollera och försök igen.'
-  }
-
-  isValidatingCode.value = false
+  joinStep.value = 'member-or-guest'
 }
 
 function selectJoinType(type: 'member' | 'guest') {
   joinStep.value = type === 'member' ? 'member-form' : 'guest-form'
+  submitError.value = ''
+}
+
+function joinErrorMessage(e: unknown, fallback: string): string {
+  if (isAxiosError(e)) {
+    const code = e.response?.data?.error as string | undefined
+    if (code === 'invalid_code') return 'Koden är ogiltig eller har gått ut.'
+    if (code === 'already_member') return 'Du är redan medlem i hushållet.'
+    if (code === 'code_required') return 'Ange en kod.'
+    if (!e.response) return 'Kunde inte nå servern — kontrollera din internetanslutning.'
+  }
+  return fallback
 }
 
 async function handleJoinAsMember() {
   if (!canSubmitJoinMember.value) return
   isSubmitting.value = true
+  submitError.value = ''
 
-  await new Promise((resolve) => setTimeout(resolve, 1500))
+  // Two-step: create the user (which auto-provisions a solo household), then
+  // join the invited household. Backend enforces single-household membership,
+  // so joining swaps the user out of the auto-created one. If register
+  // succeeds but join fails, the user is still registered — surface the
+  // error so they know why the family isn't appearing.
+  const registered = await userStore.register(
+    joinForm.value.name,
+    joinForm.value.email,
+    joinForm.value.password,
+  )
 
-  isSubmitting.value = false
-  emit('success', { type: 'member', family: matchedFamily.value })
+  if (!registered) {
+    isSubmitting.value = false
+    submitError.value = userStore.error || 'Registreringen misslyckades'
+    return
+  }
+
+  try {
+    await joinHousehold(normalizedCode.value)
+    emit('success', { type: 'member', family: matchedFamily.value })
+    setTimeout(() => {
+      router.push('/dashboard')
+    }, 1500)
+  } catch (e) {
+    submitError.value = joinErrorMessage(e, 'Kunde inte gå med i hushållet.')
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 async function handleJoinAsGuest() {
   if (!canSubmitJoinGuest.value) return
   isSubmitting.value = true
 
+  // Guest accounts aren't backed by a real endpoint yet — keep the UI
+  // behaving the same way while we flesh out the backend surface.
   await new Promise((resolve) => setTimeout(resolve, 1500))
 
   isSubmitting.value = false
@@ -147,19 +176,7 @@ async function handleJoinAsGuest() {
       </BaseButton>
     </div>
 
-    <!-- Step 2: Welcome message -->
-    <div v-else-if="joinStep === 'welcome'" class="welcome-step">
-      <div class="welcome-icon"><Home :size="36" :stroke-width="1.75" /></div>
-      <h3>Välkommen till</h3>
-      <h2 class="family-name">{{ matchedFamily }}</h2>
-      <div class="loading-dots">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-    </div>
-
-    <!-- Step 3: Member or Guest choice -->
+    <!-- Step 2: Member or Guest choice -->
     <div v-else-if="joinStep === 'member-or-guest'" class="form-card member-choice">
       <h3 class="choice-title">Hur vill du gå med?</h3>
 
@@ -263,12 +280,10 @@ async function handleJoinAsGuest() {
             <component :is="showJoinPassword ? EyeOff : Eye" :size="18" :stroke-width="2" />
           </button>
         </div>
-        <span
-          v-if="joinForm.password.length > 0 && !passwordStrongEnoughJoin"
-          class="field-hint"
-        >
-          Minst 8 tecken med minst 3 av: versaler, gemener, siffror, specialtecken
-        </span>
+        <PasswordStrength
+          v-if="joinForm.password.length > 0"
+          :password="joinForm.password"
+        />
       </label>
 
       <label class="form-label">
@@ -295,6 +310,8 @@ async function handleJoinAsGuest() {
           Lösenorden matchar inte
         </span>
       </label>
+
+      <p v-if="submitError" role="alert" class="form-error">{{ submitError }}</p>
 
       <BaseButton
         type="submit"

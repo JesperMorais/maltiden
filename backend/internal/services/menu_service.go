@@ -62,7 +62,7 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 	// Validate and default days (VALID-13)
 	days := req.Days
 	if days == 0 {
-		days = 5 // backwards-compatible default
+		days = 7 // default to a full Mon–Sun week
 	}
 	if days < 1 || days > 31 {
 		return nil, domain.ErrInvalidDays
