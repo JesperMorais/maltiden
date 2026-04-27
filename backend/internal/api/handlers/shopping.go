@@ -104,7 +104,7 @@ func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.shoppingService.UpdateItemChecked(menuID, itemID, req.Checked); err != nil {
+	if err := h.shoppingService.UpdateItemChecked(menuID, itemID, householdID, req.Checked); err != nil {
 		log.Printf("ERROR [UpdateShoppingItem] %v", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
