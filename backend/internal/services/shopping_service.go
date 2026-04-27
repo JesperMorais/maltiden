@@ -223,10 +223,10 @@ func (s *ShoppingService) DeleteCustomItem(itemID, householdID string) error {
 	return s.shoppingStorage.DeleteCustomItem(itemID, householdID)
 }
 
-func (s *ShoppingService) UpdateItemChecked(menuID, itemID string, checked bool) error {
-	// Custom items are stored in a separate table
+func (s *ShoppingService) UpdateItemChecked(menuID, itemID, householdID string, checked bool) error {
+	// Custom items are stored in a separate table and scoped by household for IDOR protection
 	if strings.HasPrefix(itemID, "citem_") {
-		return s.shoppingStorage.SetCustomItemChecked(itemID, checked)
+		return s.shoppingStorage.SetCustomItemChecked(itemID, householdID, checked)
 	}
 	return s.shoppingStorage.SetChecked(menuID, itemID, checked)
 }

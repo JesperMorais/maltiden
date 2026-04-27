@@ -80,7 +80,7 @@ func (s *ShoppingStorage) GetCheckedItems(menuID string) (map[string]bool, error
 	return result, rows.Err()
 }
 
-func (s *ShoppingStorage) SetCustomItemChecked(id string, checked bool) error {
+func (s *ShoppingStorage) SetCustomItemChecked(id, householdID string, checked bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -89,11 +89,21 @@ func (s *ShoppingStorage) SetCustomItemChecked(id string, checked bool) error {
 		checkedInt = 1
 	}
 
-	_, err := s.db.ExecContext(ctx,
-		`UPDATE custom_shopping_items SET checked = ? WHERE id = ?`,
-		checkedInt, id,
+	result, err := s.db.ExecContext(ctx,
+		`UPDATE custom_shopping_items SET checked = ? WHERE id = ? AND household_id = ?`,
+		checkedInt, id, householdID,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (s *ShoppingStorage) CreateCustomItem(item *domain.CustomShoppingItem) error {
