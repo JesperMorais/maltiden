@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"database/sql"
+	"errors"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -174,6 +176,13 @@ func (h *ShoppingHandler) DeleteCustomItem(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.shoppingService.DeleteCustomItem(itemID, householdID); err != nil {
+		// Not found OR cross-tenant probe — return 404 either way.
+		// Logged at INFO level (not ERROR) to avoid log spam from probing.
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Printf("INFO [DeleteCustomItem] not found: %s", itemID)
+			WriteError(w, http.StatusNotFound, "not_found")
+			return
+		}
 		log.Printf("ERROR [DeleteCustomItem] %v", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
