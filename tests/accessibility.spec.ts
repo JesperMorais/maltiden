@@ -27,6 +27,21 @@ function saveResult(view: string, violations: AxeViolation[], passes: number, in
   allResults.push({ view, violations, passes, incomplete })
 }
 
+// Logs all violations and fails the test if any are 'critical'.
+// 'serious'/'moderate'/'minor' are warnings only — they get logged but don't fail.
+function reportViolations(view: string, violations: AxeViolation[]) {
+  if (violations.length === 0) return
+  console.log(`[A11Y] ${view}: ${violations.length} violations`)
+  for (const v of violations) {
+    console.log(`  - [${v.impact}] ${v.id}: ${v.description}`)
+  }
+  const critical = violations.filter((v) => v.impact === 'critical')
+  if (critical.length > 0) {
+    const summary = critical.map((v) => `${v.id} (${v.nodes.length} node(s))`).join(', ')
+    throw new Error(`[A11Y] ${view}: ${critical.length} critical violation(s): ${summary}`)
+  }
+}
+
 async function runAxeOnView(
   page: import('@playwright/test').Page,
   viewName: string,
@@ -48,37 +63,21 @@ test.describe('Accessibility: Logged-out views', () => {
     await page.goto('/')
     await page.waitForTimeout(1500)
     const violations = await runAxeOnView(page, 'Landing page')
-    // Log violations but don't fail — we collect them for the report
-    if (violations.length > 0) {
-      console.log(`[A11Y] Landing page: ${violations.length} violations`)
-      for (const v of violations) {
-        console.log(`  - [${v.impact}] ${v.id}: ${v.description}`)
-      }
-    }
+    reportViolations('Landing page', violations)
   })
 
   test('Login page', async ({ page }) => {
     await page.goto('/login')
     await page.waitForTimeout(1000)
     const violations = await runAxeOnView(page, 'Login page')
-    if (violations.length > 0) {
-      console.log(`[A11Y] Login page: ${violations.length} violations`)
-      for (const v of violations) {
-        console.log(`  - [${v.impact}] ${v.id}: ${v.description}`)
-      }
-    }
+    reportViolations('Login page', violations)
   })
 
   test('Register page', async ({ page }) => {
     await page.goto('/register')
     await page.waitForTimeout(1000)
     const violations = await runAxeOnView(page, 'Register page')
-    if (violations.length > 0) {
-      console.log(`[A11Y] Register page: ${violations.length} violations`)
-      for (const v of violations) {
-        console.log(`  - [${v.impact}] ${v.id}: ${v.description}`)
-      }
-    }
+    reportViolations('Register page', violations)
   })
 })
 
@@ -93,12 +92,7 @@ test.describe('Accessibility: Logged-in views', () => {
     await page.waitForSelector('.dashboard-content', { timeout: 8000 })
     await page.waitForTimeout(2000)
     const violations = await runAxeOnView(page, 'Dashboard')
-    if (violations.length > 0) {
-      console.log(`[A11Y] Dashboard: ${violations.length} violations`)
-      for (const v of violations) {
-        console.log(`  - [${v.impact}] ${v.id}: ${v.description}`)
-      }
-    }
+    reportViolations('Dashboard', violations)
   })
 
   test('Recipe list', async ({ page }) => {
@@ -106,12 +100,7 @@ test.describe('Accessibility: Logged-in views', () => {
     await expect(page).toHaveURL(/\/recipes/)
     await page.waitForTimeout(2000)
     const violations = await runAxeOnView(page, 'Recipe list')
-    if (violations.length > 0) {
-      console.log(`[A11Y] Recipe list: ${violations.length} violations`)
-      for (const v of violations) {
-        console.log(`  - [${v.impact}] ${v.id}: ${v.description}`)
-      }
-    }
+    reportViolations('Recipe list', violations)
   })
 
   test('Add recipe tab', async ({ page }) => {
@@ -121,12 +110,7 @@ test.describe('Accessibility: Logged-in views', () => {
     await page.getByRole('tab', { name: 'Lägg till' }).click()
     await page.waitForTimeout(1000)
     const violations = await runAxeOnView(page, 'Add recipe tab')
-    if (violations.length > 0) {
-      console.log(`[A11Y] Add recipe tab: ${violations.length} violations`)
-      for (const v of violations) {
-        console.log(`  - [${v.impact}] ${v.id}: ${v.description}`)
-      }
-    }
+    reportViolations('Add recipe tab', violations)
   })
 
   test('Menu generator', async ({ page }) => {
@@ -134,12 +118,7 @@ test.describe('Accessibility: Logged-in views', () => {
     await expect(page).toHaveURL(/\/menu\/generate/)
     await page.waitForTimeout(1500)
     const violations = await runAxeOnView(page, 'Menu generator')
-    if (violations.length > 0) {
-      console.log(`[A11Y] Menu generator: ${violations.length} violations`)
-      for (const v of violations) {
-        console.log(`  - [${v.impact}] ${v.id}: ${v.description}`)
-      }
-    }
+    reportViolations('Menu generator', violations)
   })
 
   test('Shopping list', async ({ page }) => {
@@ -149,12 +128,7 @@ test.describe('Accessibility: Logged-in views', () => {
       await expect(page).toHaveURL(/\/shopping-list/)
       await page.waitForTimeout(1500)
       const violations = await runAxeOnView(page, 'Shopping list')
-      if (violations.length > 0) {
-        console.log(`[A11Y] Shopping list: ${violations.length} violations`)
-        for (const v of violations) {
-          console.log(`  - [${v.impact}] ${v.id}: ${v.description}`)
-        }
-      }
+      reportViolations('Shopping list', violations)
     }
   })
 
@@ -166,12 +140,7 @@ test.describe('Accessibility: Logged-in views', () => {
     await page.getByText('Inställningar').click()
     await page.waitForTimeout(800)
     const violations = await runAxeOnView(page, 'Settings modal')
-    if (violations.length > 0) {
-      console.log(`[A11Y] Settings modal: ${violations.length} violations`)
-      for (const v of violations) {
-        console.log(`  - [${v.impact}] ${v.id}: ${v.description}`)
-      }
-    }
+    reportViolations('Settings modal', violations)
   })
 
   test('Invite modal', async ({ page }) => {
@@ -182,12 +151,7 @@ test.describe('Accessibility: Logged-in views', () => {
       await inviteBtn.click()
       await page.waitForTimeout(800)
       const violations = await runAxeOnView(page, 'Invite modal')
-      if (violations.length > 0) {
-        console.log(`[A11Y] Invite modal: ${violations.length} violations`)
-        for (const v of violations) {
-          console.log(`  - [${v.impact}] ${v.id}: ${v.description}`)
-        }
-      }
+      reportViolations('Invite modal', violations)
     }
   })
 })
