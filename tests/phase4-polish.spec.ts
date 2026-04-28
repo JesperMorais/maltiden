@@ -21,7 +21,7 @@ test.describe('Phase 4: Polish & Delight', () => {
 
     test('page renders without errors', async ({ page }) => {
       await expect(page.getByText('Generera veckomeny')).toBeVisible({ timeout: 5000 })
-      await expect(page.getByText('Måndag - Fredag')).toBeVisible()
+      await expect(page.getByText('Måndag – Söndag')).toBeVisible()
     })
   })
 
@@ -43,7 +43,7 @@ test.describe('Phase 4: Polish & Delight', () => {
     })
 
     test('empty state shows feature list', async ({ page }) => {
-      await expect(page.getByText('5 måltider (Måndag-Fredag)')).toBeVisible({ timeout: 5000 })
+      await expect(page.getByText('7 måltider (Måndag–Söndag)')).toBeVisible({ timeout: 5000 })
       await expect(page.getByText('Slumpmässiga recept', { exact: true })).toBeVisible()
       await expect(page.getByText('Lås dagar du vill behålla', { exact: true })).toBeVisible()
     })
@@ -131,8 +131,8 @@ test.describe('Phase 4: Polish & Delight', () => {
 
     test('page header renders correctly', async ({ page }) => {
       await expect(page.getByText('Generera veckomeny')).toBeVisible({ timeout: 5000 })
-      await expect(page.getByText('Måndag - Fredag')).toBeVisible()
-      await expect(page.getByText(/Skapa en meny för 5 dagar/)).toBeVisible()
+      await expect(page.getByText('Måndag – Söndag')).toBeVisible()
+      await expect(page.getByText(/Skapa en meny för hela veckan/)).toBeVisible()
     })
 
     test('content container exists', async ({ page }) => {

@@ -194,6 +194,7 @@ test.describe('Accessibility: Logged-in views', () => {
 
 // After all tests, write a JSON summary
 test.afterAll(async () => {
+  fs.mkdirSync(RESULTS_DIR, { recursive: true })
   const summaryPath = path.join(RESULTS_DIR, 'axe-results.json')
   fs.writeFileSync(summaryPath, JSON.stringify(allResults, null, 2))
 })
