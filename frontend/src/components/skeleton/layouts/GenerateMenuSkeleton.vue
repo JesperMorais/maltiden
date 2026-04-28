@@ -20,7 +20,10 @@ withDefaults(defineProps<Props>(), {
 
 <template>
   <div class="generate-menu-skeleton" aria-hidden="true">
-    <div class="menu-grid-skeleton">
+    <div
+      class="menu-grid-skeleton"
+      :style="{ gridTemplateColumns: `repeat(${dayCount}, 1fr)` }"
+    >
       <div v-for="i in dayCount" :key="i" class="day-card-skeleton">
         <SkeletonBlock width="48px" height="12px" radius="6px" />
         <SkeletonCircle size="64px" />
@@ -49,7 +52,7 @@ withDefaults(defineProps<Props>(), {
 
 .menu-grid-skeleton {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* grid-template-columns is bound via :style to match dayCount */
   gap: 1.5rem;
 }
 
