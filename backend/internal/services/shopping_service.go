@@ -268,6 +268,15 @@ func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domai
 		amount = 1
 	}
 
+	// Enforce per-menu cap to prevent unbounded growth.
+	count, err := s.shoppingStorage.CountCustomItems(menuID, householdID)
+	if err != nil {
+		return nil, err
+	}
+	if count >= 500 {
+		return nil, errors.New("too_many_items")
+	}
+
 	item := &domain.CustomShoppingItem{
 		ID:          "citem_" + uuid.New().String(),
 		MenuID:      menuID,
