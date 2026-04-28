@@ -151,6 +151,28 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 { "error": "household_not_found" }
 ```
 
+### PATCH /households/me
+Rename the household. Requires `owner` or `member` role — guests receive 403.
+```json
+// Request
+{ "name": "Familjen Johansson" }
+
+// Response 200
+{ "ok": true }
+
+// Error 400 (name is empty)
+{ "error": "household_name_required" }
+
+// Error 400 (name exceeds 100 characters)
+{ "error": "household_name_too_long" }
+
+// Error 403 (caller is a guest)
+{ "error": "forbidden" }
+
+// Error 404 (household not found)
+{ "error": "not_found" }
+```
+
 ### POST /households/invite
 Only members and owners may create invite codes. Guests receive 403.
 ```json
@@ -827,6 +849,7 @@ The frontend uses Vue Router with the following routes:
 | POST /auth/register | ✅ | ✅ |
 | POST /auth/login | ✅ | ✅ |
 | GET /households/me | ✅ | ✅ |
+| PATCH /households/me | ✅ | ✅ |
 | POST /households/invite | ✅ | ✅ |
 | POST /households/join | ✅ | ✅ |
 | GET /households/members/status | ✅ | ✅ |
