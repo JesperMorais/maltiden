@@ -85,37 +85,25 @@ func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// IDOR protection: verify menu belongs to user's household
-	menuHouseholdID, err := h.menuStorage.GetHouseholdIDByMenuID(menuID)
-	if err != nil {
-		log.Printf("ERROR [UpdateShoppingItem] %v", err)
-		WriteError(w, http.StatusInternalServerError, "internal_error")
-		return
-	}
-	if menuHouseholdID == "" {
-		WriteError(w, http.StatusNotFound, "menu_not_found")
-		return
-	}
-	if menuHouseholdID != householdID {
-		WriteError(w, http.StatusForbidden, "forbidden")
-		return
-	}
-
 	var req domain.UpdateShoppingItemRequest
 	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
 	if err := h.shoppingService.UpdateItemChecked(menuID, itemID, householdID, req.Checked); err != nil {
-		// Custom-item not found OR cross-tenant probe — return 404 either way.
-		// Logged at INFO to avoid log spam from probing.
-		if errors.Is(err, sql.ErrNoRows) {
+		switch {
+		case errors.Is(err, domain.ErrMenuNotFound):
+			WriteError(w, http.StatusNotFound, "menu_not_found")
+		case errors.Is(err, domain.ErrForbidden):
+			WriteError(w, http.StatusForbidden, "forbidden")
+		case errors.Is(err, sql.ErrNoRows):
+			// Custom-item not found OR cross-tenant probe — return 404 either way.
 			log.Printf("INFO [UpdateShoppingItem] not found: %s", itemID)
 			WriteError(w, http.StatusNotFound, "not_found")
-			return
+		default:
+			log.Printf("ERROR [UpdateShoppingItem] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
-		log.Printf("ERROR [UpdateShoppingItem] %v", err)
-		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
 
@@ -134,36 +122,22 @@ func (h *ShoppingHandler) AddCustomItem(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// IDOR protection: verify menu belongs to user's household
-	menuHouseholdID, err := h.menuStorage.GetHouseholdIDByMenuID(menuID)
-	if err != nil {
-		log.Printf("ERROR [AddCustomItem] %v", err)
-		WriteError(w, http.StatusInternalServerError, "internal_error")
-		return
-	}
-	if menuHouseholdID == "" {
-		WriteError(w, http.StatusNotFound, "menu_not_found")
-		return
-	}
-	if menuHouseholdID != householdID {
-		WriteError(w, http.StatusForbidden, "forbidden")
-		return
-	}
-
 	var req domain.CreateCustomItemRequest
 	if !DecodeJSON(w, r, maxBodySize, &req) {
 		return
 	}
 
-	if req.Name == "" {
-		WriteError(w, http.StatusBadRequest, "name_required")
-		return
-	}
-
 	item, err := h.shoppingService.CreateCustomItem(menuID, householdID, req)
 	if err != nil {
-		log.Printf("ERROR [AddCustomItem] %v", err)
-		WriteError(w, http.StatusInternalServerError, "internal_error")
+		switch {
+		case errors.Is(err, domain.ErrMenuNotFound):
+			WriteError(w, http.StatusNotFound, "menu_not_found")
+		case errors.Is(err, domain.ErrForbidden):
+			WriteError(w, http.StatusForbidden, "forbidden")
+		default:
+			log.Printf("ERROR [AddCustomItem] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
 		return
 	}
 
