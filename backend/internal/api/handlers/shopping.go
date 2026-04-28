@@ -51,7 +51,7 @@ func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	list, err := h.shoppingService.GetShoppingList(menuID)
+	list, err := h.shoppingService.GetShoppingList(menuID, householdID)
 	if err != nil {
 		log.Printf("ERROR [GetShoppingList] %v", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
