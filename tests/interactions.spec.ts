@@ -157,10 +157,10 @@ test.describe('Interaction: Menu generation', () => {
       const menuGrid = page.locator('.menu-grid')
       await expect(menuGrid).toBeVisible({ timeout: 8000 })
 
-      // Verify all 5 days are populated (Mon-Fri)
+      // Verify all 7 days are populated (Mon-Sun)
       const dayCards = page.locator('.menu-grid > *')
       const dayCount = await dayCards.count()
-      expect(dayCount).toBe(5)
+      expect(dayCount).toBe(7)
 
       // Each day should have a recipe name (not empty)
       for (let i = 0; i < dayCount; i++) {
@@ -204,7 +204,9 @@ test.describe('Interaction: Onboarding', () => {
     await page.waitForTimeout(800)
 
     // Fill registration form (password needs 3+ char types: upper, lower, digit, special)
-    await page.getByPlaceholder('Anna Andersson').first().fill('Testperson')
+    // Form is split into first name (Anna) and last name (Andersson)
+    await page.getByPlaceholder('Anna', { exact: true }).first().fill('Test')
+    await page.getByPlaceholder('Andersson', { exact: true }).first().fill('Person')
     await page.getByPlaceholder('anna@exempel.se').first().fill('ny@test.se')
     await page.getByPlaceholder('Minst 8 tecken').first().fill('TestPass123!')
     await page.getByPlaceholder('Skriv lösenordet igen').first().fill('TestPass123!')
@@ -248,10 +250,8 @@ test.describe('Interaction: Onboarding', () => {
     await page.getByPlaceholder(/T\.ex\. ABC123/).fill('ABC123')
     await page.getByRole('button', { name: /Fortsätt/ }).click()
 
-    // Verify household found
-    await expect(page.getByText('Familjen Andersson')).toBeVisible({ timeout: 5000 })
-
-    // Expect member/guest choice
+    // Backend has no pre-join preview endpoint, so the flow goes directly
+    // from code entry to the member/guest choice (no household name preview).
     await expect(page.getByText(/Hur vill du gå med/i)).toBeVisible({ timeout: 5000 })
 
     // Choose member
