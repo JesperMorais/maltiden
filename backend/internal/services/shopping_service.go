@@ -241,7 +241,18 @@ func (s *ShoppingService) GetShoppingList(menuID, householdID string) (*domain.S
 }
 
 func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domain.CreateCustomItemRequest) (*domain.CustomShoppingItem, error) {
-	// Defense-in-depth: handler also checks empty name, but enforce here too.
+	// IDOR protection: verify menu belongs to caller's household.
+	menuHouseholdID, err := s.menuStorage.GetHouseholdIDByMenuID(menuID)
+	if err != nil {
+		return nil, err
+	}
+	if menuHouseholdID == "" {
+		return nil, domain.ErrMenuNotFound
+	}
+	if menuHouseholdID != householdID {
+		return nil, domain.ErrForbidden
+	}
+
 	if req.Name == "" {
 		return nil, errors.New("name_required")
 	}
@@ -298,6 +309,18 @@ func (s *ShoppingService) DeleteCustomItem(itemID, householdID string) error {
 }
 
 func (s *ShoppingService) UpdateItemChecked(menuID, itemID, householdID string, checked bool) error {
+	// IDOR protection: verify menu belongs to caller's household.
+	menuHouseholdID, err := s.menuStorage.GetHouseholdIDByMenuID(menuID)
+	if err != nil {
+		return err
+	}
+	if menuHouseholdID == "" {
+		return domain.ErrMenuNotFound
+	}
+	if menuHouseholdID != householdID {
+		return domain.ErrForbidden
+	}
+
 	// Custom items are stored in a separate table and scoped by household for IDOR protection
 	if strings.HasPrefix(itemID, "citem_") {
 		return s.shoppingStorage.SetCustomItemChecked(itemID, householdID, checked)

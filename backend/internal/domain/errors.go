@@ -24,7 +24,8 @@ var (
 	ErrHouseholdNameTooLong   = errors.New("household_name_too_long")
 
 	// Resource
-	ErrNotFound = errors.New("not_found")
+	ErrNotFound     = errors.New("not_found")
+	ErrMenuNotFound = errors.New("menu_not_found")
 
 	// Resource
 	ErrInvalidDays = errors.New("invalid_days")
