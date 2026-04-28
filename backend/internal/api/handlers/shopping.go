@@ -107,6 +107,13 @@ func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.shoppingService.UpdateItemChecked(menuID, itemID, householdID, req.Checked); err != nil {
+		// Custom-item not found OR cross-tenant probe — return 404 either way.
+		// Logged at INFO to avoid log spam from probing.
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Printf("INFO [UpdateShoppingItem] not found: %s", itemID)
+			WriteError(w, http.StatusNotFound, "not_found")
+			return
+		}
 		log.Printf("ERROR [UpdateShoppingItem] %v", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
