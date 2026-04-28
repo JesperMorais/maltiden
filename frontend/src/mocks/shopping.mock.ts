@@ -63,17 +63,30 @@ const categoryMap: Record<string, string> = {
 
 const categoryOrder = ['Kött & Fisk', 'Mejeri', 'Grönsaker', 'Skafferi', 'Kryddor', 'Egna varor']
 
+/** Build a deterministic UUID-format id for mocks (matches backend prefixedUUIDPattern). */
+function mockCustomId(seq: number): string {
+  const suffix = seq.toString(16).padStart(12, '0')
+  return `citem_00000000-0000-4000-8000-${suffix}`
+}
+
 /** Custom items storage */
 let customItems: ShoppingItem[] = [
   {
-    id: 'citem_mock-1',
+    id: mockCustomId(1),
     name: 'Hushållspapper',
     unit: 'st',
     amount: 2,
     checked: false,
     isCustom: true,
   },
-  { id: 'citem_mock-2', name: 'Diskmedel', unit: 'st', amount: 1, checked: false, isCustom: true },
+  {
+    id: mockCustomId(2),
+    name: 'Diskmedel',
+    unit: 'st',
+    amount: 1,
+    checked: false,
+    isCustom: true,
+  },
 ]
 
 let nextCustomId = 3
@@ -185,7 +198,7 @@ export async function mockAddCustomItem(
 ): Promise<ShoppingItem> {
   await delay(150)
   const item: ShoppingItem = {
-    id: `citem_mock-${nextCustomId++}`,
+    id: mockCustomId(nextCustomId++),
     name: req.name,
     unit: req.unit ?? 'st',
     amount: req.amount ?? 1,
