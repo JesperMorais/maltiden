@@ -257,7 +257,11 @@ onMounted(async () => {
                   v-for="item in category.items"
                   :key="item.id"
                   class="item-row"
+                  role="button"
+                  tabindex="0"
                   @click="toggle(item.id, true)"
+                  @keydown.enter="toggle(item.id, true)"
+                  @keydown.space.prevent="toggle(item.id, true)"
                 >
                   <span class="custom-checkbox">
                     <Check :size="14" :stroke-width="3" class="check-icon" />
@@ -299,7 +303,11 @@ onMounted(async () => {
                   v-for="item in checkedItems"
                   :key="item.id"
                   class="item-row checked"
+                  role="button"
+                  tabindex="0"
                   @click="toggle(item.id, false)"
+                  @keydown.enter="toggle(item.id, false)"
+                  @keydown.space.prevent="toggle(item.id, false)"
                 >
                   <span class="custom-checkbox is-checked">
                     <Check :size="14" :stroke-width="3" class="check-icon" />

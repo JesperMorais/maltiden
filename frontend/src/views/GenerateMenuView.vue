@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useMenuGeneratorStore } from '@/stores/menuGenerator'
+import { usePlanningPreferencesStore } from '@/stores/planningPreferences'
 import { useSlotMachine, type DisplayRecipe } from '@/composables/useSlotMachine'
 import { useToast } from '@/composables/useToast'
 import { useFocusTrap } from '@/composables/useFocusTrap'
@@ -14,6 +15,7 @@ import { useSkeleton } from '@/composables/useSkeleton'
 
 const router = useRouter()
 const store = useMenuGeneratorStore()
+const prefsStore = usePlanningPreferencesStore()
 const slotMachine = useSlotMachine()
 const toast = useToast()
 
@@ -211,7 +213,7 @@ onBeforeRouteLeave((to, from, next) => {
     <main class="content">
       <div class="content-container">
         <!-- Skeleton loading state -->
-        <GenerateMenuSkeleton v-if="showSkeleton" />
+        <GenerateMenuSkeleton v-if="showSkeleton" :day-count="prefsStore.activeDayCount" />
 
         <!-- Empty state -->
         <GenerateMenuEmptyState v-else-if="!showGrid" @generate="handleInitialGenerate" />
