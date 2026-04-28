@@ -2,10 +2,35 @@ package services
 
 import (
 	"maltiden/internal/domain"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 )
+
+// normalizeTags trims whitespace, drops empty strings, and dedupes
+// case-insensitively while preserving the first-seen casing and order.
+func normalizeTags(tags []string) []string {
+	if len(tags) == 0 {
+		return tags
+	}
+	seen := make(map[string]struct{}, len(tags))
+	out := make([]string, 0, len(tags))
+	for _, t := range tags {
+		trimmed := strings.TrimSpace(t)
+		if trimmed == "" {
+			continue
+		}
+		key := strings.ToLower(trimmed)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, trimmed)
+	}
+	return out
+}
 
 type RecipeService struct {
 	recipeStorage domain.RecipeRepository
@@ -54,7 +79,7 @@ func (s *RecipeService) Update(id string, householdID string, req domain.UpdateR
 	if req.Name == "" {
 		return nil, domain.ErrNameRequired
 	}
-	if len(req.Name) > 200 {
+	if utf8.RuneCountInString(req.Name) > 200 {
 		return nil, domain.ErrNameTooLong
 	}
 	if req.Servings <= 0 || req.Servings > 100 {
@@ -69,12 +94,15 @@ func (s *RecipeService) Update(id string, householdID string, req domain.UpdateR
 	if len(req.Instructions) == 0 {
 		return nil, domain.ErrInstructionsRequired
 	}
-	// Tags: max 20 tags, each tag max 50 chars
-	if len(req.Tags) > 20 {
+	// Tags: normalize (trim, drop empties, dedup), then enforce limits
+	// (max 20 tags, each tag max 50 runes — Swedish chars like å/ä/ö are
+	// 2 UTF-8 bytes, so byte-counting truncates valid tags).
+	normalizedTags := normalizeTags(req.Tags)
+	if len(normalizedTags) > 20 {
 		return nil, domain.ErrTooManyTags
 	}
-	for _, tag := range req.Tags {
-		if len(tag) > 50 {
+	for _, tag := range normalizedTags {
+		if utf8.RuneCountInString(tag) > 50 {
 			return nil, domain.ErrTagTooLong
 		}
 	}
@@ -83,7 +111,7 @@ func (s *RecipeService) Update(id string, householdID string, req domain.UpdateR
 	existing.Name = req.Name
 	existing.Servings = req.Servings
 	existing.Emoji = req.Emoji
-	existing.Tags = req.Tags
+	existing.Tags = normalizedTags
 	existing.Ingredients = req.Ingredients
 	existing.Instructions = req.Instructions
 
@@ -120,8 +148,8 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 	if req.Name == "" {
 		return nil, domain.ErrNameRequired
 	}
-	// VALID-10: name length upper bound
-	if len(req.Name) > 200 {
+	// VALID-10: name length upper bound (rune count, not bytes)
+	if utf8.RuneCountInString(req.Name) > 200 {
 		return nil, domain.ErrNameTooLong
 	}
 	if req.Servings <= 0 {
@@ -141,12 +169,15 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 	if len(req.Instructions) == 0 {
 		return nil, domain.ErrInstructionsRequired
 	}
-	// Tags: max 20 tags, each tag max 50 chars
-	if len(req.Tags) > 20 {
+	// Tags: normalize (trim, drop empties, dedup), then enforce limits
+	// (max 20 tags, each tag max 50 runes — Swedish chars like å/ä/ö are
+	// 2 UTF-8 bytes, so byte-counting truncates valid tags).
+	normalizedTags := normalizeTags(req.Tags)
+	if len(normalizedTags) > 20 {
 		return nil, domain.ErrTooManyTags
 	}
-	for _, tag := range req.Tags {
-		if len(tag) > 50 {
+	for _, tag := range normalizedTags {
+		if utf8.RuneCountInString(tag) > 50 {
 			return nil, domain.ErrTagTooLong
 		}
 	}
@@ -156,7 +187,7 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 		Name:         req.Name,
 		Servings:     req.Servings,
 		Emoji:        req.Emoji,
-		Tags:         req.Tags,
+		Tags:         normalizedTags,
 		Ingredients:  req.Ingredients,
 		Instructions: req.Instructions,
 		HouseholdID:  householdID,
