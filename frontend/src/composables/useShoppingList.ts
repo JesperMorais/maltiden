@@ -130,20 +130,60 @@ export function useShoppingList() {
   ): Promise<void> {
     const menuId = shoppingList.value?.menuId
     if (!menuId) return
+    if (!shoppingList.value) return
+
+    const trimmedName = name.trim()
+    if (!trimmedName) return
+
+    // 1. Generate temp ID for the optimistic placeholder
+    const tempId = `tmp_${crypto.randomUUID()}`
+    const tempItem: ShoppingItem = {
+      id: tempId,
+      name: trimmedName,
+      amount,
+      unit,
+      checked: false,
+      isCustom: true,
+    }
+
+    // 2. Insert placeholder into 'Egna varor' immediately
+    const cats = shoppingList.value.categories
+    let egna = cats.find((c) => c.name === 'Egna varor')
+    if (!egna) {
+      egna = { name: 'Egna varor', items: [] }
+      cats.push(egna)
+    }
+    egna.items.push(tempItem)
 
     try {
-      const created = await addCustomItemApi(menuId, { name, unit, amount })
-      // Optimistic insert into 'Egna varor' category (mirrors removeCustomItem pattern)
-      if (shoppingList.value) {
-        const cats = shoppingList.value.categories
-        let egna = cats.find((c) => c.name === 'Egna varor')
-        if (!egna) {
-          egna = { name: 'Egna varor', items: [] }
-          cats.push(egna)
+      // 3. Await the API call
+      const created = await addCustomItemApi(menuId, {
+        name: trimmedName,
+        unit,
+        amount,
+      })
+
+      // 4. Replace temp item with server-returned item (find by temp id, swap in place)
+      const targetCat = shoppingList.value.categories.find(
+        (c) => c.name === 'Egna varor',
+      )
+      if (targetCat) {
+        const idx = targetCat.items.findIndex((i) => i.id === tempId)
+        if (idx !== -1) {
+          targetCat.items.splice(idx, 1, created)
         }
-        egna.items.push(created)
       }
     } catch {
+      // 5. Roll back: remove the temp item, show toast
+      const targetCat = shoppingList.value?.categories.find(
+        (c) => c.name === 'Egna varor',
+      )
+      if (targetCat) {
+        const idx = targetCat.items.findIndex((i) => i.id === tempId)
+        if (idx !== -1) {
+          targetCat.items.splice(idx, 1)
+        }
+      }
       toast.error('Kunde inte lägga till varan. Försök igen.')
     }
   }
