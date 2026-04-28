@@ -73,6 +73,10 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	// Rate limiter for recipe parser: 2 requests/sec, burst of 5 (API credit protection)
 	parserLimiter := middleware.NewRateLimiter(2, 5)
 
+	// Rate limiter for custom shopping item creation: 0.5 req/sec, burst of 30
+	// (~30 req/min sustained, prevents abuse of unbounded list growth).
+	customItemLimiter := middleware.NewRateLimiter(0.5, 30)
+
 	// Recipe parser (Claude API) - optional, degrades gracefully if ANTHROPIC_API_KEY not set
 	var parserHandler *handlers.RecipeParserHandler
 	claudeClient, err := claude.NewClient()
@@ -157,9 +161,9 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.Handle("PATCH /shopping-list/items/{id}", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.shopping.UpdateItem),
 	))
-	mux.Handle("POST /shopping-list/items", middleware.RequireAuth(jwtService, deps.userStorage)(
+	mux.Handle("POST /shopping-list/items", customItemLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.shopping.AddCustomItem),
-	))
+	)))
 	mux.Handle("DELETE /shopping-list/items/{id}", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.shopping.DeleteCustomItem),
 	))

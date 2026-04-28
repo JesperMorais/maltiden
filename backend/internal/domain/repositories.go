@@ -64,5 +64,6 @@ type ShoppingRepository interface {
 	CreateCustomItem(item *CustomShoppingItem) error
 	DeleteCustomItem(id, householdID string) error
 	GetCustomItems(menuID, householdID string) ([]CustomShoppingItem, error)
+	CountCustomItems(menuID, householdID string) (int, error)
 	SetCustomItemChecked(id, householdID string, checked bool) error
 }
