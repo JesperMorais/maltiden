@@ -37,6 +37,10 @@ var (
 	ErrInstructionsRequired = errors.New("instructions_required")
 	ErrNameTooLong          = errors.New("name_too_long")
 	ErrTooManyIngredients   = errors.New("too_many_ingredients")
+	ErrUnitTooLong          = errors.New("unit_too_long")
+	ErrInvalidAmount        = errors.New("invalid_amount")
+	ErrAmountTooLarge       = errors.New("amount_too_large")
+	ErrTooManyItems         = errors.New("too_many_items")
 	ErrTooManyTags          = errors.New("too_many_tags")
 	ErrTagTooLong           = errors.New("tag_too_long")
 

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"errors"
 	"fmt"
 	"hash/fnv"
 	"maltiden/internal/domain"
@@ -256,25 +255,25 @@ func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domai
 	// Trim leading/trailing whitespace before validating presence.
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
-		return nil, errors.New("name_required")
+		return nil, domain.ErrNameRequired
 	}
 	// Use rune count so Swedish characters (å, ä, ö) count as single chars.
 	if utf8.RuneCountInString(name) > 200 {
-		return nil, errors.New("name_too_long")
+		return nil, domain.ErrNameTooLong
 	}
 	if utf8.RuneCountInString(req.Unit) > 20 {
-		return nil, errors.New("unit_too_long")
+		return nil, domain.ErrUnitTooLong
 	}
 	if math.IsNaN(req.Amount) || math.IsInf(req.Amount, 0) {
-		return nil, errors.New("invalid_amount")
+		return nil, domain.ErrInvalidAmount
 	}
 	// Negative amounts are rejected; zero is treated as "unspecified" and
 	// defaults to 1 below for ergonomic input.
 	if req.Amount < 0 {
-		return nil, errors.New("invalid_amount")
+		return nil, domain.ErrInvalidAmount
 	}
 	if req.Amount > 100000 {
-		return nil, errors.New("amount_too_large")
+		return nil, domain.ErrAmountTooLarge
 	}
 
 	unit := req.Unit
@@ -292,7 +291,7 @@ func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domai
 		return nil, err
 	}
 	if count >= 500 {
-		return nil, errors.New("too_many_items")
+		return nil, domain.ErrTooManyItems
 	}
 
 	item := &domain.CustomShoppingItem{
