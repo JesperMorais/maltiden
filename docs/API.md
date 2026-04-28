@@ -2,6 +2,19 @@
 
 Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
+## Recent Changes (PR #163)
+
+**New Shopping List Endpoints:**
+- `POST /shopping-list/items` — Add a custom item to the shopping list (auth required)
+- `DELETE /shopping-list/items/:id` — Remove a custom item from the shopping list (auth required)
+
+**Updated Response Shape:**
+- `ShoppingItem` (returned by `GET /shopping-list` and `POST /shopping-list/items`) now includes `isCustom: boolean` — `true` for user-added items, `false` for recipe-generated items.
+
+**No breaking changes** — purely additive.
+
+---
+
 ## Recent Changes (PR #99)
 
 **Auth client improvements (frontend only — no backend changes):**
@@ -524,17 +537,20 @@ Use this to replace the generated menu's day assignments without regenerating fr
     {
       "name": "Kött & Fisk",
       "items": [
-        { "id": "item_001", "name": "Köttfärs", "amount": 800, "unit": "g", "checked": false }
+        { "id": "item_001", "name": "Köttfärs", "amount": 800, "unit": "g", "checked": false, "isCustom": false }
       ]
     },
     {
       "name": "Mejeri",
       "items": [
-        { "id": "item_002", "name": "Grädde", "amount": 2, "unit": "dl", "checked": false }
+        { "id": "item_002", "name": "Grädde", "amount": 2, "unit": "dl", "checked": false, "isCustom": false },
+        { "id": "item_003", "name": "Parmesan", "amount": 1, "unit": "st", "checked": false, "isCustom": true }
       ]
     }
   ]
 }
+// isCustom: false — item generated from a recipe
+// isCustom: true  — item added manually by the user
 
 // Error 403 (menu belongs to a different household)
 { "error": "forbidden" }
@@ -557,6 +573,51 @@ Use this to replace the generated menu's day assignments without regenerating fr
 
 // Error 404
 { "error": "menu_not_found" }
+```
+
+### POST /shopping-list/items
+Add a custom item to the shopping list. **Auth required.**
+```json
+// Query: ?menuId=menu_001   — REQUIRED
+
+// Request
+{
+  "name": "Parmesan",    // required
+  "unit": "st",          // optional
+  "amount": 1            // optional
+}
+
+// Response 201
+{
+  "id": "item_042",
+  "name": "Parmesan",
+  "amount": 1,
+  "unit": "st",
+  "checked": false,
+  "isCustom": true
+}
+
+// Error 400 (name field missing or empty)
+{ "error": "name_required" }
+
+// Error 403 (menu belongs to a different household)
+{ "error": "forbidden" }
+
+// Error 404
+{ "error": "menu_not_found" }
+```
+
+### DELETE /shopping-list/items/:id
+Remove a custom item from the shopping list. **Auth required.** Only items with `isCustom: true` can be deleted; recipe-generated items cannot be deleted via this endpoint.
+```json
+// Response 200
+{ "ok": true }
+
+// Error 403 (item is recipe-generated, not custom; or menu belongs to a different household)
+{ "error": "forbidden" }
+
+// Error 404
+{ "error": "not_found" }
 ```
 
 ---
@@ -767,6 +828,8 @@ The frontend uses Vue Router with the following routes:
 | GET /menus/current | ✅ | ✅ |
 | GET /shopping-list | ✅ | ✅ |
 | PATCH /shopping-list/items/:id | ✅ | ✅ |
+| POST /shopping-list/items | ✅ | ✅ |
+| DELETE /shopping-list/items/:id | ✅ | ✅ |
 | GET /offers/search | ✅ | ✅ |
 | GET /offers/discounts | ✅ | ✅ |
 | GET /offers/stores | ✅ | ✅ |
