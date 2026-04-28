@@ -147,7 +147,7 @@ func (s *ShoppingStorage) GetCustomItems(menuID string) ([]domain.CustomShopping
 
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, menu_id, household_id, name, unit, amount, checked
-		 FROM custom_shopping_items WHERE menu_id = ? ORDER BY created_at`,
+		 FROM custom_shopping_items WHERE menu_id = ? ORDER BY created_at, id LIMIT 500`,
 		menuID,
 	)
 	if err != nil {
