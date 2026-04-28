@@ -253,17 +253,24 @@ func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domai
 		return nil, domain.ErrForbidden
 	}
 
-	if req.Name == "" {
+	// Trim leading/trailing whitespace before validating presence.
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
 		return nil, errors.New("name_required")
 	}
 	// Use rune count so Swedish characters (å, ä, ö) count as single chars.
-	if utf8.RuneCountInString(req.Name) > 200 {
+	if utf8.RuneCountInString(name) > 200 {
 		return nil, errors.New("name_too_long")
 	}
 	if utf8.RuneCountInString(req.Unit) > 20 {
 		return nil, errors.New("unit_too_long")
 	}
 	if math.IsNaN(req.Amount) || math.IsInf(req.Amount, 0) {
+		return nil, errors.New("invalid_amount")
+	}
+	// Negative amounts are rejected; zero is treated as "unspecified" and
+	// defaults to 1 below for ergonomic input.
+	if req.Amount < 0 {
 		return nil, errors.New("invalid_amount")
 	}
 	if req.Amount > 100000 {
@@ -275,7 +282,7 @@ func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domai
 		unit = "st"
 	}
 	amount := req.Amount
-	if amount <= 0 {
+	if amount == 0 {
 		amount = 1
 	}
 
@@ -292,7 +299,7 @@ func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domai
 		ID:          "citem_" + uuid.New().String(),
 		MenuID:      menuID,
 		HouseholdID: householdID,
-		Name:        req.Name,
+		Name:        name,
 		Unit:        unit,
 		Amount:      amount,
 	}
