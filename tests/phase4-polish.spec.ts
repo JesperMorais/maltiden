@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
-import { login, navigateTo } from './helpers'
+import { login } from './helpers'
 
 test.describe('Phase 4: Polish & Delight', () => {
-  test.describe('GenerateMenuSkeleton component', () => {
+  test.describe('GenerateMenuView page rendering', () => {
     test.beforeEach(async ({ page }) => {
       await login(page)
       await page.getByRole('button', { name: /Generera meny/ }).click()
@@ -14,9 +14,24 @@ test.describe('Phase 4: Polish & Delight', () => {
       await expect(emptyState).toBeVisible({ timeout: 5000 })
     })
 
-    test('skeleton is not visible when menu has not been generated', async ({ page }) => {
-      const skeleton = page.locator('.generate-menu-skeleton')
-      await expect(skeleton).not.toBeVisible()
+    test('GenerateMenuSkeleton appears during slow menu fetch and disappears once loaded', async ({
+      page,
+    }) => {
+      // Slow down menu API responses so we can observe the skeleton mounting
+      await page.route('**/api/menus/**', async (route) => {
+        await new Promise((r) => setTimeout(r, 1500))
+        await route.continue()
+      })
+
+      // Trigger menu generation from the empty state
+      await expect(page.locator('.empty-state')).toBeVisible({ timeout: 5000 })
+      await page.locator('.empty-state .generate-button').click()
+
+      // Skeleton must be visible while the fetch is pending
+      await expect(page.locator('.generate-menu-skeleton')).toBeVisible({ timeout: 3000 })
+
+      // Skeleton must disappear once the slow request resolves
+      await expect(page.locator('.generate-menu-skeleton')).not.toBeVisible({ timeout: 8000 })
     })
 
     test('page renders without errors', async ({ page }) => {
@@ -53,13 +68,43 @@ test.describe('Phase 4: Polish & Delight', () => {
     })
   })
 
-  test.describe('RecipeDetailModal skeleton', () => {
+  test.describe('RecipeDetailModal content', () => {
     test.beforeEach(async ({ page }) => {
       await login(page)
       // Navigate to recipes via dashboard quick action
       await page.getByRole('button', { name: /Recept/ }).first().click()
       await expect(page).toHaveURL(/\/recipes/, { timeout: 5000 })
       await page.waitForTimeout(2000)
+    })
+
+    test('RecipeDetailModal skeleton is visible during slow fetch and hidden once loaded', async ({
+      page,
+    }) => {
+      // Slow down individual recipe fetches so the modal skeleton has time to mount
+      await page.route('**/api/recipes/*', async (route) => {
+        // Only delay GETs to a single recipe (URL ends with an ID, not the list)
+        if (route.request().method() === 'GET') {
+          await new Promise((r) => setTimeout(r, 1500))
+        }
+        await route.continue()
+      })
+
+      const recipeCard = page.locator('[class*="recipe-card"]').first()
+      await expect(recipeCard).toBeVisible({ timeout: 8000 })
+      await recipeCard.click()
+
+      const modal = page.getByRole('dialog')
+      await expect(modal).toBeVisible({ timeout: 8000 })
+
+      // Skeleton blocks should appear inside the modal during the slow fetch
+      const modalSkeleton = modal.locator(
+        '.recipe-detail-skeleton, [class*="skeleton"]',
+      )
+      await expect(modalSkeleton.first()).toBeVisible({ timeout: 3000 })
+
+      // After the request resolves, skeleton disappears and the actual title renders
+      await expect(modal.locator('.recipe-title')).toBeVisible({ timeout: 8000 })
+      await expect(modalSkeleton.first()).not.toBeVisible({ timeout: 5000 })
     })
 
     test('clicking a recipe card opens detail modal with content', async ({ page }) => {
@@ -109,7 +154,7 @@ test.describe('Phase 4: Polish & Delight', () => {
     })
   })
 
-  test.describe('GenerateMenuView skeleton wiring', () => {
+  test.describe('GenerateMenuView empty state wiring', () => {
     test.beforeEach(async ({ page }) => {
       await login(page)
       await page.getByRole('button', { name: /Generera meny/ }).click()
