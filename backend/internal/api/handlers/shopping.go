@@ -134,6 +134,18 @@ func (h *ShoppingHandler) AddCustomItem(w http.ResponseWriter, r *http.Request) 
 			WriteError(w, http.StatusNotFound, "menu_not_found")
 		case errors.Is(err, domain.ErrForbidden):
 			WriteError(w, http.StatusForbidden, "forbidden")
+		case errors.Is(err, domain.ErrNameRequired):
+			WriteError(w, http.StatusBadRequest, "name_required")
+		case errors.Is(err, domain.ErrNameTooLong):
+			WriteError(w, http.StatusBadRequest, "name_too_long")
+		case errors.Is(err, domain.ErrUnitTooLong):
+			WriteError(w, http.StatusBadRequest, "unit_too_long")
+		case errors.Is(err, domain.ErrInvalidAmount):
+			WriteError(w, http.StatusBadRequest, "invalid_amount")
+		case errors.Is(err, domain.ErrAmountTooLarge):
+			WriteError(w, http.StatusBadRequest, "amount_too_large")
+		case errors.Is(err, domain.ErrTooManyItems):
+			WriteError(w, http.StatusBadRequest, "too_many_items")
 		default:
 			log.Printf("ERROR [AddCustomItem] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
