@@ -582,14 +582,14 @@ Add a custom item to the shopping list. **Auth required.**
 
 // Request
 {
-  "name": "Parmesan",    // required
-  "unit": "st",          // optional
-  "amount": 1            // optional
+  "name": "Parmesan",    // required, max 200 chars
+  "unit": "st",          // optional, max 20 chars (default: "st")
+  "amount": 1            // optional, must be finite and ≤ 100000 (default: 1)
 }
 
 // Response 201
 {
-  "id": "item_042",
+  "id": "citem_550e8400-e29b-41d4-a716-446655440000",
   "name": "Parmesan",
   "amount": 1,
   "unit": "st",
@@ -597,26 +597,42 @@ Add a custom item to the shopping list. **Auth required.**
   "isCustom": true
 }
 
-// Error 400 (name field missing or empty)
+// Error 400 — name field missing or empty
 { "error": "name_required" }
 
-// Error 403 (menu belongs to a different household)
+// Error 400 — name exceeds 200 characters
+{ "error": "name_too_long" }
+
+// Error 400 — unit exceeds 20 characters
+{ "error": "unit_too_long" }
+
+// Error 400 — amount is NaN or Infinity
+{ "error": "invalid_amount" }
+
+// Error 400 — amount exceeds 100000
+{ "error": "amount_too_large" }
+
+// Error 401 — missing or invalid auth token
+{ "error": "unauthorized" }
+
+// Error 403 — menu belongs to a different household (cross-tenant access)
 { "error": "forbidden" }
 
-// Error 404
+// Error 404 — menu does not exist
 { "error": "menu_not_found" }
 ```
 
 ### DELETE /shopping-list/items/:id
-Remove a custom item from the shopping list. **Auth required.** Only items with `isCustom: true` can be deleted; recipe-generated items cannot be deleted via this endpoint.
+Remove a custom item from the shopping list. **Auth required.** Only custom items (IDs prefixed `citem_`) can be deleted via this endpoint; recipe-generated items are not deletable.
 ```json
 // Response 200
 { "ok": true }
 
-// Error 403 (item is recipe-generated, not custom; or menu belongs to a different household)
-{ "error": "forbidden" }
+// Error 401 — missing or invalid auth token
+{ "error": "unauthorized" }
 
-// Error 404
+// Error 404 — item not found, OR item belongs to a different household
+// (cross-tenant probes return 404, not 403, to avoid leaking item existence)
 { "error": "not_found" }
 ```
 
