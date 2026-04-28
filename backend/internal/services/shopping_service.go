@@ -1,12 +1,14 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"maltiden/internal/domain"
 	"math"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 )
@@ -239,6 +241,24 @@ func (s *ShoppingService) GetShoppingList(menuID string) (*domain.ShoppingList, 
 }
 
 func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domain.CreateCustomItemRequest) (*domain.CustomShoppingItem, error) {
+	// Defense-in-depth: handler also checks empty name, but enforce here too.
+	if req.Name == "" {
+		return nil, errors.New("name_required")
+	}
+	// Use rune count so Swedish characters (å, ä, ö) count as single chars.
+	if utf8.RuneCountInString(req.Name) > 200 {
+		return nil, errors.New("name_too_long")
+	}
+	if utf8.RuneCountInString(req.Unit) > 20 {
+		return nil, errors.New("unit_too_long")
+	}
+	if math.IsNaN(req.Amount) || math.IsInf(req.Amount, 0) {
+		return nil, errors.New("invalid_amount")
+	}
+	if req.Amount > 100000 {
+		return nil, errors.New("amount_too_large")
+	}
+
 	unit := req.Unit
 	if unit == "" {
 		unit = "st"
