@@ -8,12 +8,20 @@
  */
 import SkeletonBlock from '../SkeletonBlock.vue'
 import SkeletonCircle from '../SkeletonCircle.vue'
+
+interface Props {
+  dayCount?: number
+}
+
+withDefaults(defineProps<Props>(), {
+  dayCount: 7,
+})
 </script>
 
 <template>
   <div class="generate-menu-skeleton" aria-hidden="true">
     <div class="menu-grid-skeleton">
-      <div v-for="i in 5" :key="i" class="day-card-skeleton">
+      <div v-for="i in dayCount" :key="i" class="day-card-skeleton">
         <SkeletonBlock width="48px" height="12px" radius="6px" />
         <SkeletonCircle size="64px" />
         <SkeletonBlock width="80%" height="18px" radius="8px" />
