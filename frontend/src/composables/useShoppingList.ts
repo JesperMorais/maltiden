@@ -132,9 +132,17 @@ export function useShoppingList() {
     if (!menuId) return
 
     try {
-      await addCustomItemApi(menuId, { name, unit, amount })
-      // Re-fetch to get updated list with the new item in correct category
-      await fetchList(menuId)
+      const created = await addCustomItemApi(menuId, { name, unit, amount })
+      // Optimistic insert into 'Egna varor' category (mirrors removeCustomItem pattern)
+      if (shoppingList.value) {
+        const cats = shoppingList.value.categories
+        let egna = cats.find((c) => c.name === 'Egna varor')
+        if (!egna) {
+          egna = { name: 'Egna varor', items: [] }
+          cats.push(egna)
+        }
+        egna.items.push(created)
+      }
     } catch {
       toast.error('Kunde inte lägga till varan. Försök igen.')
     }
