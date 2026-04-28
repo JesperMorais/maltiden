@@ -370,7 +370,10 @@ const topCategories = computed(() => {
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .ring-fill {
+  .ring-fill,
+  .shopping-widget,
+  .view-list-cta,
+  .cta-arrow {
     transition: none;
   }
 }
