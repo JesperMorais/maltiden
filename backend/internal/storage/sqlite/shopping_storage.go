@@ -141,14 +141,14 @@ func (s *ShoppingStorage) DeleteCustomItem(id, householdID string) error {
 	return nil
 }
 
-func (s *ShoppingStorage) GetCustomItems(menuID string) ([]domain.CustomShoppingItem, error) {
+func (s *ShoppingStorage) GetCustomItems(menuID, householdID string) ([]domain.CustomShoppingItem, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, menu_id, household_id, name, unit, amount, checked
-		 FROM custom_shopping_items WHERE menu_id = ? ORDER BY created_at, id LIMIT 500`,
-		menuID,
+		 FROM custom_shopping_items WHERE menu_id = ? AND household_id = ? ORDER BY created_at, id LIMIT 500`,
+		menuID, householdID,
 	)
 	if err != nil {
 		return nil, err

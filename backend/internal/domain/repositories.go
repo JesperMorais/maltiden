@@ -63,6 +63,6 @@ type ShoppingRepository interface {
 	SetChecked(menuID, itemID string, checked bool) error
 	CreateCustomItem(item *CustomShoppingItem) error
 	DeleteCustomItem(id, householdID string) error
-	GetCustomItems(menuID string) ([]CustomShoppingItem, error)
+	GetCustomItems(menuID, householdID string) ([]CustomShoppingItem, error)
 	SetCustomItemChecked(id, householdID string, checked bool) error
 }

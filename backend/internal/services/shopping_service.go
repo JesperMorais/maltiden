@@ -99,7 +99,7 @@ var ingredientCategories = map[string]string{
 	"kajennpeppar":  "Kryddor",
 }
 
-func (s *ShoppingService) GetShoppingList(menuID string) (*domain.ShoppingList, error) {
+func (s *ShoppingService) GetShoppingList(menuID, householdID string) (*domain.ShoppingList, error) {
 	// Get menu
 	menu, err := s.menuStorage.GetByID(menuID)
 	if err != nil {
@@ -212,7 +212,7 @@ func (s *ShoppingService) GetShoppingList(menuID string) (*domain.ShoppingList, 
 	}
 
 	// Append custom items as "Egna varor" category
-	customItems, err := s.shoppingStorage.GetCustomItems(menuID)
+	customItems, err := s.shoppingStorage.GetCustomItems(menuID, householdID)
 	if err != nil {
 		return nil, err
 	}
