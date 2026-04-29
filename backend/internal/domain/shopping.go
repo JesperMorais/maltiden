@@ -1,11 +1,12 @@
 package domain
 
 type ShoppingItem struct {
-	ID      string  `json:"id"`
-	Name    string  `json:"name"`
-	Amount  float64 `json:"amount"`
-	Unit    string  `json:"unit"`
-	Checked bool    `json:"checked"`
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Amount   float64 `json:"amount"`
+	Unit     string  `json:"unit"`
+	Checked  bool    `json:"checked"`
+	IsCustom bool    `json:"isCustom"`
 }
 
 type ShoppingCategory struct {
@@ -20,4 +21,20 @@ type ShoppingList struct {
 
 type UpdateShoppingItemRequest struct {
 	Checked bool `json:"checked"`
+}
+
+type CustomShoppingItem struct {
+	ID          string  `json:"id"`
+	MenuID      string  `json:"menuId"`
+	HouseholdID string  `json:"householdId"`
+	Name        string  `json:"name"`
+	Unit        string  `json:"unit"`
+	Amount      float64 `json:"amount"`
+	Checked     bool    `json:"checked"`
+}
+
+type CreateCustomItemRequest struct {
+	Name   string  `json:"name"`
+	Unit   string  `json:"unit"`
+	Amount float64 `json:"amount"`
 }

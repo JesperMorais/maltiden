@@ -184,6 +184,8 @@ function handleLunchboxUpdate(count: number) {
   padding: 1.5rem;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
+  /* Contain popover z-index so it can't cover the sidebar */
+  isolation: isolate;
 }
 
 .menu-header {

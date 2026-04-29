@@ -48,6 +48,7 @@
   --shadow-md: 0 4px 16px rgba(61, 44, 41, 0.12);
   --shadow-lg: 0 8px 32px rgba(61, 44, 41, 0.16);
   --shadow-accent: 0 6px 20px rgba(255, 107, 91, 0.35);
+  --shadow-accent-sm: 0 4px 12px rgba(255, 107, 91, 0.3);
 
   /* Status colors */
   --success: #48bb78;
@@ -57,6 +58,14 @@
 
   /* Text on colored backgrounds */
   --text-on-accent: #ffffff;
+
+  /* Confidence badge colors */
+  --confidence-high: #2f855a;
+  --confidence-medium: #b7791f;
+  --confidence-low: #c53030;
+
+  /* Loading overlay */
+  --loading-overlay-bg: rgba(255, 252, 247, 0.9);
 
   /* Focus rings */
   --accent-focus-ring: rgba(255, 107, 91, 0.15);
@@ -157,6 +166,7 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
   --shadow-accent: 0 6px 20px rgba(255, 138, 125, 0.25);
+  --shadow-accent-sm: 0 4px 12px rgba(255, 138, 125, 0.2);
 
   /* Status colors - slightly adjusted */
   --success: #68d391;
@@ -166,6 +176,14 @@
 
   /* Text on colored backgrounds */
   --text-on-accent: #ffffff;
+
+  /* Confidence badge colors */
+  --confidence-high: #68d391;
+  --confidence-medium: #fbd38d;
+  --confidence-low: #fc8181;
+
+  /* Loading overlay */
+  --loading-overlay-bg: rgba(26, 20, 16, 0.9);
 
   /* Focus rings */
   --accent-focus-ring: rgba(255, 138, 125, 0.2);

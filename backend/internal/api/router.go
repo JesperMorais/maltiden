@@ -73,6 +73,10 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	// Rate limiter for recipe parser: 2 requests/sec, burst of 5 (API credit protection)
 	parserLimiter := middleware.NewRateLimiter(2, 5)
 
+	// Rate limiter for custom shopping item creation: 0.5 req/sec, burst of 30
+	// (~30 req/min sustained, prevents abuse of unbounded list growth).
+	customItemLimiter := middleware.NewRateLimiter(0.5, 30)
+
 	// Recipe parser (Claude API) - optional, degrades gracefully if ANTHROPIC_API_KEY not set
 	var parserHandler *handlers.RecipeParserHandler
 	claudeClient, err := claude.NewClient()
@@ -129,12 +133,18 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 		http.HandlerFunc(deps.recipe.Delete),
 	))
 	if parserHandler != nil {
-		mux.Handle("POST /recipes/parse", parserLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
+		// Recipe parser routes call the Claude API which can routinely take
+		// 20–40s for long recipes. Apply a longer per-route timeout so the
+		// global 10s wrapper (added below) does not turn legitimate parses
+		// into 503s. The longer timeout is applied as the OUTERMOST wrapper
+		// here; the global Timeout middleware below skips these routes.
+		parseTimeout := middleware.TimeoutWith(middleware.ParserTimeout)
+		mux.Handle("POST /recipes/parse", parseTimeout(parserLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
 			http.HandlerFunc(parserHandler.ParseRecipe),
-		)))
-		mux.Handle("POST /recipes/parse-and-save", parserLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
+		))))
+		mux.Handle("POST /recipes/parse-and-save", parseTimeout(parserLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
 			http.HandlerFunc(parserHandler.ParseAndSave),
-		)))
+		))))
 	}
 	mux.Handle("POST /menus/generate", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.menu.Generate),
@@ -151,6 +161,12 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.Handle("PATCH /shopping-list/items/{id}", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.shopping.UpdateItem),
 	))
+	mux.Handle("POST /shopping-list/items", customItemLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.shopping.AddCustomItem),
+	)))
+	mux.Handle("DELETE /shopping-list/items/{id}", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.shopping.DeleteCustomItem),
+	))
 	mux.Handle("POST /feedback", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.feedback.Create),
 	))
@@ -164,5 +180,16 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 
 	// Wrap with middleware: CORS → request ID → timeout → handler
 	// Note: Security headers are applied in main.go to cover both API and static files
-	return middleware.CORS(allowedOrigins)(middleware.RequestID(middleware.Timeout(mux)))
+	//
+	// The global 10s Timeout is bypassed for recipe parser routes — those
+	// already have a per-route 60s timeout applied above, and wrapping them
+	// in an outer 10s deadline would defeat that.
+	timed := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && (r.URL.Path == "/recipes/parse" || r.URL.Path == "/recipes/parse-and-save") {
+			mux.ServeHTTP(w, r)
+			return
+		}
+		middleware.Timeout(mux).ServeHTTP(w, r)
+	})
+	return middleware.CORS(allowedOrigins)(middleware.RequestID(timed))
 }

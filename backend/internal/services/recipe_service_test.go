@@ -186,6 +186,93 @@ func TestRecipeCreate_MaxBoundaryServings(t *testing.T) {
 	}
 }
 
+func TestRecipeCreate_SwedishNameAtBoundary(t *testing.T) {
+	// 200 Swedish runes = 400 bytes. Byte-count would reject; rune-count accepts.
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Name = strings.Repeat("å", 200)
+
+	if _, err := svc.Create(req, "hh_test"); err != nil {
+		t.Fatalf("200-rune Swedish name should succeed, got %v", err)
+	}
+}
+
+func TestRecipeCreate_SwedishNameTooLong(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Name = strings.Repeat("ä", 201)
+
+	if _, err := svc.Create(req, "hh_test"); err != domain.ErrNameTooLong {
+		t.Errorf("expected ErrNameTooLong for 201-rune name, got %v", err)
+	}
+}
+
+func TestRecipeCreate_SwedishTagAtBoundary(t *testing.T) {
+	// Realistic Swedish tag: höstgryta-med-svampsås (22 runes, 25 bytes).
+	// Plus a 50-rune all-å tag to verify the boundary itself.
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Tags = []string{"höstgryta-med-svampsås", strings.Repeat("å", 50)}
+
+	resp, err := svc.Create(req, "hh_test")
+	if err != nil {
+		t.Fatalf("50-rune Swedish tag should succeed, got %v", err)
+	}
+	recipe, err := svc.GetByID(resp.ID)
+	if err != nil {
+		t.Fatalf("failed to get recipe: %v", err)
+	}
+	if len(recipe.Tags) != 2 {
+		t.Errorf("expected 2 tags persisted, got %d (%v)", len(recipe.Tags), recipe.Tags)
+	}
+}
+
+func TestRecipeCreate_TagTooLongRunes(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Tags = []string{strings.Repeat("ö", 51)}
+
+	if _, err := svc.Create(req, "hh_test"); err != domain.ErrTagTooLong {
+		t.Errorf("expected ErrTagTooLong for 51-rune tag, got %v", err)
+	}
+}
+
+func TestRecipeCreate_TagsNormalized(t *testing.T) {
+	// Trim whitespace, drop empties, dedup case-insensitively.
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.Tags = []string{"  pasta  ", "", "   ", "Pasta", "snabb", "PASTA", " snabb"}
+
+	resp, err := svc.Create(req, "hh_test")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	recipe, err := svc.GetByID(resp.ID)
+	if err != nil {
+		t.Fatalf("failed to get recipe: %v", err)
+	}
+	if len(recipe.Tags) != 2 {
+		t.Fatalf("expected 2 normalized tags, got %d (%v)", len(recipe.Tags), recipe.Tags)
+	}
+	if recipe.Tags[0] != "pasta" || recipe.Tags[1] != "snabb" {
+		t.Errorf("expected [pasta snabb], got %v", recipe.Tags)
+	}
+}
+
+func TestRecipeCreate_TooManyTagsAfterNormalization(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	tags := make([]string, 21)
+	for i := range tags {
+		tags[i] = "tag" + strings.Repeat("x", i) // unique
+	}
+	req.Tags = tags
+
+	if _, err := svc.Create(req, "hh_test"); err != domain.ErrTooManyTags {
+		t.Errorf("expected ErrTooManyTags, got %v", err)
+	}
+}
+
 func TestRecipeCreate_MaxBoundaryIngredients(t *testing.T) {
 	svc := newTestRecipeService(t)
 	req := validCreateRecipeReq()

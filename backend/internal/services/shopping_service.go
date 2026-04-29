@@ -7,6 +7,9 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"unicode/utf8"
+
+	"github.com/google/uuid"
 )
 
 type ShoppingService struct {
@@ -95,7 +98,7 @@ var ingredientCategories = map[string]string{
 	"kajennpeppar":  "Kryddor",
 }
 
-func (s *ShoppingService) GetShoppingList(menuID string) (*domain.ShoppingList, error) {
+func (s *ShoppingService) GetShoppingList(menuID, householdID string) (*domain.ShoppingList, error) {
 	// Get menu
 	menu, err := s.menuStorage.GetByID(menuID)
 	if err != nil {
@@ -207,13 +210,125 @@ func (s *ShoppingService) GetShoppingList(menuID string) (*domain.ShoppingList, 
 		}
 	}
 
+	// Append custom items as "Egna varor" category
+	customItems, err := s.shoppingStorage.GetCustomItems(menuID, householdID)
+	if err != nil {
+		return nil, err
+	}
+	if len(customItems) > 0 {
+		var items []domain.ShoppingItem
+		for _, ci := range customItems {
+			items = append(items, domain.ShoppingItem{
+				ID:       ci.ID,
+				Name:     ci.Name,
+				Amount:   ci.Amount,
+				Unit:     ci.Unit,
+				Checked:  ci.Checked,
+				IsCustom: true,
+			})
+		}
+		categories = append(categories, domain.ShoppingCategory{
+			Name:  "Egna varor",
+			Items: items,
+		})
+	}
+
 	return &domain.ShoppingList{
 		MenuID:     menuID,
 		Categories: categories,
 	}, nil
 }
 
-func (s *ShoppingService) UpdateItemChecked(menuID, itemID string, checked bool) error {
+func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domain.CreateCustomItemRequest) (*domain.CustomShoppingItem, error) {
+	// IDOR protection: verify menu belongs to caller's household.
+	menuHouseholdID, err := s.menuStorage.GetHouseholdIDByMenuID(menuID)
+	if err != nil {
+		return nil, err
+	}
+	if menuHouseholdID == "" {
+		return nil, domain.ErrMenuNotFound
+	}
+	if menuHouseholdID != householdID {
+		return nil, domain.ErrForbidden
+	}
+
+	// Trim leading/trailing whitespace before validating presence.
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return nil, domain.ErrNameRequired
+	}
+	// Use rune count so Swedish characters (å, ä, ö) count as single chars.
+	if utf8.RuneCountInString(name) > 200 {
+		return nil, domain.ErrNameTooLong
+	}
+	if utf8.RuneCountInString(req.Unit) > 20 {
+		return nil, domain.ErrUnitTooLong
+	}
+	if math.IsNaN(req.Amount) || math.IsInf(req.Amount, 0) {
+		return nil, domain.ErrInvalidAmount
+	}
+	// Negative amounts are rejected; zero is treated as "unspecified" and
+	// defaults to 1 below for ergonomic input.
+	if req.Amount < 0 {
+		return nil, domain.ErrInvalidAmount
+	}
+	if req.Amount > 100000 {
+		return nil, domain.ErrAmountTooLarge
+	}
+
+	unit := req.Unit
+	if unit == "" {
+		unit = "st"
+	}
+	amount := req.Amount
+	if amount == 0 {
+		amount = 1
+	}
+
+	item := &domain.CustomShoppingItem{
+		ID:          "citem_" + uuid.New().String(),
+		MenuID:      menuID,
+		HouseholdID: householdID,
+		Name:        name,
+		Unit:        unit,
+		Amount:      amount,
+	}
+
+	// Atomic count-and-insert: enforces the per-menu cap in a single SQL
+	// statement so concurrent requests cannot both pass the count check and
+	// exceed the limit.
+	inserted, err := s.shoppingStorage.CreateCustomItemWithCap(item, 500)
+	if err != nil {
+		return nil, err
+	}
+	if !inserted {
+		return nil, domain.ErrTooManyItems
+	}
+
+	return item, nil
+}
+
+func (s *ShoppingService) DeleteCustomItem(itemID, householdID string) error {
+	return s.shoppingStorage.DeleteCustomItem(itemID, householdID)
+}
+
+func (s *ShoppingService) UpdateItemChecked(menuID, itemID, householdID string, checked bool) error {
+	// IDOR protection: verify menu belongs to caller's household.
+	menuHouseholdID, err := s.menuStorage.GetHouseholdIDByMenuID(menuID)
+	if err != nil {
+		return err
+	}
+	if menuHouseholdID == "" {
+		return domain.ErrMenuNotFound
+	}
+	if menuHouseholdID != householdID {
+		return domain.ErrForbidden
+	}
+
+	// Custom items are stored in a separate table and scoped by household for IDOR protection
+	if strings.HasPrefix(itemID, "citem_") {
+		return s.shoppingStorage.SetCustomItemChecked(itemID, householdID, checked)
+	}
 	return s.shoppingStorage.SetChecked(menuID, itemID, checked)
 }
 

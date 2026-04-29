@@ -6,7 +6,9 @@ import { getCurrentMenu, saveMenu } from '@/api/menu.api'
 import type { Menu, MenuDay as ApiMenuDay } from '@/api/menu.api'
 import RecipeEditForm from '@/components/recipe-parser/RecipeEditForm.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
-import { Loader2, AlertTriangle } from 'lucide-vue-next'
+import { AlertTriangle } from 'lucide-vue-next'
+import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
+import SkeletonCircle from '@/components/skeleton/SkeletonCircle.vue'
 import { useToast } from '@/composables/useToast'
 import { useFocusTrap } from '@/composables/useFocusTrap'
 
@@ -214,8 +216,25 @@ function handleClose() {
       <div ref="modalCardRef" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="recipe-detail-title" @click.stop>
         <!-- Loading -->
         <div v-if="isLoading" class="modal-loading">
-          <Loader2 :size="40" class="spinner-emoji" />
-          <p class="loading-text">Laddar recept...</p>
+          <div class="modal-header">
+            <SkeletonCircle size="64px" />
+            <SkeletonBlock width="70%" height="24px" radius="12px" />
+            <SkeletonBlock width="80px" height="14px" radius="8px" />
+            <div class="skeleton-tags">
+              <SkeletonBlock width="52px" height="22px" radius="100px" />
+              <SkeletonBlock width="64px" height="22px" radius="100px" />
+            </div>
+          </div>
+          <div class="modal-body">
+            <SkeletonBlock width="110px" height="16px" radius="8px" />
+            <div class="skeleton-list">
+              <SkeletonBlock v-for="n in 5" :key="n" width="100%" height="14px" radius="6px" />
+            </div>
+            <SkeletonBlock width="110px" height="16px" radius="8px" />
+            <div class="skeleton-list">
+              <SkeletonBlock v-for="n in 3" :key="n" width="100%" height="14px" radius="6px" />
+            </div>
+          </div>
         </div>
 
         <!-- Error -->
@@ -360,29 +379,18 @@ function handleClose() {
   padding: 3rem 2rem;
 }
 
-.spinner-emoji {
-  color: var(--accent);
-  animation: spin 1.5s linear infinite;
+.skeleton-tags {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.5rem;
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg) scale(1);
-  }
-  50% {
-    transform: rotate(180deg) scale(1.2);
-  }
-  100% {
-    transform: rotate(360deg) scale(1);
-  }
-}
-
-.loading-text {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--text-primary);
-  margin: 1rem 0 0;
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1rem 0 1.5rem;
 }
 
 .modal-header {
@@ -520,7 +528,7 @@ function handleClose() {
 
 .close-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(255, 107, 91, 0.4);
+  box-shadow: var(--shadow-accent-hover);
 }
 
 .edit-btn {

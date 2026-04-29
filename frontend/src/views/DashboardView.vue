@@ -266,6 +266,7 @@ function handleViewShoppingList() {
   gap: 1rem;
   position: sticky;
   top: calc(var(--header-height) + 2rem);
+  z-index: 1;
 }
 
 /* Responsive */
