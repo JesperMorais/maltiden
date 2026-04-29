@@ -46,7 +46,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="popover" @click.stop>
+  <div ref="popoverRef" class="popover" @click.stop>
     <div class="popover-arrow"></div>
 
     <!-- Meal identity -->
@@ -319,8 +319,8 @@ onUnmounted(() => {
 }
 
 .counter-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1.5px solid var(--border-color);
   background: var(--bg-card);

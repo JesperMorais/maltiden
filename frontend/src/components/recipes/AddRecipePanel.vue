@@ -376,7 +376,7 @@ function handleViewRecipes() {
 .loading-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(255, 252, 247, 0.9);
+  background: var(--loading-overlay-bg);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;

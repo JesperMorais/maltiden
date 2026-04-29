@@ -5,11 +5,16 @@
  * When servings change (toggle eating / lunchbox), the amounts update accordingly.
  */
 
-import type { ShoppingList, ShoppingCategory, ShoppingItem } from '@/api/shopping.api'
+import type {
+  ShoppingList,
+  ShoppingCategory,
+  ShoppingItem,
+  CreateCustomItemRequest,
+} from '@/api/shopping.api'
 import { getMockMenuState } from './menu.mock'
 import { mockRecipes } from './recipes.mock'
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** Track checked state by ingredient name so it persists across list rebuilds */
 const checkedByName = new Map<string, boolean>([
@@ -22,41 +27,69 @@ const checkedByName = new Map<string, boolean>([
 
 /** Simple ingredient-to-category mapping for mock data */
 const categoryMap: Record<string, string> = {
-  'Kycklingfilé': 'Kött & Fisk',
-  'Köttfärs': 'Kött & Fisk',
-  'Bacon': 'Kött & Fisk',
-  'Laxfilé': 'Kött & Fisk',
-  'Skinka': 'Kött & Fisk',
-  'Ägg': 'Mejeri',
-  'Parmesan': 'Mejeri',
+  Kycklingfilé: 'Kött & Fisk',
+  Köttfärs: 'Kött & Fisk',
+  Bacon: 'Kött & Fisk',
+  Laxfilé: 'Kött & Fisk',
+  Skinka: 'Kött & Fisk',
+  Ägg: 'Mejeri',
+  Parmesan: 'Mejeri',
   'Riven ost': 'Mejeri',
-  'Mozzarella': 'Mejeri',
-  'Kokosmjölk': 'Mejeri',
-  'Wokgrönsaker': 'Grönsaker',
-  'Sallad': 'Grönsaker',
-  'Tomat': 'Grönsaker',
-  'Lök': 'Grönsaker',
-  'Potatis': 'Grönsaker',
-  'Citron': 'Grönsaker',
-  'Dill': 'Grönsaker',
-  'Vitlök': 'Grönsaker',
-  'Spenat': 'Grönsaker',
-  'Champinjoner': 'Grönsaker',
+  Mozzarella: 'Mejeri',
+  Kokosmjölk: 'Mejeri',
+  Wokgrönsaker: 'Grönsaker',
+  Sallad: 'Grönsaker',
+  Tomat: 'Grönsaker',
+  Lök: 'Grönsaker',
+  Potatis: 'Grönsaker',
+  Citron: 'Grönsaker',
+  Dill: 'Grönsaker',
+  Vitlök: 'Grönsaker',
+  Spenat: 'Grönsaker',
+  Champinjoner: 'Grönsaker',
   // Kryddor (mirrors backend categorization)
-  'Salt': 'Kryddor',
-  'Svartpeppar': 'Kryddor',
-  'Peppar': 'Kryddor',
-  'Oregano': 'Kryddor',
-  'Basilika': 'Kryddor',
-  'Timjan': 'Kryddor',
-  'Rosmarin': 'Kryddor',
-  'Paprikapulver': 'Kryddor',
-  'Chiliflakes': 'Kryddor',
-  'Kanel': 'Kryddor',
-  'Muskot': 'Kryddor',
+  Salt: 'Kryddor',
+  Svartpeppar: 'Kryddor',
+  Peppar: 'Kryddor',
+  Oregano: 'Kryddor',
+  Basilika: 'Kryddor',
+  Timjan: 'Kryddor',
+  Rosmarin: 'Kryddor',
+  Paprikapulver: 'Kryddor',
+  Chiliflakes: 'Kryddor',
+  Kanel: 'Kryddor',
+  Muskot: 'Kryddor',
 }
 
-const categoryOrder = ['Kött & Fisk', 'Mejeri', 'Grönsaker', 'Skafferi', 'Kryddor']
+const categoryOrder = ['Kött & Fisk', 'Mejeri', 'Grönsaker', 'Skafferi', 'Kryddor', 'Egna varor']
+
+/** Build a deterministic UUID-format id for mocks (matches backend prefixedUUIDPattern). */
+function mockCustomId(seq: number): string {
+  const suffix = seq.toString(16).padStart(12, '0')
+  return `citem_00000000-0000-4000-8000-${suffix}`
+}
+
+/** Custom items storage */
+let customItems: ShoppingItem[] = [
+  {
+    id: mockCustomId(1),
+    name: 'Hushållspapper',
+    unit: 'st',
+    amount: 2,
+    checked: false,
+    isCustom: true,
+  },
+  {
+    id: mockCustomId(2),
+    name: 'Diskmedel',
+    unit: 'st',
+    amount: 1,
+    checked: false,
+    isCustom: true,
+  },
+]
+
+let nextCustomId = 3
 
 function buildShoppingList(menuId: string): ShoppingList {
   const menu = getMockMenuState()
@@ -106,7 +139,13 @@ function buildShoppingList(menuId: string): ShoppingList {
       amount: isSpice ? 0 : amount,
       unit: isSpice ? '' : unit,
       checked: checkedByName.get(name) ?? false,
+      isCustom: false,
     })
+  }
+
+  // Add custom items
+  if (customItems.length > 0) {
+    groups.set('Egna varor', [...customItems])
   }
 
   const categories: ShoppingCategory[] = categoryOrder
@@ -126,8 +165,18 @@ export async function mockGetShoppingList(menuId?: string): Promise<ShoppingList
   return JSON.parse(JSON.stringify(list))
 }
 
-export async function mockToggleItem(itemId: string, checked: boolean): Promise<{ ok: boolean }> {
+export async function mockToggleItem(
+  itemId: string,
+  checked: boolean,
+): Promise<{ ok: boolean }> {
   await delay(100)
+
+  // Check custom items first
+  const customItem = customItems.find((i) => i.id === itemId)
+  if (customItem) {
+    customItem.checked = checked
+    return { ok: true }
+  }
 
   // Find the ingredient name from the last built list
   if (lastBuiltList) {
@@ -140,5 +189,28 @@ export async function mockToggleItem(itemId: string, checked: boolean): Promise<
     }
   }
 
+  return { ok: true }
+}
+
+export async function mockAddCustomItem(
+  _menuId: string,
+  req: CreateCustomItemRequest,
+): Promise<ShoppingItem> {
+  await delay(150)
+  const item: ShoppingItem = {
+    id: mockCustomId(nextCustomId++),
+    name: req.name,
+    unit: req.unit ?? 'st',
+    amount: req.amount ?? 1,
+    checked: false,
+    isCustom: true,
+  }
+  customItems.push(item)
+  return JSON.parse(JSON.stringify(item))
+}
+
+export async function mockDeleteCustomItem(itemId: string): Promise<{ ok: boolean }> {
+  await delay(100)
+  customItems = customItems.filter((i) => i.id !== itemId)
   return { ok: true }
 }
