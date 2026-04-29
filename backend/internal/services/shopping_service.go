@@ -285,15 +285,6 @@ func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domai
 		amount = 1
 	}
 
-	// Enforce per-menu cap to prevent unbounded growth.
-	count, err := s.shoppingStorage.CountCustomItems(menuID, householdID)
-	if err != nil {
-		return nil, err
-	}
-	if count >= 500 {
-		return nil, domain.ErrTooManyItems
-	}
-
 	item := &domain.CustomShoppingItem{
 		ID:          "citem_" + uuid.New().String(),
 		MenuID:      menuID,
@@ -303,8 +294,15 @@ func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domai
 		Amount:      amount,
 	}
 
-	if err := s.shoppingStorage.CreateCustomItem(item); err != nil {
+	// Atomic count-and-insert: enforces the per-menu cap in a single SQL
+	// statement so concurrent requests cannot both pass the count check and
+	// exceed the limit.
+	inserted, err := s.shoppingStorage.CreateCustomItemWithCap(item, 500)
+	if err != nil {
 		return nil, err
+	}
+	if !inserted {
+		return nil, domain.ErrTooManyItems
 	}
 
 	return item, nil

@@ -118,6 +118,39 @@ func (s *ShoppingStorage) CreateCustomItem(item *domain.CustomShoppingItem) erro
 	return err
 }
 
+// CreateCustomItemWithCap atomically inserts a custom item only if the current
+// per-menu count is below maxItems. The conditional INSERT...SELECT is a single
+// SQL statement, so concurrent callers cannot both pass the count check and
+// exceed the cap (unlike a separate Count + Insert flow).
+//
+// Returns (true, nil) on insert, (false, nil) if the cap is reached, and
+// (false, err) on database errors.
+func (s *ShoppingStorage) CreateCustomItemWithCap(item *domain.CustomShoppingItem, maxItems int) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := s.db.ExecContext(ctx, `
+		INSERT INTO custom_shopping_items (id, menu_id, household_id, name, unit, amount, checked)
+		SELECT ?, ?, ?, ?, ?, ?, 0
+		WHERE (
+			SELECT COUNT(*) FROM custom_shopping_items
+			WHERE menu_id = ? AND household_id = ?
+		) < ?
+	`,
+		item.ID, item.MenuID, item.HouseholdID, item.Name, item.Unit, item.Amount,
+		item.MenuID, item.HouseholdID, maxItems,
+	)
+	if err != nil {
+		return false, err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return rows == 1, nil
+}
+
 func (s *ShoppingStorage) DeleteCustomItem(id, householdID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

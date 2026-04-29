@@ -62,6 +62,7 @@ type ShoppingRepository interface {
 	GetCheckedItems(menuID string) (map[string]bool, error)
 	SetChecked(menuID, itemID string, checked bool) error
 	CreateCustomItem(item *CustomShoppingItem) error
+	CreateCustomItemWithCap(item *CustomShoppingItem, maxItems int) (bool, error)
 	DeleteCustomItem(id, householdID string) error
 	GetCustomItems(menuID, householdID string) ([]CustomShoppingItem, error)
 	CountCustomItems(menuID, householdID string) (int, error)
