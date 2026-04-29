@@ -145,12 +145,16 @@ npm run test                      # Run tests (vitest)
 | `JWT_SECRET` | **Yes** | — | JWT signing key |
 | `ANTHROPIC_API_KEY` | No | — | Claude API key (parser degrades gracefully without it) |
 | `CORS_ORIGINS` | No | `http://localhost:5173,...` | Comma-separated allowed origins |
+| `SENTRY_DSN` | No | — | Sentry DSN for backend error tracking. Auto-set by Fly extension `flyctl ext sentry create`. |
+| `FLY_APP_NAME` | No | — | Auto-set by Fly; used as Sentry environment tag. |
+| `FLY_MACHINE_VERSION` | No | — | Auto-set by Fly; used as Sentry release tag. |
 
 ### Frontend
 | Variable | Description |
 |----------|-------------|
 | `VITE_API_URL` | Backend URL (default: `http://localhost:8080`) |
 | `VITE_USE_REAL_API` | `true` = real backend, `false` = mock data |
+| `VITE_SENTRY_DSN_FE` | Sentry DSN for frontend error tracking. Build-time baked via Vite — set in CI before `npm run build`. |
 
 ## Code Conventions
 
