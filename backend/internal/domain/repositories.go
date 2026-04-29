@@ -65,6 +65,5 @@ type ShoppingRepository interface {
 	CreateCustomItemWithCap(item *CustomShoppingItem, maxItems int) (bool, error)
 	DeleteCustomItem(id, householdID string) error
 	GetCustomItems(menuID, householdID string) ([]CustomShoppingItem, error)
-	CountCustomItems(menuID, householdID string) (int, error)
 	SetCustomItemChecked(id, householdID string, checked bool) error
 }
