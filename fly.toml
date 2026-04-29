@@ -10,6 +10,12 @@ primary_region = 'arn'
   DATABASE_PATH = '/app/data/maltiden.db'
 
 [build]
+  # FE Sentry DSN. Public-by-design (baked into the JS bundle, write-only event
+  # ingestion endpoint). Vite reads VITE_* env vars at build time inside the
+  # Dockerfile frontend-builder stage.
+  [build.args]
+    VITE_SENTRY_DSN_FE = "https://9a35ff7857b417a36397664a128a1537@o4511303410319360.ingest.us.sentry.io/4511303484440576"
+
 
 [http_service]
   internal_port = 8080
