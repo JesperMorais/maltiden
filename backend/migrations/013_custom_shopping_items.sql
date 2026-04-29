@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS custom_shopping_items (
     amount REAL NOT NULL DEFAULT 1,
     checked INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (menu_id) REFERENCES menus(id) ON DELETE CASCADE
+    FOREIGN KEY (menu_id) REFERENCES menus(id) ON DELETE CASCADE,
+    FOREIGN KEY (household_id) REFERENCES households(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_custom_shopping_menu ON custom_shopping_items(menu_id);
+CREATE INDEX IF NOT EXISTS idx_custom_shopping_household ON custom_shopping_items(household_id);
