@@ -428,7 +428,7 @@ onMounted(async () => {
 .progress-bar-track {
   height: 4px;
   background: var(--bg-secondary);
-  border-radius: 100px;
+  border-radius: var(--radius-full);
   overflow: hidden;
   margin: 0.5rem 0 0;
 }
@@ -436,7 +436,7 @@ onMounted(async () => {
 .progress-bar-fill {
   height: 100%;
   background: var(--success);
-  border-radius: 100px;
+  border-radius: var(--radius-full);
   transition: width 0.4s ease;
 }
 
@@ -710,7 +710,7 @@ onMounted(async () => {
 
 .custom-checkbox .check-icon {
   opacity: 0;
-  color: white;
+  color: var(--text-on-accent);
   transform: scale(0.5);
   transition: all 200ms ease;
 }

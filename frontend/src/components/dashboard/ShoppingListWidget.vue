@@ -41,7 +41,7 @@ const topCategories = computed(() => {
 </script>
 
 <template>
-  <SpotlightCard spotlight-color="rgba(104, 211, 145, 0.15)" class-name="shopping-spotlight">
+  <SpotlightCard spotlight-color="var(--success-bg)" class-name="shopping-spotlight">
     <section class="shopping-widget" @click="emit('view-list')">
       <!-- Header -->
       <div class="widget-header">
@@ -124,7 +124,7 @@ const topCategories = computed(() => {
 <style scoped>
 .shopping-widget {
   background: var(--bg-primary);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   padding: 1.25rem;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -153,7 +153,7 @@ const topCategories = computed(() => {
   height: 32px;
   flex-shrink: 0;
   background: var(--bg-hover);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   color: var(--success);
 }
 
@@ -309,7 +309,7 @@ const topCategories = computed(() => {
   padding: 0.65rem 1rem;
   background: var(--bg-hover);
   border: 1.5px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
