@@ -98,25 +98,28 @@ export function useShoppingList() {
     const menuId = shoppingList.value?.menuId
     if (!menuId) return
 
-    // Optimistic update
+    // Find target item once and capture previous value for this specific call
+    let target: ShoppingItem | undefined
     for (const cat of allCategories.value) {
-      const item = cat.items.find((i) => i.id === itemId)
-      if (item) {
-        item.checked = checked
+      const found = cat.items.find((i) => i.id === itemId)
+      if (found) {
+        target = found
         break
       }
     }
+    if (!target) return
+
+    const previous = target.checked
+    target.checked = checked
 
     try {
       await toggleItem(itemId, checked, menuId)
     } catch {
-      // Revert on failure
-      for (const cat of allCategories.value) {
-        const item = cat.items.find((i) => i.id === itemId)
-        if (item) {
-          item.checked = !checked
-          break
-        }
+      // Only roll back if our optimistic value is still the current value.
+      // If a later toggle has superseded ours, leave that newer value in place
+      // so rapid double-toggles don't flip the wrong update.
+      if (target.checked === checked) {
+        target.checked = previous
       }
       toast.error('Kunde inte uppdatera varan. Försök igen.')
     }
