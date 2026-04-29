@@ -174,21 +174,6 @@ func (s *ShoppingStorage) DeleteCustomItem(id, householdID string) error {
 	return nil
 }
 
-func (s *ShoppingStorage) CountCustomItems(menuID, householdID string) (int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	var count int
-	err := s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM custom_shopping_items WHERE menu_id = ? AND household_id = ?`,
-		menuID, householdID,
-	).Scan(&count)
-	if err != nil {
-		return 0, err
-	}
-	return count, nil
-}
-
 func (s *ShoppingStorage) GetCustomItems(menuID, householdID string) ([]domain.CustomShoppingItem, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
