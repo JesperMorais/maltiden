@@ -3,7 +3,7 @@ name: Deploy to Fly
 # Auto-deploy to Fly when something deployable lands on main (production).
 #
 # Triggers:
-# - push to dev with paths that affect runtime (skips docs/test/.github churn)
+# - push to main with paths that affect runtime (skips docs/test/.github churn)
 # - workflow_dispatch for manual / emergency deploys
 #
 # Notable design choices:
@@ -56,12 +56,17 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@1.6
 
       - name: Log deploy context
+        # REASON is moved into env to prevent shell injection — github.* vars
+        # are repo-controlled and safe to interpolate, but inputs.reason is
+        # user-controlled. See GitHub's hardening guide.
+        env:
+          REASON: ${{ inputs.reason }}
         run: |
           echo "Trigger: ${{ github.event_name }}"
           echo "Ref: ${{ github.ref }}"
           echo "SHA: ${{ github.sha }}"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Reason: ${{ inputs.reason }}"
+            echo "Reason: $REASON"
           fi
 
       - name: Deploy
