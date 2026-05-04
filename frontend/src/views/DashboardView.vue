@@ -19,6 +19,7 @@ import ErrorState from '@/components/common/ErrorState.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
 import RotatingText from '@/components/vue-bits/RotatingText.vue'
 import type { MenuDay } from '@/api/types/dashboard.types'
+import { removeMember } from '@/api/household.api'
 
 const greetingTexts = [
   'Vad blir det till middag?',
@@ -109,9 +110,22 @@ function handleCloseInvite() {
   showInvite.value = false
 }
 
-function handleRemoveMember(memberId: string) {
-  console.log('Remove member:', memberId)
-  // TODO: Call API to remove member from household
+async function handleRemoveMember(memberId: string) {
+  if (!confirm('Vill du ta bort den här medlemmen från hushållet?')) return
+
+  const household = dashboardStore.dashboardData?.household
+  if (!household) return
+
+  const snapshot = [...household.members]
+  household.members = household.members.filter((m) => m.id !== memberId)
+
+  try {
+    await removeMember(memberId)
+    toast.success('Medlemmen har tagits bort.')
+  } catch {
+    household.members = snapshot
+    toast.error('Kunde inte ta bort medlemmen. Försök igen.')
+  }
 }
 
 function handleViewShoppingList() {
