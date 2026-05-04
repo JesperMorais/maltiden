@@ -132,6 +132,14 @@ func (s *UserStorage) UpdatePassword(userID, newHash string) error {
 	return err
 }
 
+// UpdatePasswordTx updates the password hash within a transaction.
+func (s *UserStorage) UpdatePasswordTx(tx *sql.Tx, userID, newHash string) error {
+	_, err := tx.Exec(
+		`UPDATE users SET password_hash = ? WHERE id = ?`, newHash, userID,
+	)
+	return err
+}
+
 // CreatePasswordResetToken inserts a new password reset token.
 func (s *UserStorage) CreatePasswordResetToken(token *domain.PasswordResetToken) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -176,6 +184,15 @@ func (s *UserStorage) MarkPasswordResetTokenUsed(token string) error {
 	defer cancel()
 
 	_, err := s.db.ExecContext(ctx,
+		`UPDATE password_reset_tokens SET used_at = ? WHERE token = ?`,
+		time.Now(), token,
+	)
+	return err
+}
+
+// MarkPasswordResetTokenUsedTx marks a token as used within a transaction.
+func (s *UserStorage) MarkPasswordResetTokenUsedTx(tx *sql.Tx, token string) error {
+	_, err := tx.Exec(
 		`UPDATE password_reset_tokens SET used_at = ? WHERE token = ?`,
 		time.Now(), token,
 	)
