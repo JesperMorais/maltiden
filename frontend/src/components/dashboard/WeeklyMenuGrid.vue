@@ -16,6 +16,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'view-recipe': [day: MenuDay]
+  'swap-recipe': [day: MenuDay]
 }>()
 
 const prefsStore = usePlanningPreferencesStore()
@@ -65,6 +66,12 @@ function selectDay(day: MenuDay) {
 function handleViewRecipe() {
   if (selectedDay.value) {
     emit('view-recipe', selectedDay.value)
+  }
+}
+
+function handleSwapRecipe() {
+  if (selectedDay.value) {
+    emit('swap-recipe', selectedDay.value)
   }
 }
 
@@ -167,6 +174,7 @@ function handleLunchboxUpdate(count: number) {
             :members-eating-day="dashboardStore.getMembersEatingDay(day.date)"
             :is-real-data="dashboardStore.isUsingRealData"
             @view-recipe="handleViewRecipe"
+            @swap-recipe="handleSwapRecipe"
             @update-lunchbox="handleLunchboxUpdate"
             @toggle-member="(memberId: string) => dashboardStore.toggleMemberDay(day.date, memberId)"
             @close="dashboardStore.setSelectedDate(null)"

@@ -12,7 +12,9 @@ import HouseholdWidget from '@/components/dashboard/HouseholdWidget.vue'
 import ShoppingListWidget from '@/components/dashboard/ShoppingListWidget.vue'
 import InviteModal from '@/components/dashboard/InviteModal.vue'
 import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
+import SwapRecipeModal from '@/components/menu/SwapRecipeModal.vue'
 import DashboardSkeleton from '@/components/skeleton/layouts/DashboardSkeleton.vue'
+import { useToast } from '@/composables/useToast'
 import ErrorState from '@/components/common/ErrorState.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
 import RotatingText from '@/components/vue-bits/RotatingText.vue'
@@ -33,6 +35,8 @@ const prefsStore = usePlanningPreferencesStore()
 // Modal state
 const showInvite = ref(false)
 const selectedRecipeId = ref<string | null>(null)
+const swapTarget = ref<{ recipeId: string; date: string } | null>(null)
+const toast = useToast()
 
 const todayExtraPortions = computed(() => {
   const today = dashboardStore.todayFromMenu
@@ -49,6 +53,24 @@ onMounted(() => {
 
 function handleViewRecipe(day: MenuDay) {
   selectedRecipeId.value = day.meal?.id ?? null
+}
+
+function handleSwapRecipe(day: MenuDay) {
+  if (!day.meal) return
+  swapTarget.value = { recipeId: day.meal.id, date: day.date }
+  dashboardStore.setSelectedDate(null)
+}
+
+async function handleSwapSelected(newRecipeId: string) {
+  const target = swapTarget.value
+  if (!target) return
+  swapTarget.value = null
+  const ok = await dashboardStore.swapRecipeForDay(target.date, newRecipeId)
+  if (ok) {
+    toast.success('Recept utbytt!')
+  } else {
+    toast.error('Kunde inte byta recept. Försök igen.')
+  }
 }
 
 function handleMealClick() {
@@ -147,6 +169,7 @@ function handleViewShoppingList() {
               <WeeklyMenuGrid
                 :weekly-menu="dashboardStore.weeklyMenu"
                 @view-recipe="handleViewRecipe"
+                @swap-recipe="handleSwapRecipe"
               />
             </FadeContent>
 
@@ -195,6 +218,15 @@ function handleViewShoppingList() {
         @close="selectedRecipeId = null"
         @updated="dashboardStore.fetchDashboard(true)"
         @deleted="selectedRecipeId = null; dashboardStore.fetchDashboard(true)"
+      />
+
+      <!-- Swap Recipe Modal -->
+      <SwapRecipeModal
+        v-if="swapTarget"
+        :current-recipe-id="swapTarget.recipeId"
+        :day-date="swapTarget.date"
+        @close="swapTarget = null"
+        @select="handleSwapSelected"
       />
     </template>
   </div>
