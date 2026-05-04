@@ -47,6 +47,11 @@ var (
 	// Auth validation
 	ErrInvalidEmail = errors.New("invalid_email")
 
+	// Password reset
+	ErrInvalidResetToken = errors.New("invalid_reset_token")
+	ErrExpiredResetToken = errors.New("expired_reset_token")
+	ErrUsedResetToken    = errors.New("used_reset_token")
+
 	// Feedback validation
 	ErrInvalidMood        = errors.New("invalid_mood")
 	ErrCommentTooLong     = errors.New("comment_too_long")
