@@ -7,6 +7,7 @@ import (
 	"maltiden/internal/services"
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/claude"
+	"maltiden/pkg/email"
 	"maltiden/pkg/middleware"
 	"maltiden/pkg/utils"
 	"net/http"
@@ -15,15 +16,16 @@ import (
 )
 
 type dependencies struct {
-	auth        *handlers.AuthHandler
-	household   *handlers.HouseholdHandler
-	recipe      *handlers.RecipeHandler
-	menu        *handlers.MenuHandler
-	shopping    *handlers.ShoppingHandler
-	offers      *handlers.OffersHandler
-	feedback    *handlers.FeedbackHandler
-	health      *handlers.HealthHandler
-	userStorage *sqlite.UserStorage // needed for token version checks in auth middleware
+	auth          *handlers.AuthHandler
+	household     *handlers.HouseholdHandler
+	recipe        *handlers.RecipeHandler
+	menu          *handlers.MenuHandler
+	shopping      *handlers.ShoppingHandler
+	offers        *handlers.OffersHandler
+	feedback      *handlers.FeedbackHandler
+	health        *handlers.HealthHandler
+	passwordReset *handlers.PasswordResetHandler
+	userStorage   *sqlite.UserStorage // needed for token version checks in auth middleware
 }
 
 func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
@@ -44,17 +46,33 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	tjekService := services.NewTjekService()
 	feedbackService := services.NewFeedbackService(feedbackStorage)
 
+	// Email sender — defaults to log-only; uses Resend if RESEND_API_KEY is set.
+	var emailer email.EmailSender
+	fromAddr := os.Getenv("EMAIL_FROM")
+	if fromAddr == "" {
+		fromAddr = "Måltiden <no-reply@maltiden.app>"
+	}
+	if apiKey := os.Getenv("RESEND_API_KEY"); apiKey != "" {
+		emailer = email.NewResendSender(apiKey, fromAddr)
+		log.Printf("Email sender: Resend (%s)", fromAddr)
+	} else {
+		emailer = email.NewLogSender(fromAddr)
+		log.Printf("Email sender: log-only (set RESEND_API_KEY to enable real email)")
+	}
+	passwordResetService := services.NewPasswordResetService(db, userStorage, emailer)
+
 	// Handler layer
 	return &dependencies{
-		auth:        handlers.NewAuthHandler(authService),
-		household:   handlers.NewHouseholdHandler(householdService),
-		recipe:      handlers.NewRecipeHandler(recipeService),
-		menu:        handlers.NewMenuHandler(menuService),
-		shopping:    handlers.NewShoppingHandler(shoppingService, menuStorage),
-		offers:      handlers.NewOffersHandler(tjekService),
-		feedback:    handlers.NewFeedbackHandler(feedbackService),
-		health:      handlers.NewHealthHandler(db),
-		userStorage: userStorage,
+		auth:          handlers.NewAuthHandler(authService),
+		household:     handlers.NewHouseholdHandler(householdService),
+		recipe:        handlers.NewRecipeHandler(recipeService),
+		menu:          handlers.NewMenuHandler(menuService),
+		shopping:      handlers.NewShoppingHandler(shoppingService, menuStorage),
+		offers:        handlers.NewOffersHandler(tjekService),
+		feedback:      handlers.NewFeedbackHandler(feedbackService),
+		health:        handlers.NewHealthHandler(db),
+		passwordReset: handlers.NewPasswordResetHandler(passwordResetService),
+		userStorage:   userStorage,
 	}
 }
 
@@ -66,6 +84,10 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 
 	// Rate limiter for auth endpoints: 5 requests/sec, burst of 10
 	authLimiter := middleware.NewRateLimiter(5, 10)
+
+	// Rate limiter for password reset: ~3 requests/hour per IP (burst 3)
+	// 3/3600 ≈ 0.000833 tokens/sec
+	passwordResetLimiter := middleware.NewRateLimiter(3.0/3600.0, 3)
 
 	// Rate limiter for invite code join: 3 requests/sec, burst of 5 (brute-force protection)
 	joinLimiter := middleware.NewRateLimiter(3, 5)
@@ -93,6 +115,8 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.HandleFunc("GET /health", deps.health.Check)
 	mux.Handle("POST /auth/register", authLimiter.Limit(http.HandlerFunc(deps.auth.Register)))
 	mux.Handle("POST /auth/login", authLimiter.Limit(http.HandlerFunc(deps.auth.Login)))
+	mux.Handle("POST /auth/forgot-password", passwordResetLimiter.Limit(http.HandlerFunc(deps.passwordReset.ForgotPassword)))
+	mux.Handle("POST /auth/reset-password", passwordResetLimiter.Limit(http.HandlerFunc(deps.passwordReset.ResetPassword)))
 	mux.HandleFunc("GET /offers/search", deps.offers.SearchOffers)
 	mux.HandleFunc("GET /offers/discounts", deps.offers.GetDiscounts)
 	mux.HandleFunc("GET /offers/stores", deps.offers.GetStores)

@@ -120,12 +120,9 @@ async function handleLogin() {
           <p v-show="error" id="login-error" role="alert" class="form-error">{{ error }}</p>
 
           <div class="forgot-password">
-            <a
-              href="mailto:maltiden.app@gmail.com?subject=Glömt%20lösenord%20-%20Måltiden&body=Hej!%20Jag%20har%20glömt%20mitt%20lösenord.%20Min%20e-post%3A%20"
-              class="forgot-link"
-            >
-              Glömt lösenord? Mejla support
-            </a>
+            <RouterLink to="/forgot-password" class="forgot-link">
+              Glömt lösenord?
+            </RouterLink>
           </div>
 
           <BaseButton
