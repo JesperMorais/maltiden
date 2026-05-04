@@ -51,6 +51,17 @@ const swappablePool = computed(() =>
   filteredRecipes.value.filter((r) => r.id !== props.currentRecipeId),
 )
 
+const formattedDayDate = computed(() => {
+  const parsed = new Date(props.dayDate)
+  if (Number.isNaN(parsed.getTime())) return ''
+  const formatted = parsed.toLocaleDateString('sv-SE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+})
+
 function handleSelect(id: string) {
   if (id === props.currentRecipeId) {
     emit('close')
@@ -105,7 +116,9 @@ onUnmounted(() => {
     <div class="swap-modal" @click.stop>
       <header class="swap-header">
         <div class="swap-title-wrap">
-          <h2 id="swap-modal-title" class="swap-title">Byt recept</h2>
+          <h2 id="swap-modal-title" class="swap-title">
+            Byt recept<template v-if="formattedDayDate"> för {{ formattedDayDate }}</template>
+          </h2>
           <p class="swap-subtitle">Välj ett annat recept för dagen</p>
         </div>
         <button
