@@ -14,9 +14,11 @@ type UserRepository interface {
 	IncrementTokenVersion(userID string) error
 	IncrementTokenVersionTx(tx *sql.Tx, userID string) error
 	UpdatePassword(userID, newHash string) error
+	UpdatePasswordTx(tx *sql.Tx, userID, newHash string) error
 	CreatePasswordResetToken(token *PasswordResetToken) error
 	GetPasswordResetToken(token string) (*PasswordResetToken, error)
 	MarkPasswordResetTokenUsed(token string) error
+	MarkPasswordResetTokenUsedTx(tx *sql.Tx, token string) error
 }
 
 // HouseholdRepository defines the interface for household storage operations.
