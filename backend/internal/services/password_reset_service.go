@@ -108,8 +108,8 @@ func (s *PasswordResetService) ResetPassword(token, newPassword string) error {
 	if token == "" {
 		return domain.ErrInvalidResetToken
 	}
-	if len(newPassword) < 8 {
-		return domain.ErrWeakPassword
+	if err := ValidatePasswordStrength(newPassword); err != nil {
+		return err
 	}
 
 	prt, err := s.userStorage.GetPasswordResetToken(token)
