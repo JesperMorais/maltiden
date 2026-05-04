@@ -377,7 +377,6 @@ function handleViewRecipes() {
   position: fixed;
   inset: 0;
   background: var(--loading-overlay-bg);
-  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -202,7 +202,6 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 0.45);
-  backdrop-filter: blur(2px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
