@@ -211,16 +211,37 @@ func TestResetPassword_BumpsTokenVersion(t *testing.T) {
 }
 
 func TestResetPassword_RejectsWeakPassword(t *testing.T) {
-	prs, _, sender, user := setupResetTest(t)
-
-	if err := prs.RequestReset(user.User.Email); err != nil {
-		t.Fatalf("RequestReset: %v", err)
+	cases := []struct {
+		name     string
+		password string
+		wantErr  error
+	}{
+		// Too short.
+		{"too_short", "short", domain.ErrWeakPassword},
+		// 8 chars, only lowercase (1 category).
+		{"only_lowercase", "aaaaaaaa", domain.ErrWeakPassword},
+		// 8 chars, upper + lower only (2 categories).
+		{"two_categories", "AAAAaaaa", domain.ErrWeakPassword},
+		// 8 chars, upper + lower + digit (3 categories) — accepted.
+		{"three_categories", "Aaaa1234", nil},
+		// 8 chars, all four categories — accepted.
+		{"four_categories", "Aaaa1!a!", nil},
 	}
-	token := extractTokenFromEmail(sender.Calls()[0].Body)
 
-	err := prs.ResetPassword(token, "short")
-	if err != domain.ErrWeakPassword {
-		t.Errorf("expected ErrWeakPassword, got %v", err)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			prs, _, sender, user := setupResetTest(t)
+
+			if err := prs.RequestReset(user.User.Email); err != nil {
+				t.Fatalf("RequestReset: %v", err)
+			}
+			token := extractTokenFromEmail(sender.Calls()[0].Body)
+
+			err := prs.ResetPassword(token, tc.password)
+			if err != tc.wantErr {
+				t.Errorf("password %q: expected %v, got %v", tc.password, tc.wantErr, err)
+			}
+		})
 	}
 }
 
