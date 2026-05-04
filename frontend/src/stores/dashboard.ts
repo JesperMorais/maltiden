@@ -9,7 +9,6 @@ import { getCurrentMenu, saveMenu } from '@/api/menu.api'
 import type { Menu, SaveMenuDay } from '@/api/menu.api'
 import { getShoppingList } from '@/api/shopping.api'
 import type { ShoppingList } from '@/api/shopping.api'
-import { getRecipe } from '@/api/recipes.api'
 import { updateHousehold as apiUpdateHousehold } from '@/api/household.api'
 
 /**
@@ -413,22 +412,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (targetDay.isToday) {
       dashboardData.value.todaysMeal = targetDay.meal
     }
-
-    // Fetch real name/emoji and patch optimistic placeholder.
-    getRecipe(newRecipeId)
-      .then((recipe) => {
-        if (!targetDay.meal || targetDay.meal.id !== newRecipeId) return
-        targetDay.meal = {
-          id: recipe.id,
-          name: recipe.name,
-          emoji: recipe.emoji,
-          portions,
-        }
-        if (targetDay.isToday && dashboardData.value) {
-          dashboardData.value.todaysMeal = targetDay.meal
-        }
-      })
-      .catch((e) => console.warn('Could not fetch swapped recipe details:', e))
 
     const days: SaveMenuDay[] = menu.map((d) => ({
       date: d.date,
