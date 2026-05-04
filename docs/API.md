@@ -123,6 +123,46 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 { "error": "invalid_credentials" }
 ```
 
+### POST /auth/forgot-password
+Request a password reset email. **Always returns 200** regardless of whether the email
+is registered, to avoid leaking account existence. Rate-limited to ~3 requests/hour
+per IP.
+
+When a matching account is found, the backend generates a 32-byte hex token (valid for
+1 hour) and emails a reset link. By default the email is logged to stdout (operators
+can grab the link from logs); if `RESEND_API_KEY` is set, the email is sent via Resend.
+```json
+// Request
+{ "email": "anna@example.com" }
+
+// Response 200 (always — even on unknown email or invalid format)
+{ "ok": true }
+```
+
+### POST /auth/reset-password
+Consume a reset token and set a new password. On success the user's `token_version`
+is incremented, invalidating all existing JWTs for that user. Rate-limited to
+~3 requests/hour per IP.
+```json
+// Request
+{ "token": "abc123…", "newPassword": "Newpassword123" }
+
+// Response 200
+{ "ok": true }
+
+// Error 400 — token does not exist
+{ "error": "invalid_reset_token" }
+
+// Error 400 — token has expired (>1h since creation)
+{ "error": "expired_reset_token" }
+
+// Error 400 — token has already been used
+{ "error": "used_reset_token" }
+
+// Error 400 — new password is shorter than 8 characters
+{ "error": "weak_password" }
+```
+
 ---
 
 ## Household
