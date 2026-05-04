@@ -8,6 +8,8 @@ import (
 	"math"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 // shoppingTestEnv wires a real SQLite test DB to a ShoppingService so we can
@@ -321,6 +323,94 @@ func TestUpdateItemChecked_AcceptsSameHouseholdCustomItem(t *testing.T) {
 	}
 	if err := env.shoppingService.UpdateItemChecked(env.menuID, item.ID, env.householdID, true); err != nil {
 		t.Errorf("expected success toggling own item, got %v", err)
+	}
+}
+
+// ---------- GetShoppingList: category ordering ----------
+
+// TestGetShoppingList_OrdersCategoriesCorrectly seeds a recipe whose ingredients
+// span several of the new categories (#168) and confirms the resulting shopping
+// list returns them in the supermarket-walk order, not insertion order.
+func TestGetShoppingList_OrdersCategoriesCorrectly(t *testing.T) {
+	db := setupTestDB(t)
+	recipeStorage := sqlite.NewRecipeStorage(db)
+	menuStorage := sqlite.NewMenuStorage(db)
+	shoppingStorage := sqlite.NewShoppingStorage(db)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	userStorage := sqlite.NewUserStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+
+	user := createTestUser(t, authService, "order-test@test.com", "Orderer")
+	recipeService := NewRecipeService(recipeStorage)
+	shoppingService := NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
+
+	// One recipe touching seven of the new categories at once.
+	recipe, err := recipeService.Create(domain.CreateRecipeRequest{
+		Name:     "Allt i ett",
+		Servings: 2,
+		Ingredients: []domain.Ingredient{
+			{Name: "Olivolja", Amount: 2, Unit: "msk"},          // Såser & olja
+			{Name: "Krossade tomater", Amount: 1, Unit: "burk"}, // Konserver
+			{Name: "Spaghetti", Amount: 200, Unit: "g"},         // Pasta, ris & spannmål
+			{Name: "Persilja", Amount: 1, Unit: "kruka"},        // Färska örter
+			{Name: "Vitlök", Amount: 2, Unit: "klyftor"},        // Grönsaker
+			{Name: "Parmesan", Amount: 50, Unit: "g"},           // Mejeri & Ägg
+			{Name: "Köttfärs", Amount: 400, Unit: "g"},          // Kött & Fisk
+			{Name: "Salt", Amount: 1, Unit: "tsk"},              // Kryddor
+		},
+		Instructions: []string{"Koka"},
+	}, user.User.HouseholdID)
+	if err != nil {
+		t.Fatalf("seed recipe: %v", err)
+	}
+
+	// Construct the menu directly (rather than going through MenuService.Generate,
+	// which would shuffle in seed recipes from migrations) so the shopping list
+	// is built from this single hand-picked recipe.
+	menu := &domain.Menu{
+		ID:          "menu_" + uuid.New().String(),
+		HouseholdID: user.User.HouseholdID,
+		Days: []domain.MenuDay{
+			{Date: "2026-01-01", RecipeID: recipe.ID, Servings: 2},
+		},
+	}
+	if err := menuStorage.Create(menu); err != nil {
+		t.Fatalf("create menu: %v", err)
+	}
+
+	list, err := shoppingService.GetShoppingList(menu.ID, user.User.HouseholdID)
+	if err != nil {
+		t.Fatalf("get shopping list: %v", err)
+	}
+	if list == nil {
+		t.Fatal("expected list, got nil")
+	}
+
+	got := make([]string, 0, len(list.Categories))
+	for _, c := range list.Categories {
+		got = append(got, c.Name)
+	}
+
+	// Categories with no items are omitted; the remaining ones must appear in
+	// the canonical supermarket-walk order from #168.
+	want := []string{
+		"Kött & Fisk",
+		"Mejeri & Ägg",
+		"Grönsaker",
+		"Färska örter",
+		"Pasta, ris & spannmål",
+		"Konserver",
+		"Såser & olja",
+		"Kryddor",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("expected %d categories %v, got %d %v", len(want), want, len(got), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("category[%d] = %q, want %q (full order: %v)", i, got[i], want[i], got)
+		}
 	}
 }
 
