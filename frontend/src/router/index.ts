@@ -12,6 +12,8 @@ const OffersView = () => import('@/views/OffersView.vue')
 const RecipesView = () => import('@/views/RecipesView.vue')
 const ShoppingListView = () => import('@/views/ShoppingListView.vue')
 const AccountView = () => import('@/views/AccountView.vue')
+const ForgotPasswordView = () => import('@/views/ForgotPasswordView.vue')
+const ResetPasswordView = () => import('@/views/ResetPasswordView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -32,6 +34,18 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
+      meta: { transition: 'page-slide' }
+    },
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: ForgotPasswordView,
+      meta: { transition: 'page-slide' }
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: ResetPasswordView,
       meta: { transition: 'page-slide' }
     },
     {
