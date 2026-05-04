@@ -2,7 +2,9 @@ package services
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
+	"fmt"
 	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/pkg/email"
@@ -19,6 +21,7 @@ import (
 // expire one hour after creation. Successfully resetting a password also
 // increments the user's token_version, invalidating any existing JWTs.
 type PasswordResetService struct {
+	db          *sql.DB
 	userStorage domain.UserRepository
 	emailer     email.EmailSender
 	frontendURL string
@@ -26,12 +29,13 @@ type PasswordResetService struct {
 }
 
 // NewPasswordResetService constructs a PasswordResetService.
-func NewPasswordResetService(userStorage domain.UserRepository, emailer email.EmailSender) *PasswordResetService {
+func NewPasswordResetService(db *sql.DB, userStorage domain.UserRepository, emailer email.EmailSender) *PasswordResetService {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		frontendURL = "http://localhost:5173"
 	}
 	return &PasswordResetService{
+		db:          db,
 		userStorage: userStorage,
 		emailer:     emailer,
 		frontendURL: frontendURL,
@@ -127,17 +131,26 @@ func (s *PasswordResetService) ResetPassword(token, newPassword string) error {
 		return err
 	}
 
-	if err := s.userStorage.UpdatePassword(prt.UserID, hash); err != nil {
+	// Wrap the three writes in a transaction so a mid-flow crash cannot leave
+	// the system in a partially-updated state (e.g., password changed but token
+	// still usable, or token consumed but old JWTs still valid).
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if err := s.userStorage.UpdatePasswordTx(tx, prt.UserID, hash); err != nil {
 		return err
 	}
-	if err := s.userStorage.MarkPasswordResetTokenUsed(token); err != nil {
+	if err := s.userStorage.MarkPasswordResetTokenUsedTx(tx, token); err != nil {
 		return err
 	}
 	// Invalidate all existing JWTs for this user.
-	if err := s.userStorage.IncrementTokenVersion(prt.UserID); err != nil {
+	if err := s.userStorage.IncrementTokenVersionTx(tx, prt.UserID); err != nil {
 		return err
 	}
-	return nil
+	return tx.Commit()
 }
 
 // generateResetToken returns 32 cryptographically-random bytes encoded as hex.

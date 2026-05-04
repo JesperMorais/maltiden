@@ -59,7 +59,7 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 		emailer = email.NewLogSender(fromAddr)
 		log.Printf("Email sender: log-only (set RESEND_API_KEY to enable real email)")
 	}
-	passwordResetService := services.NewPasswordResetService(userStorage, emailer)
+	passwordResetService := services.NewPasswordResetService(db, userStorage, emailer)
 
 	// Handler layer
 	return &dependencies{
