@@ -120,3 +120,64 @@ func (s *UserStorage) IncrementTokenVersionTx(tx *sql.Tx, userID string) error {
 	)
 	return err
 }
+
+// UpdatePassword updates the password hash for a given user.
+func (s *UserStorage) UpdatePassword(userID, newHash string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE users SET password_hash = ? WHERE id = ?`, newHash, userID,
+	)
+	return err
+}
+
+// CreatePasswordResetToken inserts a new password reset token.
+func (s *UserStorage) CreatePasswordResetToken(token *domain.PasswordResetToken) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO password_reset_tokens (token, user_id, expires_at, created_at)
+		 VALUES (?, ?, ?, ?)`,
+		token.Token, token.UserID, token.ExpiresAt, token.CreatedAt,
+	)
+	return err
+}
+
+// GetPasswordResetToken retrieves a password reset token by its value.
+// Returns (nil, nil) if the token does not exist.
+func (s *UserStorage) GetPasswordResetToken(token string) (*domain.PasswordResetToken, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var t domain.PasswordResetToken
+	var usedAt sql.NullTime
+	err := s.db.QueryRowContext(ctx,
+		`SELECT token, user_id, expires_at, used_at, created_at
+		 FROM password_reset_tokens WHERE token = ?`, token,
+	).Scan(&t.Token, &t.UserID, &t.ExpiresAt, &usedAt, &t.CreatedAt)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if usedAt.Valid {
+		t.UsedAt = &usedAt.Time
+	}
+	return &t, nil
+}
+
+// MarkPasswordResetTokenUsed marks a token as used at the current time.
+func (s *UserStorage) MarkPasswordResetTokenUsed(token string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE password_reset_tokens SET used_at = ? WHERE token = ?`,
+		time.Now(), token,
+	)
+	return err
+}
