@@ -403,7 +403,7 @@ var ingredientCategories = map[string]string{
 	"pizzadeg":                "Frys",
 	"smördeg":                 "Frys",
 	"filodeg":                 "Frys",
-	"tacoskal":                "Övrigt",
+	"tacoskal":                "Bröd",
 }
 
 func (s *ShoppingService) GetShoppingList(menuID, householdID string) (*domain.ShoppingList, error) {
