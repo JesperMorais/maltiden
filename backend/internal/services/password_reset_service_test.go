@@ -50,7 +50,7 @@ func setupResetTest(t *testing.T) (*PasswordResetService, *sqlite.UserStorage, *
 	user := createTestUser(t, authService, "reset@test.com", "Reset")
 
 	sender := &captureSender{}
-	prs := NewPasswordResetService(userStorage, sender)
+	prs := NewPasswordResetService(db, userStorage, sender)
 	return prs, userStorage, sender, user
 }
 
