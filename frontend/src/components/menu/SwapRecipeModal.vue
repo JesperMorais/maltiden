@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { Search, X, Shuffle, UtensilsCrossed, Check } from 'lucide-vue-next'
 import { getRecipes } from '@/api/recipes.api'
 import type { RecipeSummary } from '@/api/recipes.api'
@@ -23,6 +23,7 @@ const recipes = ref<RecipeSummary[]>([])
 const isLoading = ref(false)
 const loadError = ref<string | null>(null)
 const query = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
 
 const filteredRecipes = computed(() => {
   const q = query.value.trim().toLowerCase()
@@ -88,6 +89,9 @@ function onBackdropClick() {
 
 onMounted(async () => {
   document.addEventListener('keydown', onKeydown)
+  // Move focus into the dialog so keyboard/screen-reader users land inside.
+  await nextTick()
+  searchInputRef.value?.focus()
   isLoading.value = true
   try {
     const { recipes: list } = await getRecipes()
@@ -134,6 +138,7 @@ onUnmounted(() => {
       <div class="search-wrap">
         <Search :size="16" class="search-icon" aria-hidden="true" />
         <input
+          ref="searchInputRef"
           v-model="query"
           type="search"
           class="search-input"
