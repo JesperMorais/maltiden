@@ -2,6 +2,28 @@
 
 Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
+## Recent Changes (PR #177)
+
+**New Endpoints:**
+- `POST /auth/forgot-password` — Request a password reset email (public, rate-limited ~3/hour per IP)
+- `POST /auth/reset-password` — Consume a reset token and set a new password (public, rate-limited ~3/hour per IP)
+
+**New Frontend Routes:**
+- `/forgot-password` — ForgotPasswordView
+- `/reset-password` — ResetPasswordView (receives `?token=` from email link)
+
+**Security:**
+- Forgot-password always returns `200 { "ok": true }` regardless of whether the email is registered, preventing account enumeration.
+- On successful reset, `token_version` is incremented — all existing JWTs for that user are immediately invalidated.
+
+**New environment variables (backend):**
+- `RESEND_API_KEY` — If set, reset emails are sent via Resend; otherwise the link is logged to stdout.
+- `EMAIL_FROM` — Sender address (default: `Måltiden <no-reply@maltiden.app>`).
+
+**No breaking changes** — purely additive.
+
+---
+
 ## Recent Changes (PR #163)
 
 **New Shopping List Endpoints:**
@@ -121,6 +143,46 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
 // Error 401
 { "error": "invalid_credentials" }
+```
+
+### POST /auth/forgot-password
+Request a password reset email. **Always returns 200** regardless of whether the email
+is registered, to avoid leaking account existence. Rate-limited to ~3 requests/hour
+per IP.
+
+When a matching account is found, the backend generates a 32-byte hex token (valid for
+1 hour) and emails a reset link. By default the email is logged to stdout (operators
+can grab the link from logs); if `RESEND_API_KEY` is set, the email is sent via Resend.
+```json
+// Request
+{ "email": "anna@example.com" }
+
+// Response 200 (always — even on unknown email or invalid format)
+{ "ok": true }
+```
+
+### POST /auth/reset-password
+Consume a reset token and set a new password. On success the user's `token_version`
+is incremented, invalidating all existing JWTs for that user. Rate-limited to
+~3 requests/hour per IP.
+```json
+// Request
+{ "token": "abc123…", "newPassword": "Newpassword123" }
+
+// Response 200
+{ "ok": true }
+
+// Error 400 — token does not exist
+{ "error": "invalid_reset_token" }
+
+// Error 400 — token has expired (>1h since creation)
+{ "error": "expired_reset_token" }
+
+// Error 400 — token has already been used
+{ "error": "used_reset_token" }
+
+// Error 400 — new password is shorter than 8 characters
+{ "error": "weak_password" }
 ```
 
 ---
@@ -788,6 +850,10 @@ Alla errors följer samma struktur:
 | `invalid_token_format` | 401 | Ogiltigt format på Authorization-headern (saknar "Bearer "-prefix) |
 | `invalid_token` | 401 | JWT-token är ogiltig, utgången eller kan inte valideras |
 | `token_revoked` | 401 | Token har återkallats (t.ex. efter lösenordsbyte eller att ha lämnat hushållet) |
+| `invalid_reset_token` | 400 | Reset-token finns inte |
+| `expired_reset_token` | 400 | Reset-token har gått ut (>1h sedan skapandet) |
+| `used_reset_token` | 400 | Reset-token har redan använts |
+| `weak_password` | 400 | Nytt lösenord är kortare än 8 tecken |
 | `email_taken` | 400 | Email redan registrerad |
 | `code_required` | 400 | Inbjudningskod saknas i requesten |
 | `invalid_code` | 400 | Inbjudningskod ogiltig/utgången |
@@ -826,6 +892,8 @@ The frontend uses Vue Router with the following routes:
 | `/` | LandingView | No | No | Public landing page |
 | `/register` | OnboardingView | No | No | User registration |
 | `/login` | LoginView | No | No | User login |
+| `/forgot-password` | ForgotPasswordView | No | No | Request password reset email |
+| `/reset-password` | ResetPasswordView | No | No | Consume reset token from email link |
 | `/dashboard` | DashboardView | Yes | No | Main dashboard (guests can view) |
 | `/menu/generate` | GenerateMenuView | Yes | Yes | Menu generator (members only) |
 | `/recipes` | RecipesView | Yes | Yes | Unified recipes page with tabs |
@@ -848,6 +916,8 @@ The frontend uses Vue Router with the following routes:
 | GET /health | ✅ | ⬜ |
 | POST /auth/register | ✅ | ✅ |
 | POST /auth/login | ✅ | ✅ |
+| POST /auth/forgot-password | ✅ | ✅ |
+| POST /auth/reset-password | ✅ | ✅ |
 | GET /households/me | ✅ | ✅ |
 | PATCH /households/me | ✅ | ✅ |
 | POST /households/invite | ✅ | ✅ |
