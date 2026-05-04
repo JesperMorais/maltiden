@@ -193,8 +193,24 @@ func (s *ShoppingService) GetShoppingList(menuID, householdID string) (*domain.S
 		categoryMap[category] = append(categoryMap[category], it)
 	}
 
-	// Build response with sorted categories
-	categoryOrder := []string{"Kött & Fisk", "Mejeri", "Frukt & Grönt", "Skafferi", "Kryddor", "Övrigt"}
+	// Build response with sorted categories.
+	// Order mirrors a typical Swedish supermarket walk: meat/fish counter first,
+	// then dairy, then produce (split into fruit, veg, herbs), bakery, dry goods,
+	// canned/sauces, spices, frozen, and finally the catch-all "Övrigt".
+	categoryOrder := []string{
+		"Kött & Fisk",
+		"Mejeri & Ägg",
+		"Frukt",
+		"Grönsaker",
+		"Färska örter",
+		"Bröd",
+		"Pasta, ris & spannmål",
+		"Konserver",
+		"Såser & olja",
+		"Kryddor",
+		"Frys",
+		"Övrigt",
+	}
 	var categories []domain.ShoppingCategory
 
 	for _, catName := range categoryOrder {
