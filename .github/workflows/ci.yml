@@ -99,6 +99,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check no glassmorphism
+        run: |
+          if grep -rn "backdrop-filter" src/; then
+            echo "::error::backdrop-filter (glassmorphism) is banned per CLAUDE.md — remove it from the files listed above"
+            exit 1
+          fi
+
       - name: Type check
         run: npm run type-check
 

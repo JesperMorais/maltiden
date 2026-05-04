@@ -73,8 +73,7 @@ const emit = defineEmits<{
   border-top: 1px solid var(--border-color);
   padding: 1.5rem;
   z-index: 10;
-  backdrop-filter: blur(10px);
-  background: color-mix(in srgb, var(--bg-primary) 95%, transparent);
+  background: var(--bg-primary);
 }
 
 .actions-container {
