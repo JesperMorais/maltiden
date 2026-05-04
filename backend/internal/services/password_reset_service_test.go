@@ -1,6 +1,7 @@
 package services
 
 import (
+	"database/sql"
 	"maltiden/internal/domain"
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/email"
@@ -220,6 +221,80 @@ func TestResetPassword_RejectsWeakPassword(t *testing.T) {
 	err := prs.ResetPassword(token, "short")
 	if err != domain.ErrWeakPassword {
 		t.Errorf("expected ErrWeakPassword, got %v", err)
+	}
+}
+
+// failingTokenVersionStorage wraps UserStorage and forces IncrementTokenVersionTx
+// to fail. All other methods delegate to the embedded storage.
+type failingTokenVersionStorage struct {
+	*sqlite.UserStorage
+}
+
+func (f *failingTokenVersionStorage) IncrementTokenVersionTx(_ *sql.Tx, _ string) error {
+	return errInjectedFailure
+}
+
+var errInjectedFailure = errInjected("injected failure")
+
+type errInjected string
+
+func (e errInjected) Error() string { return string(e) }
+
+// TestResetPassword_Atomic_RollbackOnFailure verifies that if the final write
+// (IncrementTokenVersion) fails, the entire reset rolls back — the password is
+// NOT changed and the token is NOT marked used.
+func TestResetPassword_Atomic_RollbackOnFailure(t *testing.T) {
+	db := setupTestDB(t)
+	userStorage := sqlite.NewUserStorage(db)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+	user := createTestUser(t, authService, "atomic@test.com", "Atomic")
+
+	// Capture original password hash so we can verify it's unchanged.
+	originalUser, err := userStorage.GetByID(user.User.ID)
+	if err != nil {
+		t.Fatalf("GetByID: %v", err)
+	}
+	originalHash := originalUser.PasswordHash
+
+	// Build the service with a storage that fails on IncrementTokenVersionTx.
+	failing := &failingTokenVersionStorage{UserStorage: userStorage}
+	sender := &captureSender{}
+	prs := NewPasswordResetService(db, failing, sender)
+
+	if err := prs.RequestReset(user.User.Email); err != nil {
+		t.Fatalf("RequestReset: %v", err)
+	}
+	token := extractTokenFromEmail(sender.Calls()[0].Body)
+
+	if err := prs.ResetPassword(token, "Newpassword123"); err == nil {
+		t.Fatal("expected ResetPassword to fail due to injected error, got nil")
+	}
+
+	// Password must NOT have changed (transaction rolled back).
+	after, err := userStorage.GetByID(user.User.ID)
+	if err != nil {
+		t.Fatalf("GetByID after: %v", err)
+	}
+	if after.PasswordHash != originalHash {
+		t.Errorf("password hash changed despite rollback (was %q, now %q)", originalHash, after.PasswordHash)
+	}
+	if utils.CheckPassword("Newpassword123", after.PasswordHash) {
+		t.Error("new password verifies — transaction did not roll back")
+	}
+
+	// Token must NOT be marked used (transaction rolled back), so a retry is
+	// still possible once the underlying issue is resolved.
+	prt, err := userStorage.GetPasswordResetToken(token)
+	if err != nil {
+		t.Fatalf("GetPasswordResetToken: %v", err)
+	}
+	if prt == nil {
+		t.Fatal("token disappeared")
+	}
+	if prt.UsedAt != nil {
+		t.Error("token marked used despite rollback")
 	}
 }
 
