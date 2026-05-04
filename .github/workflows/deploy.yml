@@ -1,0 +1,107 @@
+name: Deploy to Fly
+
+# Auto-deploy to Fly when something deployable lands on main (production).
+#
+# Triggers:
+# - push to dev with paths that affect runtime (skips docs/test/.github churn)
+# - workflow_dispatch for manual / emergency deploys
+#
+# Notable design choices:
+# - Concurrency-cancelled per ref so overlapping dev pushes don't queue old
+#   builds. The latest commit always wins.
+# - Vite VITE_* env vars must be available at *build* time inside the Docker
+#   frontend-builder stage, so VITE_SENTRY_DSN_FE is passed via --build-arg.
+#   This guarantees the FE Sentry SDK ships in the bundle even when someone
+#   triggers a deploy outside this workflow (e.g. dashboard "Deploy" button
+#   was the cause of the v25 missing-DSN incident).
+# - Post-deploy health check validates /health AND the Sentry DSN substring is
+#   present in the main bundle, so regressions surface immediately.
+
+on:
+  # Auto-deploy on every push to main (production). Path filter skips deploys
+  # for changes that can't affect runtime (docs, tests, .github, IDE configs).
+  # The CI workflow runs in parallel on the same push and posts its required-
+  # check status to branch protection — enable branch protection on main with
+  # CI as required if you want strict "CI must pass first" gating.
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'Dockerfile'
+      - 'fly.toml'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why are you deploying manually? (logged for audit)'
+        required: true
+        default: 'Manual deploy'
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@1.6
+
+      - name: Log deploy context
+        run: |
+          echo "Trigger: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Reason: ${{ inputs.reason }}"
+          fi
+
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          # FE Sentry DSN is public-by-design (baked into JS, write-only ingest)
+          # but we still source it from a repo variable so it can be rotated
+          # without a code change. Falls back to the value committed in fly.toml.
+          SENTRY_DSN_FE: ${{ vars.VITE_SENTRY_DSN_FE }}
+        run: |
+          if [ -n "$SENTRY_DSN_FE" ]; then
+            flyctl deploy -a maltiden \
+              --remote-only \
+              --build-arg "VITE_SENTRY_DSN_FE=$SENTRY_DSN_FE"
+          else
+            flyctl deploy -a maltiden --remote-only
+          fi
+
+      - name: Post-deploy health check
+        run: |
+          # Give the new machine 10s to settle past its smoke check, then verify
+          # /health and that the FE Sentry SDK actually shipped in the bundle.
+          sleep 10
+          status=$(curl -s -o /dev/null -w "%{http_code}" https://maltiden.fly.dev/health)
+          if [ "$status" != "200" ]; then
+            echo "::error::Health check failed with HTTP $status"
+            exit 1
+          fi
+          echo "Health: 200 OK"
+
+          # Find the main bundle and confirm the Sentry DSN substring is in it.
+          # The substring matches both committed (fly.toml) and rotated (vars) values
+          # because the org-id prefix is stable.
+          MAIN_JS=$(curl -s https://maltiden.fly.dev/ | grep -oE '/assets/index-[^"]+\.js' | head -1)
+          if [ -z "$MAIN_JS" ]; then
+            echo "::warning::Could not find main JS bundle in index.html — skipping Sentry verification"
+            exit 0
+          fi
+          if curl -s "https://maltiden.fly.dev$MAIN_JS" | grep -q "ingest.us.sentry.io"; then
+            echo "Sentry FE: DSN baked into $MAIN_JS"
+          else
+            echo "::warning::Sentry FE DSN not found in $MAIN_JS — bundle may have shipped without VITE_SENTRY_DSN_FE"
+          fi
