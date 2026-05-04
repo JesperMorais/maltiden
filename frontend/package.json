@@ -23,8 +23,8 @@
     "test:e2e:ui": "npx --prefix .. playwright test --ui"
   },
   "dependencies": {
-    "@sentry/vue": "^10.50.0",
-    "axios": "^1.15.2",
+    "@sentry/vue": "^10.51.0",
+    "axios": "^1.16.0",
     "lucide-vue-next": "^1.0.0",
     "motion-v": "^2.2.1",
     "pinia": "^3.0.4",
