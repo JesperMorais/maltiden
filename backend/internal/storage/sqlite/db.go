@@ -111,6 +111,7 @@ func runMigrations(db *sql.DB, fs embed.FS) error {
 		{11, "011_create_feedback.sql"},
 		{12, "012_seed_100_recipes.sql"},
 		{13, "013_custom_shopping_items.sql"},
+		{14, "014_clean_recipe_content.sql"},
 	}
 
 	for _, m := range migrationFiles {
