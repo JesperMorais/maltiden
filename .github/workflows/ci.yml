@@ -52,6 +52,13 @@ jobs:
           go-version: "1.26"
           cache-dependency-path: backend/go.sum
 
+      - name: Lint seed recipes
+        run: |
+          if grep -niE '\b(bajs|skit|kuk|fitt|helvete)\b|klicka här|läs mer|click here|read more|&amp;|&nbsp;|&quot;|&#|https?://' migrations/*_seed*.sql; then
+            echo "::error::Seed recipe content contains forbidden patterns (profanity, scraping artifacts, HTML entities, or URLs)"
+            exit 1
+          fi
+
       - name: Build
         run: go build ./...
 

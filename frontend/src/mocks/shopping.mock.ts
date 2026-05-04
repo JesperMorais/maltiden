@@ -25,29 +25,110 @@ const checkedByName = new Map<string, boolean>([
   ['Sojasås', true],
 ])
 
-/** Simple ingredient-to-category mapping for mock data */
+/**
+ * Ingredient-to-category mapping for mock data.
+ * Mirrors backend `ingredientCategories` in shopping_service.go so mock mode
+ * shows the same supermarket-walk grouping as the real API. Keep in sync.
+ */
 const categoryMap: Record<string, string> = {
+  // Kött & Fisk
   Kycklingfilé: 'Kött & Fisk',
   Köttfärs: 'Kött & Fisk',
   Bacon: 'Kött & Fisk',
   Laxfilé: 'Kött & Fisk',
   Skinka: 'Kött & Fisk',
-  Ägg: 'Mejeri',
-  Parmesan: 'Mejeri',
-  'Riven ost': 'Mejeri',
-  Mozzarella: 'Mejeri',
-  Kokosmjölk: 'Mejeri',
-  Wokgrönsaker: 'Grönsaker',
-  Sallad: 'Grönsaker',
+  Räkor: 'Kött & Fisk',
+  Falukorv: 'Kött & Fisk',
+  Korv: 'Kött & Fisk',
+  // Mejeri & Ägg
+  Ägg: 'Mejeri & Ägg',
+  Mjölk: 'Mejeri & Ägg',
+  Grädde: 'Mejeri & Ägg',
+  Smör: 'Mejeri & Ägg',
+  Parmesan: 'Mejeri & Ägg',
+  'Riven ost': 'Mejeri & Ägg',
+  Mozzarella: 'Mejeri & Ägg',
+  Halloumi: 'Mejeri & Ägg',
+  Fetaost: 'Mejeri & Ägg',
+  Yoghurt: 'Mejeri & Ägg',
+  'Crème fraîche': 'Mejeri & Ägg',
+  Gräddfil: 'Mejeri & Ägg',
+  Kvarg: 'Mejeri & Ägg',
+  // Frukt
+  Äpple: 'Frukt',
+  Banan: 'Frukt',
+  Citron: 'Frukt',
+  Lime: 'Frukt',
+  Apelsin: 'Frukt',
+  Jordgubbar: 'Frukt',
+  Blåbär: 'Frukt',
+  Hallon: 'Frukt',
+  Avokado: 'Frukt',
+  // Grönsaker
   Tomat: 'Grönsaker',
   Lök: 'Grönsaker',
-  Potatis: 'Grönsaker',
-  Citron: 'Grönsaker',
-  Dill: 'Grönsaker',
   Vitlök: 'Grönsaker',
+  Purjolök: 'Grönsaker',
+  Potatis: 'Grönsaker',
+  Sötpotatis: 'Grönsaker',
+  Morot: 'Grönsaker',
+  Paprika: 'Grönsaker',
+  Sallad: 'Grönsaker',
   Spenat: 'Grönsaker',
+  Ruccola: 'Grönsaker',
+  Broccoli: 'Grönsaker',
+  Blomkål: 'Grönsaker',
+  Zucchini: 'Grönsaker',
+  Aubergine: 'Grönsaker',
   Champinjoner: 'Grönsaker',
-  // Kryddor (mirrors backend categorization)
+  Gurka: 'Grönsaker',
+  Ingefära: 'Grönsaker',
+  // Färska örter
+  Persilja: 'Färska örter',
+  Dill: 'Färska örter',
+  'Färsk basilika': 'Färska örter',
+  Koriander: 'Färska örter',
+  Gräslök: 'Färska örter',
+  Mynta: 'Färska örter',
+  // Bröd
+  Bröd: 'Bröd',
+  Knäckebröd: 'Bröd',
+  Tortilla: 'Bröd',
+  Baguette: 'Bröd',
+  // Pasta, ris & spannmål
+  Spaghetti: 'Pasta, ris & spannmål',
+  Pasta: 'Pasta, ris & spannmål',
+  Penne: 'Pasta, ris & spannmål',
+  Makaroner: 'Pasta, ris & spannmål',
+  Lasagneplattor: 'Pasta, ris & spannmål',
+  Ris: 'Pasta, ris & spannmål',
+  Basmatiris: 'Pasta, ris & spannmål',
+  Couscous: 'Pasta, ris & spannmål',
+  Bulgur: 'Pasta, ris & spannmål',
+  Quinoa: 'Pasta, ris & spannmål',
+  Havregryn: 'Pasta, ris & spannmål',
+  Vetemjöl: 'Pasta, ris & spannmål',
+  // Konserver
+  'Krossade tomater': 'Konserver',
+  Tomatpuré: 'Konserver',
+  Kokosmjölk: 'Konserver',
+  Kikärtor: 'Konserver',
+  'Svarta bönor': 'Konserver',
+  Majs: 'Konserver',
+  Tonfisk: 'Konserver',
+  Oliver: 'Konserver',
+  // Såser & olja
+  Olivolja: 'Såser & olja',
+  Rapsolja: 'Såser & olja',
+  Sojasås: 'Såser & olja',
+  Balsamvinäger: 'Såser & olja',
+  Vinäger: 'Såser & olja',
+  Ketchup: 'Såser & olja',
+  Senap: 'Såser & olja',
+  Majonnäs: 'Såser & olja',
+  'Sweet chili': 'Såser & olja',
+  Pesto: 'Såser & olja',
+  // Kryddor
   Salt: 'Kryddor',
   Svartpeppar: 'Kryddor',
   Peppar: 'Kryddor',
@@ -59,9 +140,32 @@ const categoryMap: Record<string, string> = {
   Chiliflakes: 'Kryddor',
   Kanel: 'Kryddor',
   Muskot: 'Kryddor',
+  Kardemumma: 'Kryddor',
+  Spiskummin: 'Kryddor',
+  Curry: 'Kryddor',
+  Tacokrydda: 'Kryddor',
+  // Frys
+  'Frysta ärtor': 'Frys',
+  Wokgrönsaker: 'Frys',
+  Glass: 'Frys',
+  Köttbullar: 'Frys',
 }
 
-const categoryOrder = ['Kött & Fisk', 'Mejeri', 'Grönsaker', 'Skafferi', 'Kryddor', 'Egna varor']
+const categoryOrder = [
+  'Kött & Fisk',
+  'Mejeri & Ägg',
+  'Frukt',
+  'Grönsaker',
+  'Färska örter',
+  'Bröd',
+  'Pasta, ris & spannmål',
+  'Konserver',
+  'Såser & olja',
+  'Kryddor',
+  'Frys',
+  'Övrigt',
+  'Egna varor',
+]
 
 /** Build a deterministic UUID-format id for mocks (matches backend prefixedUUIDPattern). */
 function mockCustomId(seq: number): string {
@@ -123,7 +227,7 @@ function buildShoppingList(menuId: string): ShoppingList {
   let idx = 0
 
   for (const [name, { amount, unit }] of ingredients) {
-    const category = categoryMap[name] ?? 'Skafferi'
+    const category = categoryMap[name] ?? 'Övrigt'
     let items = groups.get(category)
     if (!items) {
       items = []

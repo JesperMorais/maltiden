@@ -382,6 +382,66 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
+  /**
+   * Swap a single day's recipe — optimistic update + PUT /menus/current.
+   * Rolls back on error.
+   */
+  async function swapRecipeForDay(date: string, newRecipeId: string): Promise<boolean> {
+    if (!dashboardData.value || !currentMenuId.value) return false
+
+    const menu = dashboardData.value.weeklyMenu
+    const dayIndex = menu.findIndex((d) => d.date === date)
+    if (dayIndex === -1) return false
+
+    const targetDay = menu[dayIndex]
+    if (!targetDay) return false
+
+    const previousMeal = targetDay.meal ? { ...targetDay.meal } : null
+    const previousTodaysMeal = dashboardData.value.todaysMeal
+      ? { ...dashboardData.value.todaysMeal }
+      : null
+
+    // Optimistic placeholder — fetch full recipe asynchronously for name/emoji.
+    const portions = previousMeal?.portions ?? 4
+    targetDay.meal = {
+      id: newRecipeId,
+      name: previousMeal?.name ?? 'Byter recept…',
+      emoji: previousMeal?.emoji,
+      portions,
+    }
+    if (targetDay.isToday) {
+      dashboardData.value.todaysMeal = targetDay.meal
+    }
+
+    const days: SaveMenuDay[] = menu.map((d) => ({
+      date: d.date,
+      recipeId: d.date === date ? newRecipeId : d.meal?.id,
+      servings: d.meal?.portions ?? 4,
+      skip: d.isSkipped && d.date !== date,
+    }))
+
+    try {
+      const savedMenu = await saveMenu(days)
+      const transformed = transformMenuToDashboard(savedMenu)
+      if (dashboardData.value) {
+        dashboardData.value.weeklyMenu = transformed.weeklyMenu
+        dashboardData.value.todaysMeal = transformed.todaysMeal
+      }
+      await refreshShoppingList()
+      return true
+    } catch (e) {
+      // Roll back
+      if (dashboardData.value) {
+        const rollbackDay = dashboardData.value.weeklyMenu[dayIndex]
+        if (rollbackDay) rollbackDay.meal = previousMeal
+        if (targetDay.isToday) dashboardData.value.todaysMeal = previousTodaysMeal
+      }
+      error.value = 'Kunde inte byta recept. Försök igen.'
+      console.error('swapRecipeForDay failed:', e)
+      return false
+    }
+  }
+
   function clearError() {
     error.value = null
   }
@@ -459,6 +519,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     fetchDashboard,
     updateMemberLocally,
     updateHouseholdName,
+    swapRecipeForDay,
     clearError
   }
 })
