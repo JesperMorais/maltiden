@@ -15,6 +15,7 @@ const MOBILE_SPECS = [
   '**/accessibility.spec.ts',
   '**/shopping-list.spec.ts',
   '**/recipes.spec.ts',
+  '**/about.spec.ts',
 ]
 
 export default defineConfig({
