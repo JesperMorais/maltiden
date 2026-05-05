@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BackLink from '@/components/common/BackLink.vue'
@@ -7,8 +7,11 @@ import { UtensilsCrossed } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 import { useToast } from '@/composables/useToast'
-import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
 import BaseThemeToggle from '@/components/common/BaseThemeToggle.vue'
+
+const WavesBackground = defineAsyncComponent(
+  () => import('@/components/vue-bits/WavesBackground.vue'),
+)
 
 const router = useRouter()
 const userStore = useUserStore()
