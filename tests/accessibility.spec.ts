@@ -79,6 +79,13 @@ test.describe('Accessibility: Logged-out views', () => {
     const violations = await runAxeOnView(page, 'Register page')
     reportViolations('Register page', violations)
   })
+
+  test('About page', async ({ page }) => {
+    await page.goto('/about')
+    await page.waitForTimeout(1000)
+    const violations = await runAxeOnView(page, 'About page')
+    reportViolations('About page', violations)
+  })
 })
 
 // ─── Logged-in views ──────────────────────────────────────────────
