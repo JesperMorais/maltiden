@@ -111,8 +111,6 @@ function handleCloseInvite() {
 }
 
 async function handleRemoveMember(memberId: string) {
-  if (!confirm('Vill du ta bort den här medlemmen från hushållet?')) return
-
   const household = dashboardStore.dashboardData?.household
   if (!household) return
 
