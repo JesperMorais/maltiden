@@ -148,6 +148,7 @@ npm run test                      # Run tests (vitest)
 | `SENTRY_DSN` | No | — | Sentry DSN for backend error tracking. Auto-set by Fly extension `flyctl ext sentry create`. |
 | `FLY_APP_NAME` | No | — | Auto-set by Fly; used as Sentry environment tag. |
 | `FLY_MACHINE_VERSION` | No | — | Auto-set by Fly; used as Sentry release tag. |
+| `SENTRY_DEBUG_ENDPOINT` | No | — | Set to `true` to enable GET /debug/sentry (triggers panic → Sentry). For quarterly health checks only. Remove or leave unset in production. |
 
 ### Frontend
 | Variable | Description |

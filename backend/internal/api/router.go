@@ -195,6 +195,12 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 		http.HandlerFunc(deps.feedback.Create),
 	))
 
+	if os.Getenv("SENTRY_DEBUG_ENDPOINT") == "true" {
+		mux.HandleFunc("GET /debug/sentry", func(w http.ResponseWriter, r *http.Request) {
+			panic("sentry smoke test")
+		})
+	}
+
 	// Get CORS origins from environment or use development defaults
 	corsOrigins := os.Getenv("CORS_ORIGINS")
 	if corsOrigins == "" {
