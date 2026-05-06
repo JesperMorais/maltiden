@@ -2,6 +2,16 @@
 
 Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
+## Recent Changes (PR #190)
+
+**Documentation corrections (no backend changes):**
+
+- `POST /auth/register` — fixed error codes: `email_taken` (400) was incorrect; actual backend returns `email_already_exists` (409). Added missing `invalid_email` (400) and `weak_password` (400) errors. Added optional `lastName` and `householdName` request fields.
+- `POST /shopping-list/items` — added missing `too_many_items` (400) error (triggered when a menu already has 500 custom items).
+- Error table: added `email_already_exists`, `invalid_email`, `too_many_items` entries.
+
+---
+
 ## Recent Changes (PR #177)
 
 **New Endpoints:**
@@ -114,8 +124,10 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 // Request
 {
   "email": "anna@example.com",
-  "password": "minst8tecken",
-  "name": "Anna"
+  "password": "minst8tecken",   // min 8 characters
+  "name": "Anna",
+  "lastName": "Svensson",       // optional — used to auto-generate household name
+  "householdName": "Familjen Svensson"  // optional — overrides auto-generated name
 }
 
 // Response 201
@@ -129,8 +141,14 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
   }
 }
 
-// Error 400
-{ "error": "email_taken" }
+// Error 400 — email format is invalid
+{ "error": "invalid_email" }
+
+// Error 400 — password shorter than 8 characters
+{ "error": "weak_password" }
+
+// Error 409 — email already registered
+{ "error": "email_already_exists" }
 ```
 
 ### POST /auth/login
@@ -699,6 +717,9 @@ Add a custom item to the shopping list. **Auth required.**
 // Error 401 — missing or invalid auth token
 { "error": "unauthorized" }
 
+// Error 400 — menu already has 500 custom items
+{ "error": "too_many_items" }
+
 // Error 403 — menu belongs to a different household (cross-tenant access)
 { "error": "forbidden" }
 
@@ -853,8 +874,9 @@ Alla errors följer samma struktur:
 | `invalid_reset_token` | 400 | Reset-token finns inte |
 | `expired_reset_token` | 400 | Reset-token har gått ut (>1h sedan skapandet) |
 | `used_reset_token` | 400 | Reset-token har redan använts |
-| `weak_password` | 400 | Nytt lösenord är kortare än 8 tecken |
-| `email_taken` | 400 | Email redan registrerad |
+| `weak_password` | 400 | Lösenord kortare än 8 tecken (vid registrering eller lösenordsbyte) |
+| `invalid_email` | 400 | Ogiltig email-adress vid registrering |
+| `email_already_exists` | 409 | Email redan registrerad |
 | `code_required` | 400 | Inbjudningskod saknas i requesten |
 | `invalid_code` | 400 | Inbjudningskod ogiltig/utgången |
 | `already_member` | 409 | Användaren är redan medlem i ett hushåll |
@@ -869,6 +891,7 @@ Alla errors följer samma struktur:
 | `instructions_required` | 400 | Instruktioner saknas |
 | `name_too_long` | 400 | Receptnamnet är för långt |
 | `too_many_ingredients` | 400 | För många ingredienser |
+| `too_many_items` | 400 | Shoppinglistan har nått maxgränsen (500 egna varor per meny) |
 | `cannot_remove` | 403 | Kan inte ta bort sig själv eller ägaren |
 | `forbidden` | 403 | Åtkomst nekad (otillräckliga rättigheter eller fel hushåll) |
 | `menu_not_found` | 404 | Angivet menuId hittades inte |
