@@ -655,12 +655,16 @@ Use this to replace the generated menu's day assignments without regenerating fr
 // Error 403 (menu belongs to a different household)
 { "error": "forbidden" }
 
-// Error 404
+// Error 404 (menu not found)
 { "error": "menu_not_found" }
+
+// Error 404 (item not found or belongs to a different household)
+{ "error": "not_found" }
 ```
 
 ### POST /shopping-list/items
 Add a custom item to the shopping list. **Auth required.**
+**Rate limited:** 0.5 req/sec sustained, burst 30 (~30 items/min max).
 ```json
 // Query: ?menuId=menu_001   — REQUIRED
 
@@ -701,6 +705,9 @@ Add a custom item to the shopping list. **Auth required.**
 
 // Error 403 — menu belongs to a different household (cross-tenant access)
 { "error": "forbidden" }
+
+// Error 400 — household has reached the custom-item limit for this menu
+{ "error": "too_many_items" }
 
 // Error 404 — menu does not exist
 { "error": "menu_not_found" }
@@ -863,12 +870,16 @@ Alla errors följer samma struktur:
 | `not_found` | 404 | Resursen finns inte |
 | `no_active_menu` | 404 | Ingen aktiv meny |
 | `invalid_days` | 400 | Ogiltigt dagformat eller antal dagar |
-| `name_required` | 400 | Receptnamn saknas |
+| `name_required` | 400 | Receptnamn eller varunamn saknas |
 | `invalid_servings` | 400 | Ogiltigt antal portioner |
 | `ingredients_required` | 400 | Ingredienser saknas |
 | `instructions_required` | 400 | Instruktioner saknas |
-| `name_too_long` | 400 | Receptnamnet är för långt |
+| `name_too_long` | 400 | Receptnamnet eller varunamnet är för långt |
 | `too_many_ingredients` | 400 | För många ingredienser |
+| `unit_too_long` | 400 | Enhet överstiger 20 tecken (anpassad varupost) |
+| `invalid_amount` | 400 | Mängd är NaN eller Infinity (anpassad varupost) |
+| `amount_too_large` | 400 | Mängd överstiger 100 000 (anpassad varupost) |
+| `too_many_items` | 400 | Hushållet har nått gränsen för anpassade varuposter för denna meny |
 | `cannot_remove` | 403 | Kan inte ta bort sig själv eller ägaren |
 | `forbidden` | 403 | Åtkomst nekad (otillräckliga rättigheter eller fel hushåll) |
 | `menu_not_found` | 404 | Angivet menuId hittades inte |
