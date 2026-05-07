@@ -3,16 +3,35 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"net/http"
+	"runtime/debug"
 	"time"
 )
 
 type HealthHandler struct {
-	db *sql.DB
+	db      *sql.DB
+	version string
 }
 
 func NewHealthHandler(db *sql.DB) *HealthHandler {
-	return &HealthHandler{db: db}
+	return &HealthHandler{db: db, version: readBuildVersion()}
+}
+
+// readBuildVersion returns the VCS revision embedded by `go build` when run
+// inside a git checkout, or "unknown" if unavailable (e.g. -buildvcs=false,
+// `go test` without VCS info).
+func readBuildVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown"
+	}
+	for _, s := range info.Settings {
+		if s.Key == "vcs.revision" && s.Value != "" {
+			return s.Value
+		}
+	}
+	return "unknown"
 }
 
 func (h *HealthHandler) Check(w http.ResponseWriter, r *http.Request) {
@@ -24,10 +43,20 @@ func (h *HealthHandler) Check(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.db.PingContext(ctx); err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte(`{"status":"error","db":"disconnected"}`))
+		body, _ := json.Marshal(map[string]string{
+			"status":  "error",
+			"db":      "disconnected",
+			"version": h.version,
+		})
+		w.Write(body)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"ok","db":"connected"}`))
+	body, _ := json.Marshal(map[string]string{
+		"status":  "ok",
+		"db":      "connected",
+		"version": h.version,
+	})
+	w.Write(body)
 }
