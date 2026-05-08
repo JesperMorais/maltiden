@@ -8,6 +8,7 @@ primary_region = 'arn'
 
 [env]
   DATABASE_PATH = '/app/data/maltiden.db'
+  FRONTEND_URL = 'https://maltiden.fly.dev'
 
 [build]
   # FE Sentry DSN. Public-by-design (baked into the JS bundle, write-only event
