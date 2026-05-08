@@ -83,7 +83,7 @@ func main() {
 		Addr:         ":" + port,
 		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 30 * time.Second, // higher to allow Claude API proxy calls
+		WriteTimeout: 90 * time.Second, // must exceed middleware.ParserTimeout (60s) so TimeoutHandler can write 503 before TCP close
 		IdleTimeout:  60 * time.Second,
 		MaxHeaderBytes: 1 << 20, // 1 MB max header size
 	}
