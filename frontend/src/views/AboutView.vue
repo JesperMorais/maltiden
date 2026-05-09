@@ -188,7 +188,6 @@ import FadeContent from '@/components/vue-bits/FadeContent.vue'
 
 .about-nav :deep(.back-link) {
   background: var(--bg-card);
-  backdrop-filter: blur(10px);
 }
 
 .about-nav :deep(.back-link:hover) {
