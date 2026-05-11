@@ -9,11 +9,23 @@ import (
 
 const requestIDKey contextKey = "requestID"
 
+// maxRequestIDLen caps the length of a client-supplied X-Request-ID before
+// we accept it into our log/header pipeline. Without this, a malicious
+// client could send a megabyte-long header value that ends up echoed into
+// every structured log line for that request. Generated IDs are always
+// 16 hex chars (8 bytes), so 128 is generous-but-bounded.
+const maxRequestIDLen = 128
+
 // RequestID generates a unique request ID and adds it to the context and response headers
 func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Reuse incoming X-Request-ID if present, otherwise generate one
+		// Reuse incoming X-Request-ID if present (and within size cap),
+		// otherwise generate one. Oversized inbound IDs are silently
+		// replaced with a fresh generated ID — no need to error the request.
 		requestID := r.Header.Get("X-Request-ID")
+		if len(requestID) > maxRequestIDLen {
+			requestID = ""
+		}
 		if requestID == "" {
 			// Generate a short request ID (8 bytes = 16 hex chars)
 			b := make([]byte, 8)
