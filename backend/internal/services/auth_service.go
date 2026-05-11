@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 )
 
@@ -88,6 +89,7 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 	// Begin transaction for atomic registration
 	tx, err := s.db.Begin()
 	if err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 	defer tx.Rollback()
@@ -140,6 +142,7 @@ func (s *AuthService) Register(req domain.RegisterRequest) (*domain.AuthResponse
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 

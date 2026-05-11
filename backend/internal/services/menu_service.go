@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 )
 
@@ -139,6 +140,7 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 	}
 
 	if err := s.menuStorage.Create(menu); err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 
@@ -172,6 +174,7 @@ func (s *MenuService) UpdateCurrent(householdID string, req domain.UpdateMenuReq
 	menu.Days = req.Days
 
 	if err := s.menuStorage.Update(menu); err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 

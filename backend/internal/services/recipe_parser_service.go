@@ -8,6 +8,8 @@ import (
 	"maltiden/pkg/claude"
 	"strings"
 	"time"
+
+	"github.com/getsentry/sentry-go"
 )
 
 var recipeSchema = map[string]interface{}{
@@ -116,6 +118,7 @@ func (s *RecipeParserService) ParseRecipe(rawText string) (*domain.ParseRecipeRe
 
 	resp, err := s.claudeClient.SendMessage(ctx, req)
 	if err != nil {
+		sentry.CaptureException(err)
 		return nil, fmt.Errorf("claude API error: %w", err)
 	}
 
@@ -134,6 +137,7 @@ func (s *RecipeParserService) ParseRecipe(rawText string) (*domain.ParseRecipeRe
 
 	var parsed parsedRecipeResponse
 	if err := json.Unmarshal([]byte(text), &parsed); err != nil {
+		sentry.CaptureException(err)
 		return nil, fmt.Errorf("failed to parse Claude response: %w", err)
 	}
 
