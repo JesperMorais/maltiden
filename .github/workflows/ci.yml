@@ -6,6 +6,16 @@ on:
   pull_request:
     branches: [main, dev]
 
+# Dependabot PRs run with a read-only GITHUB_TOKEN by default (since 2021).
+# dorny/paths-filter@v4 queries the Pull Requests API to compute changed files
+# and needs `pull-requests: read` to do that — without this block, dependabot
+# PRs fail the "Detect changes" job with no step output, which cascades and
+# skips backend/frontend/deploy. `contents: read` is the standard minimum so
+# actions/checkout can read the ref. Reads only — no write surface added.
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   changes:
     name: Detect changes
