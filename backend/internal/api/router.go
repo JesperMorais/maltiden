@@ -208,12 +208,13 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	// The global 10s Timeout is bypassed for recipe parser routes — those
 	// already have a per-route 60s timeout applied above, and wrapping them
 	// in an outer 10s deadline would defeat that.
+	timeoutHandler := middleware.Timeout(mux)
 	timed := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost && (r.URL.Path == "/recipes/parse" || r.URL.Path == "/recipes/parse-and-save") {
 			mux.ServeHTTP(w, r)
 			return
 		}
-		middleware.Timeout(mux).ServeHTTP(w, r)
+		timeoutHandler.ServeHTTP(w, r)
 	})
 	return middleware.CORS(allowedOrigins)(middleware.RequestID(timed))
 }

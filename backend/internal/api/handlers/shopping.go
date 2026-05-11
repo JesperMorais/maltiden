@@ -35,26 +35,17 @@ func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// IDOR protection: verify menu belongs to user's household
-	menuHouseholdID, err := h.menuStorage.GetHouseholdIDByMenuID(menuID)
-	if err != nil {
-		log.Printf("ERROR [GetShoppingList] %v", err)
-		WriteError(w, http.StatusInternalServerError, "internal_error")
-		return
-	}
-	if menuHouseholdID == "" {
-		WriteError(w, http.StatusNotFound, "menu_not_found")
-		return
-	}
-	if menuHouseholdID != householdID {
-		WriteError(w, http.StatusForbidden, "forbidden")
-		return
-	}
-
 	list, err := h.shoppingService.GetShoppingList(menuID, householdID)
 	if err != nil {
-		log.Printf("ERROR [GetShoppingList] %v", err)
-		WriteError(w, http.StatusInternalServerError, "internal_error")
+		switch {
+		case errors.Is(err, domain.ErrMenuNotFound):
+			WriteError(w, http.StatusNotFound, "menu_not_found")
+		case errors.Is(err, domain.ErrForbidden):
+			WriteError(w, http.StatusForbidden, "forbidden")
+		default:
+			log.Printf("ERROR [GetShoppingList] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
 		return
 	}
 

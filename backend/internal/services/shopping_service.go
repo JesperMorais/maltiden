@@ -407,6 +407,18 @@ var ingredientCategories = map[string]string{
 }
 
 func (s *ShoppingService) GetShoppingList(menuID, householdID string) (*domain.ShoppingList, error) {
+	// IDOR protection: verify menu belongs to caller's household.
+	menuHouseholdID, err := s.menuStorage.GetHouseholdIDByMenuID(menuID)
+	if err != nil {
+		return nil, err
+	}
+	if menuHouseholdID == "" {
+		return nil, domain.ErrMenuNotFound
+	}
+	if menuHouseholdID != householdID {
+		return nil, domain.ErrForbidden
+	}
+
 	// Get menu
 	menu, err := s.menuStorage.GetByID(menuID)
 	if err != nil {
