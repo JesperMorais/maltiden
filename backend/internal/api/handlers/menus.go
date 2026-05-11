@@ -7,6 +7,8 @@ import (
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
 	"net/http"
+
+	"github.com/getsentry/sentry-go"
 )
 
 type MenuHandler struct {
@@ -38,6 +40,7 @@ func (h *MenuHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrInvalidServings):
 			WriteError(w, http.StatusBadRequest, "invalid_servings")
 		default:
+			sentry.CaptureException(err)
 			log.Printf("ERROR [GenerateMenu] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
@@ -72,6 +75,7 @@ func (h *MenuHandler) UpdateCurrent(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrInvalidDays):
 			WriteError(w, http.StatusBadRequest, "invalid_days")
 		default:
+			sentry.CaptureException(err)
 			log.Printf("ERROR [UpdateCurrentMenu] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
@@ -91,6 +95,7 @@ func (h *MenuHandler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 
 	menu, err := h.menuService.GetCurrent(householdID)
 	if err != nil {
+		sentry.CaptureException(err)
 		log.Printf("ERROR [GetCurrentMenu] %v", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
