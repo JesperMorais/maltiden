@@ -22,6 +22,7 @@ const toast = useToast()
 // Local state
 const showUnsavedWarning = ref(false)
 const unsavedModalRef = ref<HTMLElement | null>(null)
+const lastFailedAction = ref<'initial' | 'regenerate' | null>(null)
 
 useFocusTrap(unsavedModalRef, {
   isActive: showUnsavedWarning,
@@ -51,6 +52,8 @@ const showGrid = computed(() => {
  * Handle initial menu generation with slot machine animation
  */
 async function handleInitialGenerate() {
+  lastFailedAction.value = null
+  store.setError('')
   // Initialize week so we have dates to work with
   store.initializeWeek()
   store.startSlotAnimation()
@@ -80,6 +83,7 @@ async function handleInitialGenerate() {
     await slotMachine.landSequentially(finalRecipes, store.lockedDays)
     store.onSlotAnimationComplete()
   } catch {
+    lastFailedAction.value = 'initial'
     toast.error('Kunde inte generera meny. Försök igen.')
     store.setError('Kunde inte generera meny. Försök igen.')
     slotMachine.reset()
@@ -91,6 +95,8 @@ async function handleInitialGenerate() {
  * Handle regenerating unlocked days with slot machine animation
  */
 async function handleRegenerate() {
+  lastFailedAction.value = null
+  store.setError('')
   store.startSlotAnimation()
 
   // Start rolling only unlocked days
@@ -117,10 +123,19 @@ async function handleRegenerate() {
     await slotMachine.landSequentially(finalRecipes, store.lockedDays)
     store.onSlotAnimationComplete()
   } catch {
+    lastFailedAction.value = 'regenerate'
     toast.error('Kunde inte generera nya recept. Försök igen.')
     store.setError('Kunde inte generera nya recept. Försök igen.')
     slotMachine.reset()
     store.onSlotAnimationComplete()
+  }
+}
+
+function handleRetry() {
+  if (lastFailedAction.value === 'regenerate') {
+    handleRegenerate()
+  } else {
+    handleInitialGenerate()
   }
 }
 
@@ -216,7 +231,10 @@ onBeforeRouteLeave((to, from, next) => {
         <GenerateMenuSkeleton v-if="showSkeleton" :day-count="prefsStore.activeDayCount" />
 
         <!-- Empty state -->
-        <GenerateMenuEmptyState v-else-if="!showGrid" @generate="handleInitialGenerate" />
+        <GenerateMenuEmptyState v-else-if="!showGrid && !store.error" @generate="handleInitialGenerate" />
+
+        <!-- Error state: replaces the grid on failure -->
+        <ErrorState v-else-if="store.error" :description="store.error" @retry="handleRetry" />
 
         <!-- Menu grid -->
         <div v-else class="menu-grid">
@@ -232,9 +250,6 @@ onBeforeRouteLeave((to, from, next) => {
             @toggle-lock="handleLockToggle(day.date)"
           />
         </div>
-
-        <!-- Error state -->
-        <ErrorState v-if="store.error" :description="store.error" @retry="handleInitialGenerate" />
       </div>
     </main>
 
