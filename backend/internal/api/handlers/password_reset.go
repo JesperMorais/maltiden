@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"github.com/getsentry/sentry-go"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -31,6 +32,7 @@ func (h *PasswordResetHandler) ForgotPassword(w http.ResponseWriter, r *http.Req
 	if err := h.service.RequestReset(req.Email); err != nil {
 		// Log internally — never surface to client.
 		log.Printf("ERROR [ForgotPassword] %v", err)
+		sentry.CaptureException(err)
 	}
 
 	WriteJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -57,6 +59,7 @@ func (h *PasswordResetHandler) ResetPassword(w http.ResponseWriter, r *http.Requ
 			WriteError(w, http.StatusBadRequest, "weak_password")
 		default:
 			log.Printf("ERROR [ResetPassword] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return

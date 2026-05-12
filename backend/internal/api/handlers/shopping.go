@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"errors"
+	"github.com/getsentry/sentry-go"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -44,6 +45,7 @@ func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request
 			WriteError(w, http.StatusForbidden, "forbidden")
 		default:
 			log.Printf("ERROR [GetShoppingList] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -93,6 +95,7 @@ func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusNotFound, "not_found")
 		default:
 			log.Printf("ERROR [UpdateShoppingItem] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -139,6 +142,7 @@ func (h *ShoppingHandler) AddCustomItem(w http.ResponseWriter, r *http.Request) 
 			WriteError(w, http.StatusBadRequest, "too_many_items")
 		default:
 			log.Printf("ERROR [AddCustomItem] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -168,6 +172,7 @@ func (h *ShoppingHandler) DeleteCustomItem(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		log.Printf("ERROR [DeleteCustomItem] %v", err)
+		sentry.CaptureException(err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}

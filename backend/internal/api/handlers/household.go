@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"github.com/getsentry/sentry-go"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -27,6 +28,7 @@ func (h *HouseholdHandler) GetMyHousehold(w http.ResponseWriter, r *http.Request
 	household, err := h.householdService.GetMyHousehold(userID)
 	if err != nil {
 		log.Printf("ERROR [GetMyHousehold] %v", err)
+		sentry.CaptureException(err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
@@ -65,6 +67,7 @@ func (h *HouseholdHandler) UpdateMyHousehold(w http.ResponseWriter, r *http.Requ
 			WriteError(w, http.StatusNotFound, "not_found")
 		default:
 			log.Printf("ERROR [UpdateMyHousehold] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -91,6 +94,7 @@ func (h *HouseholdHandler) CreateInvite(w http.ResponseWriter, r *http.Request) 
 	resp, err := h.householdService.CreateInvite(householdID)
 	if err != nil {
 		log.Printf("ERROR [CreateInvite] %v", err)
+		sentry.CaptureException(err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
@@ -121,6 +125,7 @@ func (h *HouseholdHandler) JoinHousehold(w http.ResponseWriter, r *http.Request)
 			WriteError(w, http.StatusConflict, "already_member")
 		default:
 			log.Printf("ERROR [JoinHousehold] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -139,6 +144,7 @@ func (h *HouseholdHandler) GetMemberStatuses(w http.ResponseWriter, r *http.Requ
 	resp, err := h.householdService.GetMemberStatuses(householdID)
 	if err != nil {
 		log.Printf("ERROR [GetMemberStatuses] %v", err)
+		sentry.CaptureException(err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
@@ -175,6 +181,7 @@ func (h *HouseholdHandler) UpdateMemberStatus(w http.ResponseWriter, r *http.Req
 			WriteError(w, http.StatusNotFound, "not_found")
 		default:
 			log.Printf("ERROR [UpdateMemberStatus] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -207,6 +214,7 @@ func (h *HouseholdHandler) RemoveMember(w http.ResponseWriter, r *http.Request) 
 			WriteError(w, http.StatusNotFound, "not_found")
 		default:
 			log.Printf("ERROR [RemoveMember] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"github.com/getsentry/sentry-go"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -87,6 +88,7 @@ func (h *OffersHandler) SearchOffers(w http.ResponseWriter, r *http.Request) {
 	result, err := h.tjekService.SearchOffers(req)
 	if err != nil {
 		log.Printf("ERROR [SearchOffers] %v", err)
+		sentry.CaptureException(err)
 		WriteError(w, http.StatusBadGateway, "service_unavailable")
 		return
 	}
@@ -106,6 +108,7 @@ func (h *OffersHandler) GetDiscounts(w http.ResponseWriter, r *http.Request) {
 	result, err := h.tjekService.GetTopDiscounts(lat, lng, radius, excludeStores)
 	if err != nil {
 		log.Printf("ERROR [GetDiscounts] %v", err)
+		sentry.CaptureException(err)
 		WriteError(w, http.StatusBadGateway, "service_unavailable")
 		return
 	}
@@ -123,6 +126,7 @@ func (h *OffersHandler) GetStores(w http.ResponseWriter, r *http.Request) {
 	stores, err := h.tjekService.GetAvailableStores(lat, lng, radius)
 	if err != nil {
 		log.Printf("ERROR [GetStores] %v", err)
+		sentry.CaptureException(err)
 		WriteError(w, http.StatusBadGateway, "service_unavailable")
 		return
 	}

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"github.com/getsentry/sentry-go"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -42,6 +43,7 @@ func (h *FeedbackHandler) Create(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusTooManyRequests, "feedback_rate_limited")
 		default:
 			log.Printf("ERROR [CreateFeedback] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return

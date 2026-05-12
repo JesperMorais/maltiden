@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"github.com/getsentry/sentry-go"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -39,6 +40,7 @@ func (h *MenuHandler) Generate(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusBadRequest, "invalid_servings")
 		default:
 			log.Printf("ERROR [GenerateMenu] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -73,6 +75,7 @@ func (h *MenuHandler) UpdateCurrent(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusBadRequest, "invalid_days")
 		default:
 			log.Printf("ERROR [UpdateCurrentMenu] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -92,6 +95,7 @@ func (h *MenuHandler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 	menu, err := h.menuService.GetCurrent(householdID)
 	if err != nil {
 		log.Printf("ERROR [GetCurrentMenu] %v", err)
+		sentry.CaptureException(err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"github.com/getsentry/sentry-go"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -33,6 +34,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusBadRequest, "invalid_email")
 		default:
 			log.Printf("ERROR [Register] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -53,6 +55,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusUnauthorized, "invalid_credentials")
 		} else {
 			log.Printf("ERROR [Login] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return

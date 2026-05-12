@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"github.com/getsentry/sentry-go"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -30,6 +31,7 @@ func (h *RecipeHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	recipes, err := h.recipeService.GetAll(filter, householdID)
 	if err != nil {
 		log.Printf("ERROR [GetAllRecipes] %v", err)
+		sentry.CaptureException(err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
@@ -49,6 +51,7 @@ func (h *RecipeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	recipe, err := h.recipeService.GetByID(id)
 	if err != nil {
 		log.Printf("ERROR [GetRecipeByID] %v", err)
+		sentry.CaptureException(err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
@@ -99,6 +102,7 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusBadRequest, "tag_too_long")
 		default:
 			log.Printf("ERROR [UpdateRecipe] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -124,6 +128,7 @@ func (h *RecipeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusForbidden, "forbidden")
 		default:
 			log.Printf("ERROR [DeleteRecipe] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -161,6 +166,7 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusBadRequest, "tag_too_long")
 		default:
 			log.Printf("ERROR [CreateRecipe] %v", err)
+			sentry.CaptureException(err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
