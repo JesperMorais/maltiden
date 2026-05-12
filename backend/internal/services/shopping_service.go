@@ -9,6 +9,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 )
 
@@ -422,6 +423,7 @@ func (s *ShoppingService) GetShoppingList(menuID, householdID string) (*domain.S
 	// Get menu
 	menu, err := s.menuStorage.GetByID(menuID)
 	if err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 	if menu == nil {
@@ -431,6 +433,7 @@ func (s *ShoppingService) GetShoppingList(menuID, householdID string) (*domain.S
 	// Get checked items
 	checkedItems, err := s.shoppingStorage.GetCheckedItems(menuID)
 	if err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 
@@ -635,6 +638,7 @@ func (s *ShoppingService) CreateCustomItem(menuID, householdID string, req domai
 	// exceed the limit.
 	inserted, err := s.shoppingStorage.CreateCustomItemWithCap(item, 500)
 	if err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 	if !inserted {
