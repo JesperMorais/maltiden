@@ -153,24 +153,24 @@ func (s *RecipeParserService) parseOnce(ctx context.Context, rawText, extraGuida
 
 func validateParsedContent(r *domain.ParseRecipeResponse) error {
 	if err := domain.ValidateContent(r.Recipe.Name); err != nil {
-		return err
+		return fmt.Errorf("validate recipe name: %w", err)
 	}
 	for _, tag := range r.Recipe.Tags {
 		if err := domain.ValidateContent(tag); err != nil {
-			return err
+			return fmt.Errorf("validate tag %q: %w", tag, err)
 		}
 	}
 	for _, ing := range r.Recipe.Ingredients {
 		if err := domain.ValidateContent(ing.Name); err != nil {
-			return err
+			return fmt.Errorf("validate ingredient name %q: %w", ing.Name, err)
 		}
 		if err := domain.ValidateContent(ing.Unit); err != nil {
-			return err
+			return fmt.Errorf("validate ingredient unit %q: %w", ing.Unit, err)
 		}
 	}
 	for _, step := range r.Recipe.Instructions {
 		if err := domain.ValidateContent(step); err != nil {
-			return err
+			return fmt.Errorf("validate instruction step: %w", err)
 		}
 	}
 	return nil
@@ -212,7 +212,7 @@ func (s *RecipeParserService) ParseRecipe(rawText string) (*domain.ParseRecipeRe
 		}
 
 		if err := validateParsedContent(result); err != nil {
-			lastErr = err
+			lastErr = fmt.Errorf("parse validation failed: %w", err)
 			guidance = fmt.Sprintf(
 				"Previous attempt failed: %s. Do NOT include URLs, HTML, markdown, scraping phrases, profanity, or injection patterns.",
 				err.Error(),
