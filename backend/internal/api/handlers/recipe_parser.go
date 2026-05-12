@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -41,6 +42,10 @@ func (h *RecipeParserHandler) ParseRecipe(w http.ResponseWriter, r *http.Request
 
 	result, err := h.parserService.ParseRecipe(req.RawText)
 	if err != nil {
+		if isContentSentinel(err) {
+			WriteError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		slog.Error("ParseRecipe failed", "error", err)
 		WriteError(w, http.StatusInternalServerError, "parse_failed")
 		return
@@ -67,6 +72,10 @@ func (h *RecipeParserHandler) ParseAndSave(w http.ResponseWriter, r *http.Reques
 
 	parsed, err := h.parserService.ParseRecipe(req.RawText)
 	if err != nil {
+		if isContentSentinel(err) {
+			WriteError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		slog.Error("ParseAndSave parse failed", "error", err)
 		WriteError(w, http.StatusInternalServerError, "parse_failed")
 		return
@@ -85,4 +94,13 @@ func (h *RecipeParserHandler) ParseAndSave(w http.ResponseWriter, r *http.Reques
 		"confidence": parsed.Confidence,
 		"warnings":   parsed.Warnings,
 	})
+}
+
+func isContentSentinel(err error) bool {
+	return errors.Is(err, domain.ErrContainsHTML) ||
+		errors.Is(err, domain.ErrContainsURL) ||
+		errors.Is(err, domain.ErrContainsMarkdown) ||
+		errors.Is(err, domain.ErrContainsScraping) ||
+		errors.Is(err, domain.ErrContainsProfanity) ||
+		errors.Is(err, domain.ErrContainsInjection)
 }

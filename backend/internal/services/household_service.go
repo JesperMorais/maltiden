@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 )
 
@@ -50,6 +51,7 @@ func (s *HouseholdService) CreateInvite(householdID string) (*domain.CreateInvit
 	}
 
 	if err := s.householdStorage.CreateInviteCode(invite); err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 
@@ -88,6 +90,7 @@ func (s *HouseholdService) JoinHousehold(userID string, req domain.JoinHousehold
 	// Begin transaction for the mutating operations
 	tx, err := s.householdStorage.DB().Begin()
 	if err != nil {
+		sentry.CaptureException(err)
 		return nil, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback()
@@ -232,6 +235,7 @@ func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUse
 	// (member removed but JWT not invalidated if second write fails)
 	tx, err := s.householdStorage.DB().Begin()
 	if err != nil {
+		sentry.CaptureException(err)
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback()
