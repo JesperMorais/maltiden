@@ -6,6 +6,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 )
 
@@ -120,6 +121,7 @@ func (s *RecipeService) Update(id string, householdID string, req domain.UpdateR
 	}
 
 	if err := s.recipeStorage.Update(existing); err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 
@@ -199,6 +201,7 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 	}
 
 	if err := s.recipeStorage.Create(recipe); err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 
