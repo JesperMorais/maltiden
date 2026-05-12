@@ -2,6 +2,19 @@
 
 Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
+## Recent Changes (PR #225)
+
+**Frontend Route Changes:**
+- **Removed** `/offers-poc` route — the OffersView proof-of-concept component has been deleted.
+- **Added** `/konto` route — maps to `AccountView` (auth required, accessible by all roles including guests).
+
+**Shopping List:**
+- `GET /shopping-list` — `menuId` query parameter is now **optional**. When omitted the backend returns the shopping list for the household's current active menu.
+
+**No backend endpoint changes** — no new or removed API routes, no request/response shape changes.
+
+---
+
 ## Recent Changes (PR #177)
 
 **New Endpoints:**
@@ -612,7 +625,7 @@ Use this to replace the generated menu's day assignments without regenerating fr
 
 ### GET /shopping-list
 ```json
-// Query: ?menuId=menu_001   — REQUIRED
+// Query: ?menuId=menu_001   — optional; defaults to the household's current active menu
 
 // Response 200
 {
@@ -899,8 +912,8 @@ The frontend uses Vue Router with the following routes:
 | `/recipes` | RecipesView | Yes | Yes | Unified recipes page with tabs |
 | `/recipes/parse` | *(redirect to /recipes)* | Yes | Yes | Legacy route, redirects to recipes |
 | `/shopping-list` | ShoppingListView | Yes | Yes | Shopping list (members only) |
+| `/konto` | AccountView | Yes | No | Account settings (all authenticated roles) |
 | `/about` | AboutView | No | No | About page |
-| `/offers-poc` | OffersView | No | No | Offers POC page |
 
 **Authentication Guard:**
 - Routes with `requiresAuth: true` redirect to `/login` if not authenticated
