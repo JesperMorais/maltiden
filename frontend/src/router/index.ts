@@ -8,7 +8,6 @@ const LoginView = () => import('@/views/LoginView.vue')
 const DashboardView = () => import('@/views/DashboardView.vue')
 const GenerateMenuView = () => import('@/views/GenerateMenuView.vue')
 const AboutView = () => import('@/views/AboutView.vue')
-const OffersView = () => import('@/views/OffersView.vue')
 const RecipesView = () => import('@/views/RecipesView.vue')
 const ShoppingListView = () => import('@/views/ShoppingListView.vue')
 const AccountView = () => import('@/views/AccountView.vue')
@@ -87,12 +86,6 @@ const router = createRouter({
       name: 'account',
       component: AccountView,
       meta: { transition: 'page-slide', requiresAuth: true }
-    },
-    {
-      path: '/offers-poc',
-      name: 'offers-poc',
-      component: OffersView,
-      meta: { transition: 'page-fade' }
     },
   ],
 })
