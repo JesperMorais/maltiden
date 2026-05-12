@@ -107,6 +107,12 @@ func (s *RecipeService) Update(id string, householdID string, req domain.UpdateR
 		}
 	}
 
+	if err := validateRecipeContent(req.Name, normalizedTags, req.Ingredients, req.Instructions); err != nil {
+		return nil, err
+	}
+	stripUpdateEmoji(&req)
+	normalizedTags = normalizeTags(req.Tags)
+
 	// Update fields on existing recipe
 	existing.Name = req.Name
 	existing.Servings = req.Servings
@@ -182,6 +188,12 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 		}
 	}
 
+	if err := validateRecipeContent(req.Name, normalizedTags, req.Ingredients, req.Instructions); err != nil {
+		return nil, err
+	}
+	stripCreateEmoji(&req)
+	normalizedTags = normalizeTags(req.Tags)
+
 	recipe := &domain.Recipe{
 		ID:           "rec_" + uuid.New().String(),
 		Name:         req.Name,
@@ -203,4 +215,59 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 	}
 
 	return &domain.CreateRecipeResponse{ID: recipe.ID}, nil
+}
+
+func validateRecipeContent(name string, tags []string, ingredients []domain.Ingredient, instructions []string) error {
+	if err := domain.ValidateContent(name); err != nil {
+		return err
+	}
+	for _, tag := range tags {
+		if err := domain.ValidateContent(tag); err != nil {
+			return err
+		}
+	}
+	for _, ing := range ingredients {
+		if err := domain.ValidateContent(ing.Name); err != nil {
+			return err
+		}
+		if err := domain.ValidateContent(ing.Unit); err != nil {
+			return err
+		}
+	}
+	for _, step := range instructions {
+		if err := domain.ValidateContent(step); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func stripCreateEmoji(req *domain.CreateRecipeRequest) {
+	req.Name = domain.StripEmoji(req.Name)
+	for i, tag := range req.Tags {
+		req.Tags[i] = domain.StripEmoji(tag)
+	}
+	for i := range req.Ingredients {
+		req.Ingredients[i].Name = domain.StripEmoji(req.Ingredients[i].Name)
+		req.Ingredients[i].Unit = domain.StripEmoji(req.Ingredients[i].Unit)
+	}
+	for i, step := range req.Instructions {
+		req.Instructions[i] = domain.StripEmoji(step)
+	}
+	// req.Emoji is intentionally untouched
+}
+
+func stripUpdateEmoji(req *domain.UpdateRecipeRequest) {
+	req.Name = domain.StripEmoji(req.Name)
+	for i, tag := range req.Tags {
+		req.Tags[i] = domain.StripEmoji(tag)
+	}
+	for i := range req.Ingredients {
+		req.Ingredients[i].Name = domain.StripEmoji(req.Ingredients[i].Name)
+		req.Ingredients[i].Unit = domain.StripEmoji(req.Ingredients[i].Unit)
+	}
+	for i, step := range req.Instructions {
+		req.Instructions[i] = domain.StripEmoji(step)
+	}
+	// req.Emoji is intentionally untouched
 }
