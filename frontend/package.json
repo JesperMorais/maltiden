@@ -20,7 +20,8 @@
     "format": "prettier --write --experimental-cli src/",
     "test:e2e": "npx --prefix .. playwright test",
     "test:e2e:real": "npx --prefix .. playwright test --config=tests/e2e/playwright.e2e.config.ts",
-    "test:e2e:ui": "npx --prefix .. playwright test --ui"
+    "test:e2e:ui": "npx --prefix .. playwright test --ui",
+    "check:chunks": "node scripts/check-chunk-sizes.mjs"
   },
   "dependencies": {
     "@sentry/vue": "^10.52.0",
