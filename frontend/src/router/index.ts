@@ -94,6 +94,12 @@ const router = createRouter({
       component: OffersView,
       meta: { transition: 'page-fade' }
     },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('@/views/ProfileView.vue'),
+      meta: { transition: 'page-slide', requiresAuth: true }
+    },
   ],
 })
 

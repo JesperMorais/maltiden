@@ -43,6 +43,10 @@ export const useUserStore = defineStore('user', () => {
   )
   const isGuest = computed(() => currentUser.value?.role === 'guest')
   const userName = computed(() => currentUser.value?.name ?? 'Gäst')
+  const userInitial = computed(() => {
+    const source = currentUser.value?.name || currentUser.value?.email || ''
+    return source.charAt(0).toUpperCase() || '?'
+  })
 
   // Actions
   function setUser(user: User) {
@@ -161,6 +165,7 @@ export const useUserStore = defineStore('user', () => {
     isMember,
     isGuest,
     userName,
+    userInitial,
 
     // Actions
     setUser,
