@@ -107,6 +107,12 @@ const router = createRouter({
       component: () => import('@/views/ProfileView.vue'),
       meta: { transition: 'page-slide', requiresAuth: true }
     },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('@/views/SettingsView.vue'),
+      meta: { transition: 'page-slide', requiresAuth: true }
+    },
   ],
 })
 
