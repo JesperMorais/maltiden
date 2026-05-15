@@ -17,16 +17,50 @@ const MobileBottomNav = defineAsyncComponent(() =>
 </script>
 
 <template>
-  <RouterView v-slot="{ Component, route }">
-    <Transition :name="route.meta.transition as string || 'page-fade'" mode="out-in">
-      <component :is="Component" :key="route.path" />
-    </Transition>
-  </RouterView>
+  <a href="#main" class="skip-link">Hoppa till huvudinnehåll</a>
+  <main id="main">
+    <RouterView v-slot="{ Component, route }">
+      <Transition :name="route.meta.transition as string || 'page-fade'" mode="out-in">
+        <component :is="Component" :key="route.path" />
+      </Transition>
+    </RouterView>
+  </main>
   <div v-if="userStore.isAuthenticated" class="bottom-nav-spacer" />
   <ToastNotification />
   <FeedbackWidget v-if="userStore.isAuthenticated" />
   <MobileBottomNav v-if="userStore.isAuthenticated" />
 </template>
+
+<style scoped>
+.skip-link {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  position: fixed;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  width: auto;
+  height: auto;
+  clip: auto;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-radius: var(--radius-sm);
+  z-index: 9999;
+  font-family: 'Nunito', system-ui, sans-serif;
+  font-weight: 700;
+}
+</style>
 
 <style>
 /* Global reset and base styles */
