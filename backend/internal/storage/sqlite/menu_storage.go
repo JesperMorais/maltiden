@@ -210,6 +210,47 @@ func (s *MenuStorage) GetByID(id string) (*domain.Menu, error) {
 	return &menu, rows.Err()
 }
 
+func (s *MenuStorage) ListByHousehold(householdID string, limit, offset int) ([]domain.Menu, int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var total int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM menus WHERE household_id = ?`,
+		householdID,
+	).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, household_id, created_at FROM menus
+		 WHERE household_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+		householdID, limit, offset,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var menus []domain.Menu
+	for rows.Next() {
+		var m domain.Menu
+		if err := rows.Scan(&m.ID, &m.HouseholdID, &m.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		menus = append(menus, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	if menus == nil {
+		menus = []domain.Menu{}
+	}
+	return menus, total, nil
+}
+
 // GetHouseholdIDByMenuID returns the household_id for a given menu_id.
 // Returns empty string if menu not found.
 func (s *MenuStorage) GetHouseholdIDByMenuID(menuID string) (string, error) {

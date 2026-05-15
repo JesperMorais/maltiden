@@ -36,8 +36,9 @@ func (m *mockMenuStorage) GetCurrentByHousehold(householdID string) (*domain.Men
 	return m.currentMenu, nil
 }
 
-func (m *mockMenuStorage) GetByID(id string) (*domain.Menu, error)                      { return nil, nil }
-func (m *mockMenuStorage) GetHouseholdIDByMenuID(menuID string) (string, error)          { return "", nil }
+func (m *mockMenuStorage) GetByID(id string) (*domain.Menu, error)                                  { return nil, nil }
+func (m *mockMenuStorage) GetHouseholdIDByMenuID(menuID string) (string, error)                      { return "", nil }
+func (m *mockMenuStorage) ListByHousehold(_ string, _, _ int) ([]domain.Menu, int, error)            { return []domain.Menu{}, 0, nil }
 
 // mockRecipeStorage implements domain.RecipeRepository (needed by MenuService).
 type mockRecipeStorage struct{}

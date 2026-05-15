@@ -61,6 +61,7 @@ type MenuRepository interface {
 	GetCurrentByHousehold(householdID string) (*Menu, error)
 	GetByID(id string) (*Menu, error)
 	GetHouseholdIDByMenuID(menuID string) (string, error)
+	ListByHousehold(householdID string, limit, offset int) ([]Menu, int, error)
 }
 
 // ShoppingRepository defines the interface for shopping storage operations.

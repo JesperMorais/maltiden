@@ -14,6 +14,7 @@ const ShoppingListView = () => import('@/views/ShoppingListView.vue')
 const AccountView = () => import('@/views/AccountView.vue')
 const ForgotPasswordView = () => import('@/views/ForgotPasswordView.vue')
 const ResetPasswordView = () => import('@/views/ResetPasswordView.vue')
+const MenuHistoryView = () => import('@/views/MenuHistoryView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -93,6 +94,12 @@ const router = createRouter({
       name: 'offers-poc',
       component: OffersView,
       meta: { transition: 'page-fade' }
+    },
+    {
+      path: '/menus',
+      name: 'menu-history',
+      component: MenuHistoryView,
+      meta: { transition: 'page-slide', requiresAuth: true, requiresMember: true }
     },
     {
       path: '/profile',

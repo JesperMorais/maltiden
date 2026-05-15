@@ -59,6 +59,18 @@ export async function saveMenu(days: SaveMenuDay[]): Promise<Menu> {
   return data
 }
 
+export interface MenuListResponse {
+  menus: Menu[]
+  limit: number
+  offset: number
+  total: number
+}
+
+export async function listMenus(limit = 20, offset = 0): Promise<MenuListResponse> {
+  const { data } = await apiClient.get<MenuListResponse>('/menus', { params: { limit, offset } })
+  return data
+}
+
 /**
  * Get the current active menu
  */

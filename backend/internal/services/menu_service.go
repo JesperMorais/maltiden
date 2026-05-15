@@ -189,6 +189,37 @@ func (s *MenuService) UpdateCurrent(householdID string, req domain.UpdateMenuReq
 	}, nil
 }
 
+type MenuListResponse struct {
+	Menus  []domain.Menu `json:"menus"`
+	Limit  int           `json:"limit"`
+	Offset int           `json:"offset"`
+	Total  int           `json:"total"`
+}
+
+func (s *MenuService) ListMenus(householdID string, limit, offset int) (*MenuListResponse, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	menus, total, err := s.menuStorage.ListByHousehold(householdID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	return &MenuListResponse{
+		Menus:  menus,
+		Limit:  limit,
+		Offset: offset,
+		Total:  total,
+	}, nil
+}
+
 func (s *MenuService) GetCurrent(householdID string) (*domain.MenuResponse, error) {
 	menu, err := s.menuStorage.GetCurrentByHousehold(householdID)
 	if err != nil {

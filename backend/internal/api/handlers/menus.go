@@ -7,6 +7,7 @@ import (
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
 	"net/http"
+	"strconv"
 )
 
 type MenuHandler struct {
@@ -79,6 +80,36 @@ func (h *MenuHandler) UpdateCurrent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSON(w, http.StatusOK, menu)
+}
+
+func (h *MenuHandler) List(w http.ResponseWriter, r *http.Request) {
+	householdID := middleware.GetHouseholdID(r)
+	if householdID == "" {
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	limit := 20
+	offset := 0
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			limit = n
+		}
+	}
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			offset = n
+		}
+	}
+
+	result, err := h.menuService.ListMenus(householdID, limit, offset)
+	if err != nil {
+		log.Printf("ERROR [ListMenus] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, result)
 }
 
 func (h *MenuHandler) GetCurrent(w http.ResponseWriter, r *http.Request) {
