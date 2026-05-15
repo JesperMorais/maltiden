@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
+	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"net/http"
@@ -39,6 +41,18 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSON(w, http.StatusCreated, resp)
+}
+
+func (h *AuthHandler) PasswordResetRequest(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Email == "" {
+		WriteError(w, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	slog.Info("password reset requested", "email", body.Email)
+	WriteJSON(w, http.StatusOK, map[string]string{"message": "if account exists, reset link sent"})
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {

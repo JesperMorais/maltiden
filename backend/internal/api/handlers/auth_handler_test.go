@@ -109,3 +109,61 @@ func TestAuthHandler_Login_UnknownUser(t *testing.T) {
 		t.Errorf("expected error 'invalid_credentials', got %q", errResp["error"])
 	}
 }
+
+func TestAuthHandler_PasswordResetRequest_Valid(t *testing.T) {
+	h := setupAuthHandlerTest(t)
+
+	body := `{"email":"someone@example.com"}`
+	req := httptest.NewRequest(http.MethodPost, "/auth/password-reset/request", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	h.PasswordResetRequest(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var resp map[string]string
+	json.NewDecoder(rr.Body).Decode(&resp)
+	if resp["message"] == "" {
+		t.Error("expected non-empty message field")
+	}
+}
+
+func TestAuthHandler_PasswordResetRequest_InvalidJSON(t *testing.T) {
+	h := setupAuthHandlerTest(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/auth/password-reset/request", bytes.NewBufferString(`not-json`))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	h.PasswordResetRequest(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var errResp map[string]string
+	json.NewDecoder(rr.Body).Decode(&errResp)
+	if errResp["error"] != "invalid_request" {
+		t.Errorf("expected error 'invalid_request', got %q", errResp["error"])
+	}
+}
+
+func TestAuthHandler_PasswordResetRequest_MissingEmail(t *testing.T) {
+	h := setupAuthHandlerTest(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/auth/password-reset/request", bytes.NewBufferString(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	h.PasswordResetRequest(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var errResp map[string]string
+	json.NewDecoder(rr.Body).Decode(&errResp)
+	if errResp["error"] != "invalid_request" {
+		t.Errorf("expected error 'invalid_request', got %q", errResp["error"])
+	}
+}

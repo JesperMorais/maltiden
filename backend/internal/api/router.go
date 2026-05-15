@@ -115,6 +115,7 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.HandleFunc("GET /health", deps.health.Check)
 	mux.Handle("POST /auth/register", authLimiter.Limit(http.HandlerFunc(deps.auth.Register)))
 	mux.Handle("POST /auth/login", authLimiter.Limit(http.HandlerFunc(deps.auth.Login)))
+	mux.Handle("POST /auth/password-reset/request", passwordResetLimiter.Limit(http.HandlerFunc(deps.auth.PasswordResetRequest)))
 	mux.Handle("POST /auth/forgot-password", passwordResetLimiter.Limit(http.HandlerFunc(deps.passwordReset.ForgotPassword)))
 	mux.Handle("POST /auth/reset-password", passwordResetLimiter.Limit(http.HandlerFunc(deps.passwordReset.ResetPassword)))
 	mux.HandleFunc("GET /offers/search", deps.offers.SearchOffers)
