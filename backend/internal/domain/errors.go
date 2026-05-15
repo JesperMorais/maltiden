@@ -57,4 +57,8 @@ var (
 	ErrCommentTooLong     = errors.New("comment_too_long")
 	ErrInvalidCategory    = errors.New("invalid_category")
 	ErrFeedbackRateLimited = errors.New("feedback_rate_limited")
+
+	// MenuDay validation
+	ErrInvalidDate    = errors.New("invalid_date")
+	ErrRecipeRequired = errors.New("recipe_required")
 )

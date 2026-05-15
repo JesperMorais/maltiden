@@ -2,6 +2,16 @@ package domain
 
 import "time"
 
+func (d MenuDay) Validate() error {
+	if _, err := time.Parse("2006-01-02", d.Date); err != nil {
+		return ErrInvalidDate
+	}
+	if !d.Skip && d.RecipeID == "" {
+		return ErrRecipeRequired
+	}
+	return nil
+}
+
 type MenuDay struct {
 	Date     string `json:"date"`
 	RecipeID string `json:"recipeId,omitempty"`
