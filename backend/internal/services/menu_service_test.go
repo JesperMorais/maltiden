@@ -335,3 +335,157 @@ func TestMenuGenerate_BoundaryDays(t *testing.T) {
 		t.Errorf("expected 31 days, got %d", len(resp.Days))
 	}
 }
+
+func TestMenuGenerate_MultipleSkipDays(t *testing.T) {
+	env := newMenuTestEnv(t)
+	env.seedRecipes(t, 5)
+
+	today := time.Now()
+	skip0 := today.Format("2006-01-02")
+	skip2 := today.AddDate(0, 0, 2).Format("2006-01-02")
+	skip4 := today.AddDate(0, 0, 4).Format("2006-01-02")
+
+	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{
+		Days:     5,
+		Servings: 4,
+		SkipDays: []string{skip0, skip2, skip4},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Days) != 5 {
+		t.Fatalf("expected 5 days, got %d", len(resp.Days))
+	}
+
+	skippedIndices := map[int]bool{0: true, 2: true, 4: true}
+	for i, day := range resp.Days {
+		if skippedIndices[i] {
+			if !day.Skip {
+				t.Errorf("day %d: expected Skip=true", i)
+			}
+			if day.RecipeID != "" {
+				t.Errorf("day %d: expected empty RecipeID on skipped day, got %q", i, day.RecipeID)
+			}
+		} else {
+			if day.Skip {
+				t.Errorf("day %d: expected Skip=false", i)
+			}
+			if day.RecipeID == "" {
+				t.Errorf("day %d: expected non-empty RecipeID on non-skipped day", i)
+			}
+		}
+	}
+}
+
+func TestMenuGenerate_AllDaysSkipped(t *testing.T) {
+	env := newMenuTestEnv(t)
+	env.seedRecipes(t, 5)
+
+	today := time.Now()
+	skipDays := make([]string, 4)
+	for i := range skipDays {
+		skipDays[i] = today.AddDate(0, 0, i).Format("2006-01-02")
+	}
+
+	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{
+		Days:     4,
+		Servings: 4,
+		SkipDays: skipDays,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Days) != 4 {
+		t.Fatalf("expected 4 days, got %d", len(resp.Days))
+	}
+
+	for i, day := range resp.Days {
+		if !day.Skip {
+			t.Errorf("day %d: expected Skip=true when all days are skipped", i)
+		}
+		if day.RecipeID != "" {
+			t.Errorf("day %d: expected empty RecipeID on skipped day, got %q", i, day.RecipeID)
+		}
+	}
+}
+
+func TestMenuGenerate_SkipDayOutOfRange(t *testing.T) {
+	env := newMenuTestEnv(t)
+	env.seedRecipes(t, 5)
+
+	today := time.Now()
+	// A date well outside the 3-day window
+	outOfRange := today.AddDate(0, 0, 30).Format("2006-01-02")
+
+	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{
+		Days:     3,
+		Servings: 4,
+		SkipDays: []string{outOfRange},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Days) != 3 {
+		t.Fatalf("expected 3 days, got %d", len(resp.Days))
+	}
+
+	for i, day := range resp.Days {
+		if day.Skip {
+			t.Errorf("day %d: expected Skip=false when skip date is out of range", i)
+		}
+		if day.RecipeID == "" {
+			t.Errorf("day %d: expected non-empty RecipeID when no day should be skipped", i)
+		}
+	}
+}
+
+func TestMenuGenerate_SkipAndExtraPortionsCombined(t *testing.T) {
+	env := newMenuTestEnv(t)
+	env.seedRecipes(t, 5)
+
+	today := time.Now()
+	skipDate := today.AddDate(0, 0, 1).Format("2006-01-02")
+	extraDate := today.AddDate(0, 0, 2).Format("2006-01-02")
+	baseServings := 4
+	extra := 3
+
+	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{
+		Days:          3,
+		Servings:      baseServings,
+		SkipDays:      []string{skipDate},
+		ExtraPortions: map[string]int{extraDate: extra},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Days) != 3 {
+		t.Fatalf("expected 3 days, got %d", len(resp.Days))
+	}
+
+	// Day 1 is skipped — should have Skip=true and default servings
+	if !resp.Days[1].Skip {
+		t.Error("day 1: expected Skip=true")
+	}
+	if resp.Days[1].RecipeID != "" {
+		t.Errorf("day 1: expected empty RecipeID on skipped day, got %q", resp.Days[1].RecipeID)
+	}
+	if resp.Days[1].Servings != baseServings {
+		t.Errorf("day 1: expected Servings=%d on skipped day, got %d", baseServings, resp.Days[1].Servings)
+	}
+
+	// Day 2 has extra portions — should have Servings = base + extra
+	if resp.Days[2].Skip {
+		t.Error("day 2: expected Skip=false")
+	}
+	if resp.Days[2].Servings != baseServings+extra {
+		t.Errorf("day 2: expected Servings=%d, got %d", baseServings+extra, resp.Days[2].Servings)
+	}
+
+	// Day 0 is normal
+	if resp.Days[0].Skip {
+		t.Error("day 0: expected Skip=false")
+	}
+	if resp.Days[0].Servings != baseServings {
+		t.Errorf("day 0: expected Servings=%d, got %d", baseServings, resp.Days[0].Servings)
+	}
+}
