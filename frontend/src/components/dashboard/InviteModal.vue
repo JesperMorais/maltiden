@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, toRefs, watch } from 'vue'
 import { useFocusTrap } from '@/composables/useFocusTrap'
+import _focusTrap from '@/directives/focusTrap'
 import { createInvite } from '@/api/household.api'
 
 interface Props {

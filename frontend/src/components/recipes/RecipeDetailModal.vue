@@ -11,6 +11,7 @@ import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import SkeletonCircle from '@/components/skeleton/SkeletonCircle.vue'
 import { useToast } from '@/composables/useToast'
 import { useFocusTrap } from '@/composables/useFocusTrap'
+import _focusTrap from '@/directives/focusTrap'
 
 type EditableRecipe = CreateRecipeRequest & { emoji?: string }
 

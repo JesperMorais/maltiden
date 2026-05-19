@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Search, X, Shuffle, UtensilsCrossed, Check } from 'lucide-vue-next'
 import { getRecipes } from '@/api/recipes.api'
 import type { RecipeSummary } from '@/api/recipes.api'
+import focusTrap from '@/directives/focusTrap'
 
 interface Props {
   currentRecipeId: string
@@ -24,6 +25,8 @@ const isLoading = ref(false)
 const loadError = ref<string | null>(null)
 const query = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
+
+const vFocusTrap = focusTrap
 
 const filteredRecipes = computed(() => {
   const q = query.value.trim().toLowerCase()
@@ -79,19 +82,11 @@ function handleRandom() {
   if (pick) emit('select', pick.id)
 }
 
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('close')
-}
-
 function onBackdropClick() {
   emit('close')
 }
 
 onMounted(async () => {
-  document.addEventListener('keydown', onKeydown)
-  // Move focus into the dialog so keyboard/screen-reader users land inside.
-  await nextTick()
-  searchInputRef.value?.focus()
   isLoading.value = true
   try {
     const { recipes: list } = await getRecipes()
@@ -105,12 +100,13 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  document.removeEventListener('keydown', onKeydown)
+  // keydown cleanup handled by v-focus-trap directive
 })
 </script>
 
 <template>
   <div
+    v-focus-trap="() => emit('close')"
     class="swap-backdrop"
     role="dialog"
     aria-modal="true"
