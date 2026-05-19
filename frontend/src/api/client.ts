@@ -5,6 +5,7 @@
 
 import axios from 'axios'
 import type { AxiosError } from 'axios'
+import * as Sentry from '@sentry/vue'
 import { tokenUtils } from '@/utils/token'
 
 declare module 'axios' {
@@ -61,8 +62,22 @@ apiClient.interceptors.request.use(
  * Response interceptor - handles common errors
  */
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const id = response.headers['x-request-id']
+    if (id) {
+      Sentry.getCurrentScope().setTag('request_id', id)
+      Sentry.addBreadcrumb({ category: 'request', message: 'X-Request-ID=' + id, level: 'info' })
+    }
+    return response
+  },
   (error: AxiosError) => {
+    if (error.response) {
+      const id = error.response.headers['x-request-id']
+      if (id) {
+        Sentry.getCurrentScope().setTag('request_id', id)
+        Sentry.addBreadcrumb({ category: 'request', message: 'X-Request-ID=' + id, level: 'info' })
+      }
+    }
     const requestUrl = error.config?.url ?? ''
     const isAuthEndpoint = requestUrl.startsWith('/auth/')
 

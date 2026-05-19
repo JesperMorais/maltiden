@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
+
+	sentry "github.com/getsentry/sentry-go"
 )
 
 const requestIDKey contextKey = "requestID"
@@ -41,6 +43,11 @@ func RequestID(next http.Handler) http.Handler {
 
 		// Add to request context
 		ctx := context.WithValue(r.Context(), requestIDKey, requestID)
+
+		if hub := sentry.GetHubFromContext(ctx); hub != nil {
+			hub.Scope().SetTag("request_id", requestID)
+			hub.AddBreadcrumb(&sentry.Breadcrumb{Category: "request", Message: "X-Request-ID=" + requestID, Level: sentry.LevelInfo}, nil)
+		}
 
 		// Continue to next handler
 		next.ServeHTTP(w, r.WithContext(ctx))

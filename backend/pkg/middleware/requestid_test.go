@@ -59,6 +59,19 @@ func TestGetRequestID_NoMiddleware(t *testing.T) {
 	}
 }
 
+// TestRequestID_NilSentryHubNoPanic verifies the nil-guard: when no Sentry hub
+// is on the context (e.g. unit tests without sentryhttp), the middleware must
+// not panic.
+func TestRequestID_NilSentryHubNoPanic(t *testing.T) {
+	handler := RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+}
+
 // TestRequestID_OversizedIncomingIsReplaced verifies the maxRequestIDLen
 // cap: a client-supplied X-Request-ID longer than the cap is treated as
 // absent, and the middleware generates a fresh ID instead of echoing the
