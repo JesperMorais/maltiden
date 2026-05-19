@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"maltiden/internal/domain"
 	"math/rand/v2"
 	"time"
@@ -38,7 +39,7 @@ func (s *MenuService) enrichMenuDays(days []domain.MenuDay) ([]domain.MenuRespon
 		var err error
 		recipeMap, err = s.recipeStorage.GetByIDs(ids)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("enrich menu days: get recipes by ids: %w", err)
 		}
 	}
 
@@ -81,7 +82,7 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 	// Get recipes visible to this household (own + seed)
 	recipes, err := s.recipeStorage.GetAll(nil, householdID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generate menu: get recipes: %w", err)
 	}
 
 	if len(recipes) == 0 {
