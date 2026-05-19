@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
@@ -26,7 +26,7 @@ func (h *HouseholdHandler) GetMyHousehold(w http.ResponseWriter, r *http.Request
 
 	household, err := h.householdService.GetMyHousehold(userID)
 	if err != nil {
-		log.Printf("ERROR [GetMyHousehold] %v", err)
+		slog.Error("GetMyHousehold failed", "error", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
@@ -64,7 +64,7 @@ func (h *HouseholdHandler) UpdateMyHousehold(w http.ResponseWriter, r *http.Requ
 		case errors.Is(err, domain.ErrNotFound):
 			WriteError(w, http.StatusNotFound, "not_found")
 		default:
-			log.Printf("ERROR [UpdateMyHousehold] %v", err)
+			slog.Error("UpdateMyHousehold failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -90,7 +90,7 @@ func (h *HouseholdHandler) CreateInvite(w http.ResponseWriter, r *http.Request) 
 
 	resp, err := h.householdService.CreateInvite(householdID)
 	if err != nil {
-		log.Printf("ERROR [CreateInvite] %v", err)
+		slog.Error("CreateInvite failed", "error", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
@@ -120,7 +120,7 @@ func (h *HouseholdHandler) JoinHousehold(w http.ResponseWriter, r *http.Request)
 		case errors.Is(err, domain.ErrAlreadyMember):
 			WriteError(w, http.StatusConflict, "already_member")
 		default:
-			log.Printf("ERROR [JoinHousehold] %v", err)
+			slog.Error("JoinHousehold failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -138,7 +138,7 @@ func (h *HouseholdHandler) GetMemberStatuses(w http.ResponseWriter, r *http.Requ
 
 	resp, err := h.householdService.GetMemberStatuses(householdID)
 	if err != nil {
-		log.Printf("ERROR [GetMemberStatuses] %v", err)
+		slog.Error("GetMemberStatuses failed", "error", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
@@ -174,7 +174,7 @@ func (h *HouseholdHandler) UpdateMemberStatus(w http.ResponseWriter, r *http.Req
 		case errors.Is(err, domain.ErrNotFound):
 			WriteError(w, http.StatusNotFound, "not_found")
 		default:
-			log.Printf("ERROR [UpdateMemberStatus] %v", err)
+			slog.Error("UpdateMemberStatus failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -206,7 +206,7 @@ func (h *HouseholdHandler) RemoveMember(w http.ResponseWriter, r *http.Request) 
 		case errors.Is(err, domain.ErrNotFound):
 			WriteError(w, http.StatusNotFound, "not_found")
 		default:
-			log.Printf("ERROR [RemoveMember] %v", err)
+			slog.Error("RemoveMember failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return

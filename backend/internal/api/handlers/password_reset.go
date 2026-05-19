@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"net/http"
@@ -30,7 +30,7 @@ func (h *PasswordResetHandler) ForgotPassword(w http.ResponseWriter, r *http.Req
 
 	if err := h.service.RequestReset(req.Email); err != nil {
 		// Log internally — never surface to client.
-		log.Printf("ERROR [ForgotPassword] %v", err)
+		slog.Error("ForgotPassword failed", "error", err)
 	}
 
 	WriteJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -56,7 +56,7 @@ func (h *PasswordResetHandler) ResetPassword(w http.ResponseWriter, r *http.Requ
 		case errors.Is(err, domain.ErrWeakPassword):
 			WriteError(w, http.StatusBadRequest, "weak_password")
 		default:
-			log.Printf("ERROR [ResetPassword] %v", err)
+			slog.Error("ResetPassword failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return

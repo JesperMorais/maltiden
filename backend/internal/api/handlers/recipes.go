@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
@@ -29,7 +29,7 @@ func (h *RecipeHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	recipes, err := h.recipeService.GetAll(filter, householdID)
 	if err != nil {
-		log.Printf("ERROR [GetAllRecipes] %v", err)
+		slog.Error("GetAllRecipes failed", "error", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
@@ -48,7 +48,7 @@ func (h *RecipeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	recipe, err := h.recipeService.GetByID(id)
 	if err != nil {
-		log.Printf("ERROR [GetRecipeByID] %v", err)
+		slog.Error("GetRecipeByID failed", "error", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
@@ -98,7 +98,7 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrTagTooLong):
 			WriteError(w, http.StatusBadRequest, "tag_too_long")
 		default:
-			log.Printf("ERROR [UpdateRecipe] %v", err)
+			slog.Error("UpdateRecipe failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -123,7 +123,7 @@ func (h *RecipeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrForbidden):
 			WriteError(w, http.StatusForbidden, "forbidden")
 		default:
-			log.Printf("ERROR [DeleteRecipe] %v", err)
+			slog.Error("DeleteRecipe failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -160,7 +160,7 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrTagTooLong):
 			WriteError(w, http.StatusBadRequest, "tag_too_long")
 		default:
-			log.Printf("ERROR [CreateRecipe] %v", err)
+			slog.Error("CreateRecipe failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return

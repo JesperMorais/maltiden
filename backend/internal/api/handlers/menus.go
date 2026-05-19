@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
@@ -38,7 +38,7 @@ func (h *MenuHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrInvalidServings):
 			WriteError(w, http.StatusBadRequest, "invalid_servings")
 		default:
-			log.Printf("ERROR [GenerateMenu] %v", err)
+			slog.Error("GenerateMenu failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -72,7 +72,7 @@ func (h *MenuHandler) UpdateCurrent(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrInvalidDays):
 			WriteError(w, http.StatusBadRequest, "invalid_days")
 		default:
-			log.Printf("ERROR [UpdateCurrentMenu] %v", err)
+			slog.Error("UpdateCurrentMenu failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -91,7 +91,7 @@ func (h *MenuHandler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 
 	menu, err := h.menuService.GetCurrent(householdID)
 	if err != nil {
-		log.Printf("ERROR [GetCurrentMenu] %v", err)
+		slog.Error("GetCurrentMenu failed", "error", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}

@@ -3,7 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"errors"
-	"log"
+	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
@@ -43,7 +43,7 @@ func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request
 		case errors.Is(err, domain.ErrForbidden):
 			WriteError(w, http.StatusForbidden, "forbidden")
 		default:
-			log.Printf("ERROR [GetShoppingList] %v", err)
+			slog.Error("GetShoppingList failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -89,10 +89,10 @@ func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusForbidden, "forbidden")
 		case errors.Is(err, sql.ErrNoRows):
 			// Custom-item not found OR cross-tenant probe — return 404 either way.
-			log.Printf("INFO [UpdateShoppingItem] not found: %s", itemID)
+			slog.Info("UpdateShoppingItem not found", "item_id", itemID)
 			WriteError(w, http.StatusNotFound, "not_found")
 		default:
-			log.Printf("ERROR [UpdateShoppingItem] %v", err)
+			slog.Error("UpdateShoppingItem failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -138,7 +138,7 @@ func (h *ShoppingHandler) AddCustomItem(w http.ResponseWriter, r *http.Request) 
 		case errors.Is(err, domain.ErrTooManyItems):
 			WriteError(w, http.StatusBadRequest, "too_many_items")
 		default:
-			log.Printf("ERROR [AddCustomItem] %v", err)
+			slog.Error("AddCustomItem failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -163,11 +163,11 @@ func (h *ShoppingHandler) DeleteCustomItem(w http.ResponseWriter, r *http.Reques
 		// Not found OR cross-tenant probe — return 404 either way.
 		// Logged at INFO level (not ERROR) to avoid log spam from probing.
 		if errors.Is(err, sql.ErrNoRows) {
-			log.Printf("INFO [DeleteCustomItem] not found: %s", itemID)
+			slog.Info("DeleteCustomItem not found", "item_id", itemID)
 			WriteError(w, http.StatusNotFound, "not_found")
 			return
 		}
-		log.Printf("ERROR [DeleteCustomItem] %v", err)
+		slog.Error("DeleteCustomItem failed", "error", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}

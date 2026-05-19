@@ -3,7 +3,7 @@ package middleware
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"maltiden/pkg/utils"
 	"net/http"
 	"strings"
@@ -61,7 +61,7 @@ func RequireAuth(validator TokenValidator, versionChecker TokenVersionChecker) f
 			// household removal or password change
 			currentVersion, err := versionChecker.GetTokenVersion(claims.UserID)
 			if err != nil {
-				log.Printf("ERROR [RequireAuth] token version check for user %s: %v", claims.UserID, err)
+				slog.Error("RequireAuth: token version check failed", "user_id", claims.UserID, "error", err)
 				writeError(w, http.StatusUnauthorized, "invalid_token")
 				return
 			}

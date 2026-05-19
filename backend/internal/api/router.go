@@ -2,7 +2,7 @@ package api
 
 import (
 	"database/sql"
-	"log"
+	"log/slog"
 	"maltiden/internal/api/handlers"
 	"maltiden/internal/services"
 	"maltiden/internal/storage/sqlite"
@@ -54,10 +54,10 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	}
 	if apiKey := os.Getenv("RESEND_API_KEY"); apiKey != "" {
 		emailer = email.NewResendSender(apiKey, fromAddr)
-		log.Printf("Email sender: Resend (%s)", fromAddr)
+		slog.Info("email sender: Resend", "from", fromAddr)
 	} else {
 		emailer = email.NewLogSender(fromAddr)
-		log.Printf("Email sender: log-only (set RESEND_API_KEY to enable real email)")
+		slog.Info("email sender: log-only (set RESEND_API_KEY to enable real email)")
 	}
 	passwordResetService := services.NewPasswordResetService(db, userStorage, emailer)
 
@@ -103,7 +103,7 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	var parserHandler *handlers.RecipeParserHandler
 	claudeClient, err := claude.NewClient()
 	if err != nil {
-		log.Printf("Warning: Recipe parser disabled: %v", err)
+		slog.Warn("recipe parser disabled", "error", err)
 	} else {
 		recipeStorage := sqlite.NewRecipeStorage(db)
 		recipeService := services.NewRecipeService(recipeStorage)

@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"net/http"
@@ -32,7 +32,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrInvalidEmail):
 			WriteError(w, http.StatusBadRequest, "invalid_email")
 		default:
-			log.Printf("ERROR [Register] %v", err)
+			slog.Error("Register failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
@@ -52,7 +52,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, domain.ErrInvalidCredentials) {
 			WriteError(w, http.StatusUnauthorized, "invalid_credentials")
 		} else {
-			log.Printf("ERROR [Login] %v", err)
+			slog.Error("Login failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return

@@ -15,13 +15,13 @@ import (
 
 	"maltiden/internal/api"
 	"maltiden/internal/storage/sqlite"
+	"maltiden/pkg/logging"
 	"maltiden/pkg/middleware"
 	"maltiden/pkg/utils"
 )
 
 func main() {
-	// Set up structured logging
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	logging.Default()
 
 	// Initialize Sentry if SENTRY_DSN is set (provisioned by Fly extension).
 	// Captures unhandled panics and any errors explicitly sent via sentry.CaptureException.

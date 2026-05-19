@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
@@ -41,7 +41,7 @@ func (h *FeedbackHandler) Create(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrFeedbackRateLimited):
 			WriteError(w, http.StatusTooManyRequests, "feedback_rate_limited")
 		default:
-			log.Printf("ERROR [CreateFeedback] %v", err)
+			slog.Error("CreateFeedback failed", "error", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
 		return
