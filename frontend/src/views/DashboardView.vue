@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useUserStore } from '@/stores/user'
@@ -17,7 +17,7 @@ import DashboardSkeleton from '@/components/skeleton/layouts/DashboardSkeleton.v
 import { useToast } from '@/composables/useToast'
 import ErrorState from '@/components/common/ErrorState.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
-import RotatingText from '@/components/vue-bits/RotatingText.vue'
+const RotatingText = defineAsyncComponent(() => import('@/components/vue-bits/RotatingText.vue'))
 import type { MenuDay } from '@/api/types/dashboard.types'
 import { removeMember } from '@/api/household.api'
 
