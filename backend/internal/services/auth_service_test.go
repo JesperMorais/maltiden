@@ -5,6 +5,9 @@ import (
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/utils"
 	"testing"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func TestRegister_WeakPassword_TooShort(t *testing.T) {
@@ -196,6 +199,60 @@ func TestJWT_MalformedToken(t *testing.T) {
 	_, err := jwtService.ValidateToken("not.a.valid.jwt")
 	if err == nil {
 		t.Error("expected error for malformed token")
+	}
+}
+
+func TestJWT_ExpiryBoundaries(t *testing.T) {
+	const testSecret = "test-secret-key-for-jwt-tests"
+	jwtSvc, err := utils.NewJWTService(testSecret)
+	if err != nil {
+		t.Fatalf("NewJWTService: %v", err)
+	}
+
+	buildToken := func(expOffset time.Duration) string {
+		claims := utils.Claims{
+			UserID:       "usr_test",
+			HouseholdID:  "hh_test",
+			TokenVersion: 1,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(expOffset)),
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+			},
+		}
+		tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		signed, err := tok.SignedString([]byte(testSecret))
+		if err != nil {
+			t.Fatalf("SignedString: %v", err)
+		}
+		return signed
+	}
+
+	cases := []struct {
+		name      string
+		expOffset time.Duration
+		wantErr   bool
+	}{
+		{"expires in 1s — valid", time.Second, false},
+		{"expired 1s ago — rejected", -time.Second, true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			token := buildToken(tc.expOffset)
+			claims, err := jwtSvc.ValidateToken(token)
+			if tc.wantErr {
+				if err == nil {
+					t.Error("expected error for expired token, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected valid token, got error: %v", err)
+				}
+				if claims == nil || claims.UserID != "usr_test" {
+					t.Errorf("expected claims.UserID=usr_test, got %v", claims)
+				}
+			}
+		})
 	}
 }
 
