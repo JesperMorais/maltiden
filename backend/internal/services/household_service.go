@@ -252,6 +252,21 @@ func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUse
 	return tx.Commit()
 }
 
+// RotateInviteCode expires all existing invite codes for the household and issues a new one.
+func (s *HouseholdService) RotateInviteCode(householdID string) (*domain.CreateInviteResponse, error) {
+	// Expire all current unused invite codes for this household
+	_, err := s.householdStorage.DB().Exec(
+		`UPDATE invite_codes SET expires_at = datetime('now', '-1 second') WHERE household_id = ? AND used_by IS NULL`,
+		householdID,
+	)
+	if err != nil {
+		sentry.CaptureException(err)
+		return nil, fmt.Errorf("expiring old invite codes: %w", err)
+	}
+
+	return s.CreateInvite(householdID)
+}
+
 // generateInviteCode creates a random 8-character alphanumeric code (~40 bits of entropy).
 func generateInviteCode() (string, error) {
 	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // no 0/O/1/I to avoid confusion

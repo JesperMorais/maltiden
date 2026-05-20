@@ -573,6 +573,54 @@ func TestUpdateName_GuestForbidden(t *testing.T) {
 	}
 }
 
+func TestRotateInviteCode(t *testing.T) {
+	db := setupTestDB(t)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	userStorage := sqlite.NewUserStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+	householdService := NewHouseholdService(householdStorage, userStorage)
+
+	owner := createTestUser(t, authService, "anna@test.com", "Anna")
+
+	// Capture initial invite code
+	first, err := householdService.CreateInvite(owner.User.HouseholdID)
+	if err != nil {
+		t.Fatalf("CreateInvite failed: %v", err)
+	}
+
+	// Rotate
+	second, err := householdService.RotateInviteCode(owner.User.HouseholdID)
+	if err != nil {
+		t.Fatalf("RotateInviteCode failed: %v", err)
+	}
+
+	// New code must be non-empty and different
+	if second.Code == "" {
+		t.Error("expected non-empty rotated code")
+	}
+	if second.Code == first.Code {
+		t.Errorf("expected rotated code to differ from old code, both are %q", first.Code)
+	}
+
+	// Old code must no longer join (invalidated / expired)
+	joiner := createTestUser(t, authService, "erik@test.com", "Erik")
+	_, err = householdService.JoinHousehold(joiner.User.ID, domain.JoinHouseholdRequest{Code: first.Code})
+	if err == nil {
+		t.Error("expected error joining with old (invalidated) code")
+	}
+
+	// New code must join successfully
+	joiner2 := createTestUser(t, authService, "lisa@test.com", "Lisa")
+	resp, err := householdService.JoinHousehold(joiner2.User.ID, domain.JoinHouseholdRequest{Code: second.Code})
+	if err != nil {
+		t.Fatalf("expected join with new code to succeed, got: %v", err)
+	}
+	if resp.HouseholdID != owner.User.HouseholdID {
+		t.Errorf("expected household %s, got %s", owner.User.HouseholdID, resp.HouseholdID)
+	}
+}
+
 func TestFullFlow_InviteJoinAndManage(t *testing.T) {
 	db := setupTestDB(t)
 	householdStorage := sqlite.NewHouseholdStorage(db)
