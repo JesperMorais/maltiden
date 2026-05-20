@@ -3,6 +3,7 @@ import { onMounted, computed, ref, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useShoppingList } from '@/composables/useShoppingList'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useOffersStore } from '@/stores/offers'
 import { useSkeleton } from '@/composables/useSkeleton'
 import ErrorState from '@/components/common/ErrorState.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -21,6 +22,7 @@ import {
 const router = useRouter()
 const route = useRoute()
 const dashboardStore = useDashboardStore()
+const offersStore = useOffersStore()
 const {
   isLoading,
   error,
@@ -99,6 +101,7 @@ onMounted(async () => {
   if (menuId.value) {
     fetchList(menuId.value)
   }
+  offersStore.fetchOffers()
 })
 </script>
 
@@ -257,6 +260,7 @@ onMounted(async () => {
                   v-for="item in category.items"
                   :key="item.id"
                   class="item-row"
+                  :class="{ 'has-offer': offersStore.matchOffer(item.name) }"
                   role="button"
                   tabindex="0"
                   @click="toggle(item.id, true)"
@@ -267,6 +271,12 @@ onMounted(async () => {
                     <Check :size="14" :stroke-width="3" class="check-icon" />
                   </span>
                   <span class="item-name">{{ item.name }}</span>
+                  <span
+                    v-if="offersStore.matchOffer(item.name)"
+                    class="offer-badge"
+                  >
+                    {{ offersStore.matchOffer(item.name)!.price }}&nbsp;{{ offersStore.matchOffer(item.name)!.currency }}
+                  </span>
                   <span class="item-amount">{{ item.amount }} {{ item.unit }}</span>
                   <button
                     v-if="item.isCustom"
@@ -768,6 +778,25 @@ onMounted(async () => {
 .delete-btn:hover {
   color: var(--accent);
   background: var(--bg-hover);
+}
+
+/* Offer highlight + badge */
+.item-row.has-offer {
+  border-left: 3px solid var(--accent);
+  padding-left: calc(0.5rem - 3px);
+}
+
+.offer-badge {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.72rem;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 0.2em 0.55em;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  flex-shrink: 0;
 }
 
 /* Checked section */
