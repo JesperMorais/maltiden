@@ -81,6 +81,45 @@ func (h *MenuHandler) UpdateCurrent(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, menu)
 }
 
+func (h *MenuHandler) SwapDay(w http.ResponseWriter, r *http.Request) {
+	householdID := middleware.GetHouseholdID(r)
+	if householdID == "" {
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	date := r.PathValue("date")
+	if date == "" {
+		WriteError(w, http.StatusBadRequest, "missing_date")
+		return
+	}
+
+	var req struct {
+		RecipeID string `json:"recipeId"`
+	}
+	if !DecodeJSON(w, r, maxBodySize, &req) {
+		return
+	}
+	if req.RecipeID == "" {
+		WriteError(w, http.StatusBadRequest, "missing_recipe_id")
+		return
+	}
+
+	day, err := h.menuService.SwapDay(householdID, date, req.RecipeID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrNotFound):
+			WriteError(w, http.StatusNotFound, "not_found")
+		default:
+			log.Printf("ERROR [SwapDay] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, day)
+}
+
 func (h *MenuHandler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 	// Get household ID from auth context
 	householdID := middleware.GetHouseholdID(r)

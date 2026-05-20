@@ -179,6 +179,9 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.Handle("GET /menus/current", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.menu.GetCurrent),
 	))
+	mux.Handle("PUT /menus/current/days/{date}", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.menu.SwapDay),
+	))
 	mux.Handle("GET /shopping-list", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.shopping.GetShoppingList),
 	))

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AnimatePresence, Motion } from 'motion-v'
-import { Lock, LockOpen } from 'lucide-vue-next'
+import { Lock, LockOpen, RefreshCw } from 'lucide-vue-next'
 import type { DraftMenuDay } from '@/stores/menuGenerator'
 import type { DisplayRecipe } from '@/composables/useSlotMachine'
 
@@ -11,12 +11,16 @@ interface Props {
   isRolling?: boolean
   hasLanded?: boolean
   displayRecipe?: DisplayRecipe
+  showSwap?: boolean
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), {
+  showSwap: false,
+})
 
 const emit = defineEmits<{
   'toggle-lock': []
+  'swap': []
 }>()
 </script>
 
@@ -109,6 +113,17 @@ const emit = defineEmits<{
       @click.stop="emit('toggle-lock')"
     >
       <component :is="isLocked ? Lock : LockOpen" :size="14" class="lock-icon" />
+    </button>
+
+    <!-- Swap button -->
+    <button
+      v-if="showSwap && day.recipeId && !isRolling"
+      class="swap-button"
+      :aria-label="`Byt recept för ${day.dayName}`"
+      :disabled="isLoading"
+      @click.stop="emit('swap')"
+    >
+      <RefreshCw :size="14" />
     </button>
   </article>
 </template>
@@ -400,6 +415,40 @@ const emit = defineEmits<{
 
 .lock-button.locked .lock-icon {
   filter: brightness(0) invert(1);
+}
+
+/* Swap button */
+.swap-button {
+  position: absolute;
+  bottom: 1rem;
+  right: 3.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 2;
+}
+
+.swap-button:hover:not(:disabled) {
+  transform: scale(1.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.swap-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.swap-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ========================================

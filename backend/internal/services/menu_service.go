@@ -189,6 +189,50 @@ func (s *MenuService) UpdateCurrent(householdID string, req domain.UpdateMenuReq
 	}, nil
 }
 
+func (s *MenuService) SwapDay(householdID, date, recipeID string) (*domain.MenuResponseDay, error) {
+	menu, err := s.menuStorage.GetCurrentByHousehold(householdID)
+	if err != nil {
+		return nil, err
+	}
+	if menu == nil {
+		return nil, domain.ErrNotFound
+	}
+
+	// Validate date belongs to this menu
+	var found bool
+	for _, d := range menu.Days {
+		if d.Date == date {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, domain.ErrNotFound
+	}
+
+	// Validate recipe exists
+	recipe, err := s.recipeStorage.GetByID(recipeID)
+	if err != nil {
+		return nil, err
+	}
+	if recipe == nil {
+		return nil, domain.ErrNotFound
+	}
+
+	if err := s.menuStorage.UpdateDayRecipe(menu.ID, date, recipeID); err != nil {
+		sentry.CaptureException(err)
+		return nil, err
+	}
+
+	return &domain.MenuResponseDay{
+		Date:       date,
+		RecipeID:   recipeID,
+		RecipeName: recipe.Name,
+		Emoji:      recipe.Emoji,
+		Servings:   4,
+	}, nil
+}
+
 func (s *MenuService) GetCurrent(householdID string) (*domain.MenuResponse, error) {
 	menu, err := s.menuStorage.GetCurrentByHousehold(householdID)
 	if err != nil {

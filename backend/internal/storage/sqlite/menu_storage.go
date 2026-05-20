@@ -210,6 +210,29 @@ func (s *MenuStorage) GetByID(id string) (*domain.Menu, error) {
 	return &menu, rows.Err()
 }
 
+// UpdateDayRecipe sets recipe_id for a single menu_day row identified by menu+date.
+// Returns domain.ErrNotFound if no matching row exists.
+func (s *MenuStorage) UpdateDayRecipe(menuID, date, recipeID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE menu_days SET recipe_id = ?, skip = 0 WHERE menu_id = ? AND date = ?`,
+		recipeID, menuID, date,
+	)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
 // GetHouseholdIDByMenuID returns the household_id for a given menu_id.
 // Returns empty string if menu not found.
 func (s *MenuStorage) GetHouseholdIDByMenuID(menuID string) (string, error) {
