@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -e
+
+STAGED_GO=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
+STAGED_FE=$(git diff --cached --name-only --diff-filter=ACM | grep '^frontend/' || true)
+
+if [ -n "$STAGED_GO" ]; then
+    echo "Running gofmt on staged Go files..."
+    UNFORMATTED=$(gofmt -l $STAGED_GO)
+    if [ -n "$UNFORMATTED" ]; then
+        echo "gofmt: the following files need formatting:"
+        echo "$UNFORMATTED"
+        exit 1
+    fi
+
+    echo "Running go vet..."
+    (cd backend && go vet ./...)
+fi
+
+if [ -n "$STAGED_FE" ]; then
+    echo "Running npm run lint..."
+    (cd frontend && npm run lint)
+fi
+
+exit 0
