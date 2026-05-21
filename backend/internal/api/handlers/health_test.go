@@ -43,6 +43,36 @@ func TestHealthHandler_Check_OK(t *testing.T) {
 	}
 }
 
+func TestHealthHandler_Check_ResponseShape(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("open in-memory sqlite: %v", err)
+	}
+	defer db.Close()
+
+	h := NewHealthHandler(db)
+
+	req := httptest.NewRequest("GET", "/health", nil)
+	rr := httptest.NewRecorder()
+	h.Check(rr, req)
+
+	ct := rr.Header().Get("Content-Type")
+	if ct != "application/json" {
+		t.Errorf("expected Content-Type 'application/json', got %q", ct)
+	}
+
+	var resp map[string]string
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if _, ok := resp["status"]; !ok {
+		t.Errorf("response body missing key 'status'")
+	}
+	if _, ok := resp["version"]; !ok {
+		t.Errorf("response body missing key 'version'")
+	}
+}
+
 func TestHealthHandler_Check_DBDown(t *testing.T) {
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
