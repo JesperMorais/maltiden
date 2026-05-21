@@ -59,6 +59,72 @@ func TestGetRequestID_NoMiddleware(t *testing.T) {
 	}
 }
 
+func TestRequestID(t *testing.T) {
+	cases := []struct {
+		name          string
+		incoming      string
+		wantPreserved bool
+	}{
+		{
+			name:          "generates when absent",
+			incoming:      "",
+			wantPreserved: false,
+		},
+		{
+			name:          "preserves valid incoming",
+			incoming:      "test-id-abc123",
+			wantPreserved: true,
+		},
+		{
+			name:          "preserves boundary-length incoming",
+			incoming:      strings.Repeat("B", maxRequestIDLen),
+			wantPreserved: true,
+		},
+		{
+			name:          "replaces oversized incoming",
+			incoming:      strings.Repeat("A", maxRequestIDLen+1),
+			wantPreserved: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var contextID string
+			handler := RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				contextID = GetRequestID(r)
+			}))
+
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			if tc.incoming != "" {
+				req.Header.Set("X-Request-ID", tc.incoming)
+			}
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
+
+			got := rr.Header().Get("X-Request-ID")
+
+			if got == "" {
+				t.Fatal("response X-Request-ID must not be empty")
+			}
+			if contextID != got {
+				t.Fatalf("context value %q differs from response header %q", contextID, got)
+			}
+			if tc.wantPreserved {
+				if got != tc.incoming {
+					t.Fatalf("expected preserved incoming %q, got %q", tc.incoming, got)
+				}
+			} else {
+				if got == tc.incoming {
+					t.Fatalf("expected incoming %q to be replaced, but it was preserved", tc.incoming)
+				}
+				if len(got) > maxRequestIDLen {
+					t.Fatalf("generated ID length %d exceeds cap %d", len(got), maxRequestIDLen)
+				}
+			}
+		})
+	}
+}
+
 // TestRequestID_OversizedIncomingIsReplaced verifies the maxRequestIDLen
 // cap: a client-supplied X-Request-ID longer than the cap is treated as
 // absent, and the middleware generates a fresh ID instead of echoing the
