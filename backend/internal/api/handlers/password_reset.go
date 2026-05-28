@@ -6,6 +6,8 @@ import (
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
 	"net/http"
+
+	"github.com/getsentry/sentry-go"
 )
 
 // PasswordResetHandler exposes HTTP endpoints for the forgot/reset password flow.
@@ -30,6 +32,7 @@ func (h *PasswordResetHandler) ForgotPassword(w http.ResponseWriter, r *http.Req
 
 	if err := h.service.RequestReset(req.Email); err != nil {
 		// Log internally — never surface to client.
+		sentry.CaptureException(err)
 		log.Printf("ERROR [ForgotPassword] %v", err)
 	}
 
@@ -56,6 +59,7 @@ func (h *PasswordResetHandler) ResetPassword(w http.ResponseWriter, r *http.Requ
 		case errors.Is(err, domain.ErrWeakPassword):
 			WriteError(w, http.StatusBadRequest, "weak_password")
 		default:
+			sentry.CaptureException(err)
 			log.Printf("ERROR [ResetPassword] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}

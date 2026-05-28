@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/getsentry/sentry-go"
 )
 
 // Haninge coordinates (hardcoded for POC)
@@ -86,6 +88,7 @@ func (h *OffersHandler) SearchOffers(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.tjekService.SearchOffers(req)
 	if err != nil {
+		sentry.CaptureException(err)
 		log.Printf("ERROR [SearchOffers] %v", err)
 		WriteError(w, http.StatusBadGateway, "service_unavailable")
 		return
@@ -105,6 +108,7 @@ func (h *OffersHandler) GetDiscounts(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.tjekService.GetTopDiscounts(lat, lng, radius, excludeStores)
 	if err != nil {
+		sentry.CaptureException(err)
 		log.Printf("ERROR [GetDiscounts] %v", err)
 		WriteError(w, http.StatusBadGateway, "service_unavailable")
 		return
@@ -122,6 +126,7 @@ func (h *OffersHandler) GetStores(w http.ResponseWriter, r *http.Request) {
 
 	stores, err := h.tjekService.GetAvailableStores(lat, lng, radius)
 	if err != nil {
+		sentry.CaptureException(err)
 		log.Printf("ERROR [GetStores] %v", err)
 		WriteError(w, http.StatusBadGateway, "service_unavailable")
 		return
