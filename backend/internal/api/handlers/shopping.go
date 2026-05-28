@@ -8,6 +8,8 @@ import (
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
 	"net/http"
+
+	"github.com/getsentry/sentry-go"
 )
 
 type ShoppingHandler struct {
@@ -43,6 +45,7 @@ func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request
 		case errors.Is(err, domain.ErrForbidden):
 			WriteError(w, http.StatusForbidden, "forbidden")
 		default:
+			sentry.CaptureException(err)
 			log.Printf("ERROR [GetShoppingList] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
@@ -92,6 +95,7 @@ func (h *ShoppingHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 			log.Printf("INFO [UpdateShoppingItem] not found: %s", itemID)
 			WriteError(w, http.StatusNotFound, "not_found")
 		default:
+			sentry.CaptureException(err)
 			log.Printf("ERROR [UpdateShoppingItem] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
@@ -138,6 +142,7 @@ func (h *ShoppingHandler) AddCustomItem(w http.ResponseWriter, r *http.Request) 
 		case errors.Is(err, domain.ErrTooManyItems):
 			WriteError(w, http.StatusBadRequest, "too_many_items")
 		default:
+			sentry.CaptureException(err)
 			log.Printf("ERROR [AddCustomItem] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
@@ -167,6 +172,7 @@ func (h *ShoppingHandler) DeleteCustomItem(w http.ResponseWriter, r *http.Reques
 			WriteError(w, http.StatusNotFound, "not_found")
 			return
 		}
+		sentry.CaptureException(err)
 		log.Printf("ERROR [DeleteCustomItem] %v", err)
 		WriteError(w, http.StatusInternalServerError, "internal_error")
 		return

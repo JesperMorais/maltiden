@@ -7,6 +7,8 @@ import (
 	"maltiden/internal/services"
 	"maltiden/pkg/middleware"
 	"net/http"
+
+	"github.com/getsentry/sentry-go"
 )
 
 type FeedbackHandler struct {
@@ -41,6 +43,7 @@ func (h *FeedbackHandler) Create(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrFeedbackRateLimited):
 			WriteError(w, http.StatusTooManyRequests, "feedback_rate_limited")
 		default:
+			sentry.CaptureException(err)
 			log.Printf("ERROR [CreateFeedback] %v", err)
 			WriteError(w, http.StatusInternalServerError, "internal_error")
 		}
