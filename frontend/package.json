@@ -23,13 +23,13 @@
     "test:e2e:ui": "npx --prefix .. playwright test --ui"
   },
   "dependencies": {
-    "@sentry/vue": "^10.53.1",
+    "@sentry/vue": "^10.55.0",
     "axios": "^1.16.1",
     "lucide-vue-next": "^1.0.0",
     "motion-v": "^2.2.1",
     "pinia": "^3.0.4",
-    "vue": "^3.5.34",
-    "vue-router": "^5.0.7"
+    "vue": "^3.5.35",
+    "vue-router": "^5.1.0"
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.4",
@@ -40,7 +40,7 @@
     "@vue/test-utils": "^2.4.10",
     "@vue/tsconfig": "^0.9.1",
     "axios-mock-adapter": "^2.1.0",
-    "eslint": "^10.4.0",
+    "eslint": "^10.4.1",
     "eslint-plugin-vue": "~10.9.1",
     "happy-dom": "^20.9.0",
     "jiti": "^2.7.0",
@@ -49,7 +49,7 @@
     "typescript": "~6.0.3",
     "vite": "^7.3.3",
     "vite-plugin-vue-devtools": "^8.1.2",
-    "vitest": "^4.1.7",
-    "vue-tsc": "^3.3.1"
+    "vitest": "^4.1.8",
+    "vue-tsc": "^3.3.3"
   }
 }
