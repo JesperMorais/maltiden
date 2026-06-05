@@ -43,6 +43,12 @@ var (
 	ErrTooManyItems         = errors.New("too_many_items")
 	ErrTooManyTags          = errors.New("too_many_tags")
 	ErrTagTooLong           = errors.New("tag_too_long")
+	ErrEmojiTooLong         = errors.New("emoji_too_long")
+	ErrTooManyInstructions  = errors.New("too_many_instructions")
+	ErrInstructionTooLong   = errors.New("instruction_too_long")
+	ErrIngredientNameTooLong = errors.New("ingredient_name_too_long")
+	ErrRecipeTooLarge       = errors.New("recipe_too_large")
+	ErrContainsControlChar  = errors.New("contains_control_char")
 
 	// Auth validation
 	ErrInvalidEmail = errors.New("invalid_email")

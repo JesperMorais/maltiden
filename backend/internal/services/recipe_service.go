@@ -10,6 +10,45 @@ import (
 	"github.com/google/uuid"
 )
 
+func validateRecipeContent(name string, tags []string, ingredients []domain.Ingredient, instructions []string) error {
+	if err := domain.ValidateContent(name); err != nil {
+		return err
+	}
+	for _, tag := range tags {
+		if err := domain.ValidateContent(tag); err != nil {
+			return err
+		}
+	}
+	for _, ing := range ingredients {
+		if err := domain.ValidateContent(ing.Name); err != nil {
+			return err
+		}
+		if err := domain.ValidateContent(ing.Unit); err != nil {
+			return err
+		}
+	}
+	for _, step := range instructions {
+		if err := domain.ValidateContent(step); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func stripRecipeEmoji(r *domain.Recipe) {
+	r.Name = domain.StripEmoji(r.Name)
+	for i, tag := range r.Tags {
+		r.Tags[i] = domain.StripEmoji(tag)
+	}
+	for i := range r.Ingredients {
+		r.Ingredients[i].Name = domain.StripEmoji(r.Ingredients[i].Name)
+		r.Ingredients[i].Unit = domain.StripEmoji(r.Ingredients[i].Unit)
+	}
+	for i, step := range r.Instructions {
+		r.Instructions[i] = domain.StripEmoji(step)
+	}
+}
+
 // normalizeTags trims whitespace, drops empty strings, and dedupes
 // case-insensitively while preserving the first-seen casing and order.
 func normalizeTags(tags []string) []string {
@@ -108,6 +147,10 @@ func (s *RecipeService) Update(id string, householdID string, req domain.UpdateR
 		}
 	}
 
+	if err := validateRecipeContent(req.Name, normalizedTags, req.Ingredients, req.Instructions); err != nil {
+		return nil, err
+	}
+
 	// Update fields on existing recipe
 	existing.Name = req.Name
 	existing.Servings = req.Servings
@@ -119,6 +162,8 @@ func (s *RecipeService) Update(id string, householdID string, req domain.UpdateR
 	if existing.Tags == nil {
 		existing.Tags = []string{}
 	}
+
+	stripRecipeEmoji(existing)
 
 	if err := s.recipeStorage.Update(existing); err != nil {
 		sentry.CaptureException(err)
@@ -184,6 +229,10 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 		}
 	}
 
+	if err := validateRecipeContent(req.Name, normalizedTags, req.Ingredients, req.Instructions); err != nil {
+		return nil, err
+	}
+
 	recipe := &domain.Recipe{
 		ID:           "rec_" + uuid.New().String(),
 		Name:         req.Name,
@@ -199,6 +248,8 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 	if recipe.Tags == nil {
 		recipe.Tags = []string{}
 	}
+
+	stripRecipeEmoji(recipe)
 
 	if err := s.recipeStorage.Create(recipe); err != nil {
 		sentry.CaptureException(err)
