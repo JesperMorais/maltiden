@@ -23,8 +23,8 @@
     "test:e2e:ui": "npx --prefix .. playwright test --ui"
   },
   "dependencies": {
-    "@sentry/vue": "^10.55.0",
-    "axios": "^1.16.1",
+    "@sentry/vue": "^10.56.0",
+    "axios": "^1.17.0",
     "lucide-vue-next": "^1.0.0",
     "motion-v": "^2.2.1",
     "pinia": "^3.0.4",
@@ -33,23 +33,23 @@
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.4",
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.2",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/eslint-config-prettier": "^10.2.0",
-    "@vue/eslint-config-typescript": "^14.7.0",
-    "@vue/test-utils": "^2.4.10",
+    "@vue/eslint-config-typescript": "^14.8.0",
+    "@vue/test-utils": "^2.4.11",
     "@vue/tsconfig": "^0.9.1",
     "axios-mock-adapter": "^2.1.0",
     "eslint": "^10.4.1",
-    "eslint-plugin-vue": "~10.9.1",
-    "happy-dom": "^20.9.0",
+    "eslint-plugin-vue": "~10.9.2",
+    "happy-dom": "^20.10.2",
     "jiti": "^2.7.0",
     "npm-run-all2": "^9.0.1",
     "prettier": "3.8.3",
     "typescript": "~6.0.3",
-    "vite": "^7.3.3",
+    "vite": "^7.3.5",
     "vite-plugin-vue-devtools": "^8.1.2",
     "vitest": "^4.1.8",
-    "vue-tsc": "^3.3.3"
+    "vue-tsc": "^3.3.4"
   }
 }
