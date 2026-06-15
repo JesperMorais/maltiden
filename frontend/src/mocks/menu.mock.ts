@@ -53,7 +53,16 @@ export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Me
     }
   }
 
-  const menu: Menu = { id: 'menu_mock_' + Date.now(), days }
+  const menu: Menu = {
+    id: 'menu_mock_' + Date.now(),
+    days,
+    // Illustrative shared-ingredient economy so the UX is exercisable in mock mode.
+    sharedIngredients: [
+      { name: 'Lök', recipeCount: 3 },
+      { name: 'Vitlök', recipeCount: 3 },
+      { name: 'Grädde', recipeCount: 2 },
+    ],
+  }
   currentMockMenu = menu
   return menu
 }

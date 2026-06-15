@@ -16,9 +16,17 @@ export interface MenuDay {
   skip?: boolean
 }
 
+/** An ingredient reused across two or more of the week's recipes. */
+export interface SharedIngredient {
+  name: string
+  recipeCount: number
+}
+
 export interface Menu {
   id: string
   days: MenuDay[]
+  /** Ingredients shared across the week's recipes, most-shared first. */
+  sharedIngredients?: SharedIngredient[]
 }
 
 export interface GenerateMenuRequest {
