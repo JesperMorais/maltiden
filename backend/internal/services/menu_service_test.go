@@ -3,6 +3,7 @@ package services
 import (
 	"maltiden/internal/domain"
 	"maltiden/internal/storage/sqlite"
+	"math/rand/v2"
 	"strings"
 	"testing"
 	"time"
@@ -421,6 +422,75 @@ func TestMenuGenerate_ExcludedTagsFilterRecipes(t *testing.T) {
 			t.Errorf("day %d selected excluded recipe %q", i, excluded.ID)
 		}
 	}
+}
+
+func TestMenuGenerate_PrefersIngredientOverlap(t *testing.T) {
+	// End-to-end proof that the service can load real recipe ingredients from
+	// storage (loadIngredients) and that feeding them to the selector makes the
+	// greedy overlap step prefer the sharing recipe. We isolate the assertion to
+	// our own three recipes by driving the selector directly — the same code
+	// path Generate uses (loadIngredients + newMenuSelector) — rather than
+	// fighting the 100+ seed recipes that also live in the household's pool.
+	env := newMenuTestEnv(t)
+
+	mk := func(name string, ings []domain.Ingredient) (string, domain.RecipeSummary) {
+		r, err := env.recipeService.Create(domain.CreateRecipeRequest{
+			Name:         name,
+			Servings:     4,
+			Ingredients:  ings,
+			Instructions: []string{"Cook"},
+		}, env.householdID)
+		if err != nil {
+			t.Fatalf("create %s: %v", name, err)
+		}
+		return r.ID, domain.RecipeSummary{ID: r.ID, Name: name, Servings: 4}
+	}
+
+	aID, aSum := mk("Kycklinggryta", ing("kyckling", "ris"))
+	bID, bSum := mk("Kycklingsallad", ing("kyckling", "sallad"))
+	cID, cSum := mk("Torskrätt", ing("torsk", "potatis"))
+
+	// Build the ingredient map the way the service does: load full recipes by
+	// ID via the real storage. This exercises loadIngredients' data source.
+	ingMap := env.menuService.loadIngredients([]domain.RecipeSummary{aSum, bSum, cSum})
+	if len(ingMap[aID]) == 0 || len(ingMap[bID]) == 0 || len(ingMap[cID]) == 0 {
+		t.Fatalf("loadIngredients did not return ingredients for all recipes: %v", ingMap)
+	}
+
+	// Drive the selector over exactly our three recipes across several seeds.
+	// The first pick is a 0-overlap tie (shuffle order), but once one kyckling
+	// recipe is chosen the other jumps to overlap=1 and must be picked before
+	// the unrelated torsk recipe — so the two kyckling recipes always end up
+	// adjacent in the 3-pick sequence.
+	for _, seed := range []uint64{1, 7, 42, 100} {
+		sel, ok := newMenuSelector([]domain.RecipeSummary{aSum, bSum, cSum},
+			domain.DefaultMenuPreferences(env.householdID),
+			rand.New(rand.NewPCG(seed, seed+1)), ingMap)
+		if !ok {
+			t.Fatalf("seed %d: selector failed to build", seed)
+		}
+		order := []string{sel.Next(), sel.Next(), sel.Next()}
+		posA, posB := indexOf(order, aID), indexOf(order, bID)
+		if abs(posA-posB) != 1 {
+			t.Errorf("seed %d: kyckling recipes should be adjacent via overlap, got order %v (c=%s)", seed, order, cID)
+		}
+	}
+}
+
+func indexOf(s []string, v string) int {
+	for i, x := range s {
+		if x == v {
+			return i
+		}
+	}
+	return -1
+}
+
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
 }
 
 func TestMenuGetCurrent_NoMenu(t *testing.T) {
