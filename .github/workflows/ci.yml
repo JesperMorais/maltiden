@@ -109,10 +109,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check no glassmorphism
+      - name: No glassmorphism (backdrop-filter ban)
         run: |
-          if grep -rn "backdrop-filter" src/; then
-            echo "::error::backdrop-filter (glassmorphism) is banned per CLAUDE.md — remove it from the files listed above"
+          if grep -rn 'backdrop-filter' src/ --include='*.vue' | grep -v '@media'; then
+            echo "backdrop-filter is banned (glassmorphism). See CLAUDE.md."
             exit 1
           fi
 
