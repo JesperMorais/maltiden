@@ -6,6 +6,7 @@ import { usePlanningPreferencesStore } from '@/stores/planningPreferences'
 import { useSlotMachine, type DisplayRecipe } from '@/composables/useSlotMachine'
 import { useToast } from '@/composables/useToast'
 import { useFocusTrap } from '@/composables/useFocusTrap'
+import { ChefHat } from 'lucide-vue-next'
 import MenuDayCard from '@/components/menu/MenuDayCard.vue'
 import GenerateMenuEmptyState from '@/components/menu/GenerateMenuEmptyState.vue'
 import MenuGeneratorActions from '@/components/menu/MenuGeneratorActions.vue'
@@ -33,6 +34,12 @@ const hasNavigatedFromSave = ref(false)
 // Computed
 const days = computed(() => store.orderedDays)
 const hasMenu = computed(() => store.hasMenu)
+
+// Prep-läge (batch cooking) toggle, two-way bound to the store + localStorage.
+const prepMode = computed({
+  get: () => store.prepMode,
+  set: (value: boolean) => store.setPrepMode(value),
+})
 const isLoading = computed(() => store.isLoading)
 const { showSkeleton } = useSkeleton(
   computed(() => store.isGenerating && !slotMachine.isAnimating.value),
@@ -207,6 +214,24 @@ onBeforeRouteLeave((to, from, next) => {
         <p class="description">
           Skapa en meny för hela veckan med slumpmässiga recept. Lås dagar du vill behålla och generera nya för resten.
         </p>
+
+        <!-- Prep-läge (batch cooking) toggle -->
+        <label class="prep-toggle" :class="{ active: prepMode }">
+          <span class="prep-toggle-icon">
+            <ChefHat :size="20" :stroke-width="2.25" />
+          </span>
+          <span class="prep-toggle-text">
+            <span class="prep-toggle-label">Prep-läge</span>
+            <span class="prep-toggle-desc">Laga en gång, ät i två dagar</span>
+          </span>
+          <input
+            v-model="prepMode"
+            type="checkbox"
+            class="prep-toggle-input"
+            aria-label="Prep-läge: laga en gång, ät i två dagar"
+          />
+          <span class="prep-toggle-slider"></span>
+        </label>
       </div>
     </header>
 
@@ -330,6 +355,115 @@ onBeforeRouteLeave((to, from, next) => {
   line-height: 1.6;
   max-width: 700px;
   margin: 0 auto;
+}
+
+/* Prep-läge toggle */
+.prep-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin: 1.5rem auto 0;
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.prep-toggle:hover {
+  border-color: var(--border-color-hover);
+}
+
+.prep-toggle.active {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.prep-toggle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: color var(--duration-normal) var(--ease-default);
+}
+
+.prep-toggle.active .prep-toggle-icon {
+  color: var(--accent);
+}
+
+.prep-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.prep-toggle-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.prep-toggle-desc {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.prep-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.prep-toggle-slider {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  background: var(--border-color);
+  border-radius: var(--radius-full);
+  transition: background var(--duration-normal) ease;
+  flex-shrink: 0;
+}
+
+.prep-toggle-slider::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  background: var(--bg-card);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--duration-normal) var(--ease-default);
+}
+
+.prep-toggle-input:checked + .prep-toggle-slider {
+  background: var(--accent);
+}
+
+.prep-toggle-input:checked + .prep-toggle-slider::after {
+  transform: translateX(20px);
+}
+
+.prep-toggle-input:focus-visible + .prep-toggle-slider {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--accent-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prep-toggle,
+  .prep-toggle-icon,
+  .prep-toggle-slider,
+  .prep-toggle-slider::after {
+    transition: none;
+  }
 }
 
 /* Content */

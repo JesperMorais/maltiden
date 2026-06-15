@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { AnimatePresence, Motion } from 'motion-v'
-import { Lock, LockOpen } from 'lucide-vue-next'
+import { Lock, LockOpen, ChefHat, Refrigerator } from 'lucide-vue-next'
 import type { DraftMenuDay } from '@/stores/menuGenerator'
 import type { DisplayRecipe } from '@/composables/useSlotMachine'
 
@@ -13,7 +14,12 @@ interface Props {
   displayRecipe?: DisplayRecipe
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+// Prep-mode state derived from the day. A cook day batch-cooks for two days
+// (2× servings, already reflected in day.servings); a leftovers day reuses it.
+const isCookDay = computed(() => props.day.isCookDay === true && !props.day.leftover)
+const isLeftover = computed(() => props.day.leftover === true)
 
 const emit = defineEmits<{
   'toggle-lock': []
@@ -29,6 +35,8 @@ const emit = defineEmits<{
       empty: !day.recipeId && !isRolling,
       rolling: isRolling,
       'just-landed': hasLanded,
+      'cook-day': isCookDay,
+      leftover: isLeftover,
     }"
   >
     <!-- Loading shimmer overlay -->
@@ -37,6 +45,16 @@ const emit = defineEmits<{
     <!-- Day name header -->
     <div class="day-header">
       <h3 class="day-name">{{ day.dayName }}</h3>
+
+      <!-- Prep-mode badges -->
+      <span v-if="isCookDay" class="prep-badge prep-badge-cook">
+        <ChefHat :size="13" :stroke-width="2.5" class="prep-badge-icon" />
+        Lagas (2 dagar)
+      </span>
+      <span v-else-if="isLeftover" class="prep-badge prep-badge-leftover">
+        <Refrigerator :size="13" :stroke-width="2.5" class="prep-badge-icon" />
+        Rester
+      </span>
     </div>
 
     <!-- Recipe content -->
@@ -99,9 +117,9 @@ const emit = defineEmits<{
       </template>
     </div>
 
-    <!-- Lock button -->
+    <!-- Lock button — hidden on leftovers days (they follow their cook day) -->
     <button
-      v-if="day.recipeId && !isRolling"
+      v-if="day.recipeId && !isRolling && !isLeftover"
       class="lock-button"
       :class="{ locked: isLocked }"
       :aria-label="isLocked ? `Lås upp ${day.dayName}` : `Lås ${day.dayName}`"
@@ -275,6 +293,11 @@ const emit = defineEmits<{
 /* Day header */
 .day-header {
   margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .day-name {
@@ -285,6 +308,65 @@ const emit = defineEmits<{
   letter-spacing: 0.05em;
   color: var(--text-secondary);
   margin: 0;
+}
+
+/* ========================================
+   PREP MODE (BATCH COOKING)
+   ======================================== */
+
+.prep-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.prep-badge-icon {
+  flex-shrink: 0;
+}
+
+/* Cook day: accent badge */
+.prep-badge-cook {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+/* Leftovers day: muted badge */
+.prep-badge-leftover {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+/* Cook day card: accent emphasis, mirrors the .locked pattern */
+.menu-day-card.cook-day {
+  border-color: var(--accent);
+  background: linear-gradient(165deg, var(--bg-card) 0%, var(--bg-hover) 100%);
+}
+
+/* Leftovers day card: secondary, visually linked to the prior cook day via a
+   left-edge accent. */
+.menu-day-card.leftover {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  border-left: 4px solid var(--accent);
+}
+
+.menu-day-card.leftover .recipe-name,
+.menu-day-card.leftover .recipe-emoji {
+  opacity: 0.85;
+}
+
+.menu-day-card.leftover .recipe-servings {
+  color: var(--text-muted);
 }
 
 /* Recipe content */

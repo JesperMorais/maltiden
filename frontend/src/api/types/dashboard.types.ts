@@ -74,6 +74,12 @@ export interface MenuDay {
 
   /** Whether this day is skipped (no cooking) */
   isSkipped: boolean
+
+  /** True when this day reuses leftovers from a prior cook day (prep mode). */
+  leftover?: boolean
+
+  /** The date ("YYYY-MM-DD") of the cook day a leftovers day draws from. */
+  cookDate?: string
 }
 
 // ============================================

@@ -130,9 +130,9 @@ func TestRunMigrations_RecordsAllVersions(t *testing.T) {
 		t.Fatalf("rows.Err: %v", err)
 	}
 
-	// Migrations 1..18 are defined in runMigrations.
-	want := make([]int, 0, 18)
-	for v := 1; v <= 18; v++ {
+	// Migrations 1..19 are defined in runMigrations.
+	want := make([]int, 0, 19)
+	for v := 1; v <= 19; v++ {
 		want = append(want, v)
 	}
 	if !sort.IntsAreSorted(versions) {
@@ -215,8 +215,53 @@ func TestRunMigrations_Phase0Columns(t *testing.T) {
 			mainProtein, dietClass, batchable, cookMinutes)
 	}
 
-	if reached := schemaVersion(t, db); reached != 18 {
-		t.Errorf("expected schema to reach version 18, got %d", reached)
+	if reached := schemaVersion(t, db); reached != 19 {
+		t.Errorf("expected schema to reach version 19, got %d", reached)
+	}
+}
+
+// TestRunMigrations_Phase2Columns asserts the Phase 2 (issue #248, meal prep)
+// migration added the menu_days leftover/cook_date columns and the
+// menu_preferences prep_mode_default column, with the documented defaults on a
+// legacy-shaped row.
+func TestRunMigrations_Phase2Columns(t *testing.T) {
+	db := newMigratedMemoryDB(t)
+
+	menuDayCols := columnNames(t, db, "menu_days")
+	for _, col := range []string{"leftover", "cook_date"} {
+		if !menuDayCols[col] {
+			t.Errorf("expected menu_days column %q after migration 019, present: %v", col, menuDayCols)
+		}
+	}
+
+	prefCols := columnNames(t, db, "menu_preferences")
+	if !prefCols["prep_mode_default"] {
+		t.Errorf("expected menu_preferences column prep_mode_default after migration 019, present: %v", prefCols)
+	}
+
+	// A menu_days row inserted without the new columns must read back with defaults.
+	if _, err := db.Exec(`INSERT INTO households (id, name) VALUES ('hh_p2', 'P2')`); err != nil {
+		t.Fatalf("insert household: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO menus (id, household_id) VALUES ('menu_p2', 'hh_p2')`); err != nil {
+		t.Fatalf("insert menu: %v", err)
+	}
+	_, err := db.Exec(`INSERT INTO menu_days (id, menu_id, date, servings)
+	                   VALUES ('md_p2', 'menu_p2', '2026-01-01', 4)`)
+	if err != nil {
+		t.Fatalf("insert legacy-shaped menu_day: %v", err)
+	}
+	var (
+		leftover int
+		cookDate sql.NullString
+	)
+	err = db.QueryRow(`SELECT leftover, cook_date FROM menu_days WHERE id = 'md_p2'`).
+		Scan(&leftover, &cookDate)
+	if err != nil {
+		t.Fatalf("read back menu_day defaults: %v", err)
+	}
+	if leftover != 0 || cookDate.Valid {
+		t.Errorf("expected leftover=0 cook_date=NULL, got leftover=%d cookDate=%v", leftover, cookDate)
 	}
 }
 

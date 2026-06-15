@@ -1,0 +1,3 @@
+ALTER TABLE menu_days ADD COLUMN leftover INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE menu_days ADD COLUMN cook_date TEXT;
+ALTER TABLE menu_preferences ADD COLUMN prep_mode_default INTEGER NOT NULL DEFAULT 0;

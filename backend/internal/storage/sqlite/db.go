@@ -116,6 +116,7 @@ func runMigrations(db *sql.DB, fs embed.FS) error {
 		{16, "016_create_menu_preferences.sql"},
 		{17, "017_add_recipe_metadata.sql"},
 		{18, "018_add_preferences_diet_profile.sql"},
+		{19, "019_add_menu_day_leftover.sql"},
 	}
 
 	for _, m := range migrationFiles {

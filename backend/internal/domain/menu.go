@@ -7,6 +7,14 @@ type MenuDay struct {
 	RecipeID string `json:"recipeId,omitempty"`
 	Servings int    `json:"servings"`
 	Skip     bool   `json:"skip,omitempty"`
+
+	// Leftover marks a meal-prep "eat the leftovers" day: it reuses the recipe
+	// cooked on CookDate (the batch cook day, which carries 2× servings), so this
+	// day requires no new groceries and is excluded from the shopping list.
+	Leftover bool `json:"leftover,omitempty"`
+	// CookDate is the date of the cook day whose batch this leftover day eats
+	// from (only set when Leftover is true).
+	CookDate string `json:"cookDate,omitempty"`
 }
 
 type Menu struct {
@@ -27,6 +35,13 @@ type GenerateMenuRequest struct {
 	// counts them when scoring the rest of the week (overlap, protein variety,
 	// recency, vegetarian quota). An unknown recipeId is silently ignored.
 	LockedDays map[string]string `json:"lockedDays,omitempty"`
+
+	// PrepMode opts the week into meal-prep (batch-cooking) placement: the
+	// selector cooks a batchable recipe once at 2× servings and reuses it as
+	// leftovers the next day. A nil pointer falls back to the household's saved
+	// PrepModeDefault preference; an explicit false forces classic Phase-1
+	// generation regardless of the default.
+	PrepMode *bool `json:"prepMode,omitempty"`
 }
 
 type UpdateMenuRequest struct {
@@ -40,6 +55,11 @@ type MenuResponseDay struct {
 	Emoji      string `json:"emoji,omitempty"`
 	Servings   int    `json:"servings"`
 	Skip       bool   `json:"skip,omitempty"`
+
+	// Leftover / CookDate mirror MenuDay (see there): a meal-prep leftovers day
+	// reuses the recipe cooked on CookDate and buys no new groceries.
+	Leftover bool   `json:"leftover,omitempty"`
+	CookDate string `json:"cookDate,omitempty"`
 }
 
 type MenuResponse struct {
@@ -85,6 +105,12 @@ const (
 	// SelectorRestarts is how many randomized greedy constructions are tried;
 	// the best-scoring week wins (ties broken by lowest restart index).
 	SelectorRestarts = 24
+	// BatchMultiplier is how many servings of base portions a meal-prep cook day
+	// produces (one day to eat + one day of leftovers).
+	BatchMultiplier = 2
+	// PrepPairsPerWeek is the maximum number of cook→leftovers batch pairs the
+	// prep-aware selector places in a single generated week.
+	PrepPairsPerWeek = 1
 )
 
 // DietCompatible reports whether a recipe's diet class is acceptable for a
@@ -129,6 +155,10 @@ type MenuPreferences struct {
 	// free-text strings the household wants to avoid; Phase 0 only STORES them.
 	DietProfile         string   `json:"dietProfile,omitempty"`
 	DislikedIngredients []string `json:"dislikedIngredients"`
+
+	// PrepModeDefault is the household's default for meal-prep (batch cooking).
+	// When true, a generate request that omits prepMode opts into prep placement.
+	PrepModeDefault bool `json:"prepModeDefault"`
 }
 
 // UpdateMenuPreferencesRequest is the payload for upserting a household's
@@ -141,6 +171,8 @@ type UpdateMenuPreferencesRequest struct {
 
 	DietProfile         string   `json:"dietProfile,omitempty"`
 	DislikedIngredients []string `json:"dislikedIngredients"`
+
+	PrepModeDefault bool `json:"prepModeDefault"`
 }
 
 // DefaultMenuPreferences returns the preferences applied to a household that
@@ -154,6 +186,7 @@ func DefaultMenuPreferences(householdID string) MenuPreferences {
 		VegetarianDays:      0,
 		DietProfile:         "",
 		DislikedIngredients: []string{},
+		PrepModeDefault:     false,
 	}
 }
 

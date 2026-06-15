@@ -14,6 +14,10 @@ export interface MenuDay {
   emoji?: string
   servings: number
   skip?: boolean
+  /** True when this day reuses leftovers from a prior cook day (prep mode). */
+  leftover?: boolean
+  /** The date ("YYYY-MM-DD") of the cook day a leftovers day draws from. */
+  cookDate?: string
 }
 
 export interface SharedIngredient {
@@ -41,6 +45,16 @@ export interface GenerateMenuRequest {
   extraPortions?: Record<string, number>
   /** Locked days kept and scored server-side: date "YYYY-MM-DD" → recipeId */
   lockedDays?: Record<string, string>
+  /** Batch-cook mode: pair cook days (2× servings) with leftovers days. */
+  prepMode?: boolean
+}
+
+/**
+ * Planning preferences persisted server-side and used as generation defaults.
+ */
+export interface MenuPreferences {
+  /** Default prep-mode (batch cooking) state for new menus. */
+  prepModeDefault?: boolean
 }
 
 /**
@@ -60,6 +74,10 @@ export interface SaveMenuDay {
   recipeId?: string
   servings: number
   skip?: boolean
+  /** True when this day reuses leftovers from a prior cook day (prep mode). */
+  leftover?: boolean
+  /** The date ("YYYY-MM-DD") of the cook day a leftovers day draws from. */
+  cookDate?: string
 }
 
 /**

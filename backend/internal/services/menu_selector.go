@@ -46,8 +46,9 @@ var fallbackStaples = map[string]bool{
 type menuSelector struct {
 	rng *rand.Rand
 
-	veg  []string // vegetarian candidate ids
-	pool []string // veg + nonVeg ids, the cycling fallback order
+	veg       []string // vegetarian candidate ids
+	pool      []string // veg + nonVeg ids, the cycling fallback order
+	batchable []string // batchable candidate ids (subset of pool), prep-mode pairs
 
 	byID      map[string]domain.Recipe   // candidate recipes by id
 	canonInts map[string][]int           // recipe id → non-staple canonicals as sorted dense int ids
@@ -266,6 +267,9 @@ func newMenuSelector(recipes []domain.Recipe, prefs domain.MenuPreferences, rece
 		} else {
 			nonVeg = append(nonVeg, r.ID)
 		}
+		if r.Batchable {
+			sel.batchable = append(sel.batchable, r.ID)
+		}
 	}
 	sel.nProteins = len(protID)
 
@@ -335,9 +339,37 @@ func (s *menuSelector) protIntFor(id string) int {
 // It returns the chosen recipe id per slot ("" for skipped slots). Locks and
 // the cycling fallback for fewer-recipes-than-days are preserved.
 func (s *menuSelector) SelectWeek(slots int, skip []bool, locked []string) []string {
+	chosen, _ := s.SelectWeekPrep(slots, skip, locked, nil, false)
+	return chosen
+}
+
+// PrepPair records one meal-prep batch placement: RecipeID is cooked at the
+// CookSlot (carrying batch servings) and eaten again as leftovers at the
+// LeftoverSlot (the immediately following slot).
+type PrepPair struct {
+	CookSlot     int
+	LeftoverSlot int
+	RecipeID     string
+}
+
+// SelectWeekPrep builds the best week, optionally placing meal-prep batch pairs.
+//
+//   - slots, skip, locked behave exactly as for SelectWeek.
+//   - weekday[i] is the Go time.Weekday of slot i (0=Sun..6=Sat). It is only
+//     consulted to rank candidate cook days (Sunday first, then Monday); a nil
+//     or short slice is fine (those slots just rank as "any").
+//   - prep enables batch placement. When false the result is byte-identical to
+//     SelectWeek (no pairs), so prepMode off == Phase 1.
+//
+// It returns the chosen recipe id per slot and the batch pairs placed (empty
+// when prep is off or no eligible window/recipe exists). A leftover slot's
+// chosen id equals its pair's RecipeID, so a returned week is self-consistent
+// even for callers that ignore the pairs.
+func (s *menuSelector) SelectWeekPrep(slots int, skip []bool, locked []string, weekday []int, prep bool) ([]string, []PrepPair) {
 	// Classify slots.
 	openIdx := make([]int, 0, slots)
 	lockedAtSlot := make(map[int]string)
+	open := make([]bool, slots) // slot is open (not skip/locked) — used by prep windows
 	for i := 0; i < slots; i++ {
 		if i < len(skip) && skip[i] {
 			continue
@@ -350,6 +382,7 @@ func (s *menuSelector) SelectWeek(slots int, skip []bool, locked []string) []str
 			// Unknown locked id → treat as a normal open slot.
 		}
 		openIdx = append(openIdx, i)
+		open[i] = true
 	}
 
 	// Vegetarian quota covered by locked slots reduces what's still owed.
@@ -359,7 +392,42 @@ func (s *menuSelector) SelectWeek(slots int, skip []bool, locked []string) []str
 			vegFromLocks++
 		}
 	}
+	// vegNeeded may go negative here when locks already over-cover the quota; the
+	// single clamp after the prep pre-pass (below) is the load-bearing one that
+	// normalizes it before it bounds any slice, so we deliberately don't clamp
+	// twice.
 	vegNeeded := s.vegRemaining - vegFromLocks
+
+	// Prep pre-pass: choose up to PrepPairsPerWeek batch pairs and pre-fill their
+	// slots, removing them from the open set the greedy then fills. Done once,
+	// before the restarts, so the pairs are stable for a given input.
+	var pairs []PrepPair
+	if prep {
+		pairs = s.placePrepPairs(slots, open, weekday, lockedAtSlot)
+		prefilledSlot := make(map[int]bool, 2*len(pairs))
+		for _, p := range pairs {
+			prefilledSlot[p.CookSlot] = true
+			prefilledSlot[p.LeftoverSlot] = true
+			// A vegetarian batch pair fills TWO vegetarian days (cook + leftover,
+			// same veg recipe), so it satisfies two of the requested veg-days quota
+			// — credit 2, not 1, or the selector would reserve an extra veg slot and
+			// over-serve vegetarian beyond the quota.
+			if r, ok := s.byID[p.RecipeID]; ok && isVegetarian(r) {
+				vegNeeded -= 2
+			}
+		}
+		// Remove pre-filled slots from the open list the greedy fills.
+		if len(prefilledSlot) > 0 {
+			remaining := openIdx[:0:0]
+			for _, i := range openIdx {
+				if !prefilledSlot[i] {
+					remaining = append(remaining, i)
+				}
+			}
+			openIdx = remaining
+		}
+	}
+
 	if vegNeeded < 0 {
 		vegNeeded = 0
 	}
@@ -375,7 +443,7 @@ func (s *menuSelector) SelectWeek(slots int, skip []bool, locked []string) []str
 	haveBest := false
 
 	for restart := 0; restart < domain.SelectorRestarts; restart++ {
-		week, score := s.constructGreedy(slots, openIdx, lockedAtSlot, vegNeeded, restart)
+		week, score := s.constructGreedy(slots, openIdx, lockedAtSlot, pairs, vegNeeded, restart)
 		if !haveBest || score > bestScore {
 			best = week
 			bestScore = score
@@ -383,7 +451,105 @@ func (s *menuSelector) SelectWeek(slots int, skip []bool, locked []string) []str
 		}
 	}
 
-	return best
+	return best, pairs
+}
+
+// placePrepPairs selects up to PrepPairsPerWeek batch windows over the open
+// slots. A window (i, i+1) is eligible iff BOTH slots are open. Windows are
+// ranked by cook-day weekday (Sunday first, then Monday, then any), tie-broken
+// by lowest cook slot index. For each chosen window it picks the batchable
+// recipe maximizing the marginal score against the pairs already placed (a
+// single O(candidates) pass), counting the batch recipe once. Returns the pairs
+// in placement order; empty when there is no batchable recipe or no eligible
+// consecutive window (graceful no-op, never an error).
+func (s *menuSelector) placePrepPairs(slots int, open []bool, weekday []int, lockedAtSlot map[int]string) []PrepPair {
+	if len(s.batchable) == 0 {
+		return nil
+	}
+
+	// weekdayRank: Sunday(0)=0 best, Monday(1)=1, anything else=2.
+	weekdayRank := func(slot int) int {
+		if slot >= len(weekday) {
+			return 2
+		}
+		switch weekday[slot] {
+		case 0: // Sunday
+			return 0
+		case 1: // Monday
+			return 1
+		default:
+			return 2
+		}
+	}
+
+	// Candidate windows: consecutive open slot pairs, ranked deterministically.
+	type window struct{ cook int }
+	windows := make([]window, 0, slots)
+	for i := 0; i+1 < slots; i++ {
+		if open[i] && open[i+1] {
+			windows = append(windows, window{cook: i})
+		}
+	}
+	if len(windows) == 0 {
+		return nil
+	}
+	sort.SliceStable(windows, func(a, b int) bool {
+		ra, rb := weekdayRank(windows[a].cook), weekdayRank(windows[b].cook)
+		if ra != rb {
+			return ra < rb
+		}
+		return windows[a].cook < windows[b].cook
+	})
+
+	// Seed the scoring state and the used-recipe set with the locked recipes so a
+	// batch candidate is scored against the rest of the week and a locked
+	// (batchable) recipe is never auto-expanded into a second, duplicate slot.
+	state := s.newWeekState()
+	usedRecipe := make(map[string]bool)
+	for _, id := range lockedAtSlot {
+		state.addRecipe(id)
+		usedRecipe[id] = true
+	}
+	usedSlot := make([]bool, slots)
+	var pairs []PrepPair
+
+	for _, w := range windows {
+		if len(pairs) >= domain.PrepPairsPerWeek {
+			break
+		}
+		// Window slots must still both be free (an adjacent pair could have
+		// consumed one of these slots).
+		if usedSlot[w.cook] || usedSlot[w.cook+1] {
+			continue
+		}
+		// Pick the batchable recipe with the highest marginal score. A batch
+		// recipe is added to the running state ONCE (it occupies two slots but is
+		// one scored dish), so the marginal delta reflects no duplicate penalty.
+		bestID := ""
+		bestDelta := 0.0
+		found := false
+		for _, id := range s.batchable {
+			if usedRecipe[id] {
+				continue
+			}
+			delta := state.marginalDelta(id)
+			if !found || delta > bestDelta {
+				bestID = id
+				bestDelta = delta
+				found = true
+			}
+		}
+		if !found {
+			break // no batchable recipe left
+		}
+		state.addRecipe(bestID)
+		usedRecipe[bestID] = true
+		usedSlot[w.cook] = true
+		usedSlot[w.cook+1] = true
+		pairs = append(pairs, PrepPair{CookSlot: w.cook, LeftoverSlot: w.cook + 1, RecipeID: bestID})
+	}
+
+	return pairs
 }
 
 // weekState carries the running aggregates needed to score a (partial) week
@@ -481,12 +647,24 @@ func (w *weekState) addRecipe(id string) {
 // first — by argmax marginal score delta over a per-restart shuffled candidate
 // order. Exact duplicates are only allowed once the unique pool is exhausted
 // (preserving the cycling fallback for fewer-recipes-than-days).
-func (s *menuSelector) constructGreedy(slots int, openIdx []int, lockedAtSlot map[int]string, vegNeeded, restart int) ([]string, float64) {
+func (s *menuSelector) constructGreedy(slots int, openIdx []int, lockedAtSlot map[int]string, pairs []PrepPair, vegNeeded, restart int) ([]string, float64) {
 	week := make([]string, slots)
 	state := s.newWeekState()
 	for slot, id := range lockedAtSlot {
 		week[slot] = id
 		state.addRecipe(id)
+	}
+
+	// Pre-place meal-prep batch pairs. Both slots of a pair carry the recipe id,
+	// but the batch dish is counted ONCE in the score (no duplicate penalty): we
+	// add it to the running state only at the cook slot. The leftover slot mirrors
+	// the same id so the returned week is self-consistent.
+	preFilled := make(map[string]bool) // recipe ids consumed by a batch pair
+	for _, p := range pairs {
+		week[p.CookSlot] = p.RecipeID
+		week[p.LeftoverSlot] = p.RecipeID
+		state.addRecipe(p.RecipeID)
+		preFilled[p.RecipeID] = true
 	}
 
 	// Per-restart deterministic sub-stream so each restart explores a different
@@ -505,6 +683,9 @@ func (s *menuSelector) constructGreedy(slots int, openIdx []int, lockedAtSlot ma
 
 	used := make(map[string]bool)
 	for _, id := range lockedAtSlot {
+		used[id] = true
+	}
+	for id := range preFilled {
 		used[id] = true
 	}
 

@@ -2,7 +2,7 @@
  * Menu API Mock Data
  */
 
-import type { Menu, GenerateMenuRequest, SaveMenuDay, MenuEconomy } from '@/api/menu.api'
+import type { Menu, MenuDay, GenerateMenuRequest, SaveMenuDay, MenuEconomy } from '@/api/menu.api'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -148,7 +148,7 @@ function getDateString(daysFromNow: number): string {
 export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Menu> {
   await delay(1000) // Menu generation takes time
 
-  const days = []
+  const days: MenuDay[] = []
   const skipDays = new Set(request.skipDays || [])
   const lockedDays = request.lockedDays ?? {}
   const chosenRecipeIds: string[] = []
@@ -182,10 +182,37 @@ export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Me
     })
   }
 
+  // Prep mode: place ONE batchable pair across two consecutive days. The first
+  // day cooks 2× servings; the second reuses leftovers (base servings,
+  // leftover: true, cookDate pointing at the first day).
+  if (request.prepMode) {
+    for (let i = 0; i < days.length - 1; i++) {
+      const cook = days[i]!
+      const rest = days[i + 1]!
+      // Both days must carry a (non-skipped) recipe to form a batch pair.
+      if (cook.recipeId && rest.recipeId && !cook.skip && !rest.skip) {
+        cook.servings = request.servings * 2
+        rest.recipeId = cook.recipeId
+        rest.recipeName = cook.recipeName
+        rest.emoji = cook.emoji
+        rest.servings = request.servings
+        rest.leftover = true
+        rest.cookDate = cook.date
+        break
+      }
+    }
+  }
+
+  // Economy counts each cooked recipe once — leftovers days reuse a cook day's
+  // recipe and contribute no additional ingredient references.
+  const cookedRecipeIds = request.prepMode
+    ? days.filter((d) => d.recipeId && !d.leftover).map((d) => d.recipeId!)
+    : chosenRecipeIds
+
   const menu: Menu = {
     id: 'menu_mock_' + Date.now(),
     days,
-    economy: computeMockEconomy(chosenRecipeIds)
+    economy: computeMockEconomy(cookedRecipeIds)
   }
   currentMockMenu = menu
   return menu
@@ -207,6 +234,8 @@ export async function mockSaveMenu(days: SaveMenuDay[]): Promise<Menu> {
         emoji: recipe?.emoji,
         servings: day.servings,
         skip: day.skip,
+        leftover: day.leftover,
+        cookDate: day.cookDate,
       }
     }),
   }
@@ -223,8 +252,9 @@ export async function mockGetCurrentMenu(): Promise<Menu | null> {
       id: 'menu_current',
       days: [
         { date: getDateString(0), recipeId: 'rec_1', recipeName: 'Pasta Carbonara', emoji: '🍝', servings: 4 },
-        { date: getDateString(1), recipeId: 'rec_2', recipeName: 'Kycklingwok', emoji: '🥘', servings: 4 },
-        { date: getDateString(2), recipeId: 'rec_3', recipeName: 'Tacos', emoji: '🌮', servings: 4 },
+        // Batch pair: a cook day (2× servings) followed by a leftovers day.
+        { date: getDateString(1), recipeId: 'rec_2', recipeName: 'Kycklingwok', emoji: '🥘', servings: 8 },
+        { date: getDateString(2), recipeId: 'rec_2', recipeName: 'Kycklingwok', emoji: '🥘', servings: 4, leftover: true, cookDate: getDateString(1) },
         { date: getDateString(3), recipeId: 'rec_4', recipeName: 'Laxfilé med potatis', emoji: '🐟', servings: 4 },
         { date: getDateString(4), recipeId: 'rec_5', recipeName: 'Köttfärssås', emoji: '🍖', servings: 4 },
         { date: getDateString(5), skip: true, servings: 0 },

@@ -576,7 +576,8 @@ yields a different (still valid) week.
   "skipDays": ["2025-01-22"],
   "servings": 4,
   "extraPortions": { "2025-01-23": 2 },
-  "lockedDays": { "2025-01-20": "rec_001" }
+  "lockedDays": { "2025-01-20": "rec_001" },
+  "prepMode": true
 }
 // lockedDays (optional): map of date → recipeId. A locked day keeps its recipe
 //   across regeneration (it is never replaced) but is still counted when scoring
@@ -585,13 +586,21 @@ yields a different (still valid) week.
 //   belonging to another household — is silently ignored (that day is generated
 //   normally); foreign recipes are never fetched or returned.
 //   A date present in both skipDays and lockedDays is treated as skipped.
+// prepMode (optional, boolean): opt into meal-prep / batch cooking. When true the
+//   selector cooks ONE batchable recipe at 2× servings on a preferred cook day
+//   (Sunday, else Monday, else any) and reuses it the next day as leftovers (see
+//   leftover/cookDate on response days). Omit the field to fall back to the
+//   household's saved prepModeDefault preference; send an explicit false to force
+//   classic (non-batched) generation regardless of the default. With prep on but
+//   no batchable recipe or no two consecutive open days, the week is generated
+//   normally (no error). A locked batchable recipe is NOT auto-expanded.
 
 // Response 201
 {
   "id": "menu_001",
   "days": [
-    { "date": "2025-01-20", "recipeId": "rec_001", "recipeName": "Köttfärssås", "emoji": "🍝", "servings": 4 },
-    { "date": "2025-01-21", "recipeId": "rec_002", "recipeName": "Laxpasta", "emoji": "🐟", "servings": 4 },
+    { "date": "2025-01-20", "recipeId": "rec_001", "recipeName": "Köttfärssås", "emoji": "🍝", "servings": 8 },
+    { "date": "2025-01-21", "recipeId": "rec_001", "recipeName": "Köttfärssås", "emoji": "🍝", "servings": 4, "leftover": true, "cookDate": "2025-01-20" },
     { "date": "2025-01-22", "skip": true, "servings": 0 },
     { "date": "2025-01-23", "recipeId": "rec_003", "recipeName": "Kycklinggryta", "emoji": "🍗", "servings": 6 }
   ],
@@ -605,6 +614,13 @@ yields a different (still valid) week.
   }
 }
 // Note: recipeName and emoji are optional — omitted for skip days and when not set on the recipe.
+// Meal-prep days (only when prepMode resolves to true and a batch pair is placed):
+//   - The cook day carries 2× the base servings (here 8 = 2×4) plus any
+//     extraPortions requested on EITHER the cook date or its leftover date.
+//   - The leftover day repeats the cook day's recipeId, carries base servings,
+//     and adds "leftover": true and "cookDate": "<cook day's date>".
+//   - Leftover days are EXCLUDED from the shopping list (GET /shopping-list) and
+//     from the economy summary — the cook day's 2× servings already covers them.
 // economy (optional): a summary of ingredient reuse across the generated week.
 //   - sharedIngredients: non-staple ingredients used by ≥2 recipes, sorted by
 //     recipeCount desc (capped to the top 8). `name` is a human-readable label
@@ -629,24 +645,28 @@ Use this to replace the generated menu's day assignments without regenerating fr
 // Request
 {
   "days": [
-    { "date": "2026-02-24", "recipeId": "rec_001", "servings": 4 },
-    { "date": "2026-02-25", "recipeId": "rec_002", "servings": 4 },
+    { "date": "2026-02-24", "recipeId": "rec_001", "servings": 8 },
+    { "date": "2026-02-25", "recipeId": "rec_001", "servings": 4, "leftover": true, "cookDate": "2026-02-24" },
     { "date": "2026-02-26", "skip": true, "servings": 0 },
     { "date": "2026-02-27", "recipeId": "rec_003", "servings": 6 }
   ]
 }
+// leftover / cookDate (optional, per day): preserved round-trip so a saved
+//   meal-prep menu keeps its batch pairing. A leftover day reuses the recipe
+//   cooked on cookDate and is excluded from the shopping list.
 
 // Response 200 — updated menu
 {
   "id": "menu_001",
   "days": [
-    { "date": "2026-02-24", "recipeId": "rec_001", "recipeName": "Köttfärssås", "emoji": "🍝", "servings": 4 },
-    { "date": "2026-02-25", "recipeId": "rec_002", "recipeName": "Laxpasta", "emoji": "🐟", "servings": 4 },
+    { "date": "2026-02-24", "recipeId": "rec_001", "recipeName": "Köttfärssås", "emoji": "🍝", "servings": 8 },
+    { "date": "2026-02-25", "recipeId": "rec_001", "recipeName": "Köttfärssås", "emoji": "🍝", "servings": 4, "leftover": true, "cookDate": "2026-02-24" },
     { "date": "2026-02-26", "skip": true, "servings": 0 },
     { "date": "2026-02-27", "recipeId": "rec_003", "recipeName": "Kycklinggryta", "servings": 6 }
   ]
 }
 // Note: recipeName and emoji are optional — omitted for skip days and when not set on the recipe.
+//       leftover/cookDate are present only on meal-prep leftover days.
 
 // Error 404
 { "error": "no_active_menu" }
@@ -667,6 +687,7 @@ Use this to replace the generated menu's day assignments without regenerating fr
   ]
 }
 // Note: recipeName and emoji are optional — omitted for skip days and when not set on the recipe.
+//       Meal-prep menus also round-trip leftover/cookDate on their leftover days.
 
 // Response 404 (ingen aktiv meny)
 { "error": "no_active_menu" }
@@ -684,6 +705,7 @@ Fetch the household's persisted menu-generation preferences. **Auth required.** 
   "vegetarianDays": 0,
   "dietProfile": "vegetarian",          // optional — one of omnivore|vegetarian|vegan|pescetarian; "" = unset
   "dislikedIngredients": ["koriander"], // free-text ingredients to avoid (matching deferred to a later phase)
+  "prepModeDefault": false,             // default meal-prep mode for POST /menus/generate when prepMode is omitted
   "updatedAt": "2026-06-15T10:00:00Z"   // optional
 }
 ```
@@ -698,7 +720,8 @@ Upsert the household's menu-generation preferences. **Auth required.**
   "defaultServings": 4,
   "vegetarianDays": 0,
   "dietProfile": "vegetarian",          // optional — empty/omitted = unset
-  "dislikedIngredients": ["koriander"]  // optional — max 50 entries, each 1–50 chars
+  "dislikedIngredients": ["koriander"], // optional — max 50 entries, each 1–50 chars
+  "prepModeDefault": false              // optional — default meal-prep mode (defaults to false)
 }
 
 // Response 200 — full preferences object (same shape as GET)

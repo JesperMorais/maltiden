@@ -94,6 +94,7 @@ func (s *MenuService) UpdatePreferences(householdID string, req domain.UpdateMen
 		VegetarianDays:      req.VegetarianDays,
 		DietProfile:         req.DietProfile,
 		DislikedIngredients: disliked,
+		PrepModeDefault:     req.PrepModeDefault,
 	}
 	if err := s.prefsStorage.Upsert(prefs); err != nil {
 		sentry.CaptureException(err)
@@ -130,6 +131,8 @@ func (s *MenuService) enrichMenuDays(days []domain.MenuDay) ([]domain.MenuRespon
 			RecipeID: d.RecipeID,
 			Servings: d.Servings,
 			Skip:     d.Skip,
+			Leftover: d.Leftover,
+			CookDate: d.CookDate,
 		}
 		if r, ok := recipeMap[d.RecipeID]; ok {
 			rd.RecipeName = r.Name
@@ -253,7 +256,30 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		}
 	}
 
-	chosen := selector.SelectWeek(days, skip, locked)
+	// Resolve effective meal-prep mode: an explicit request flag wins, otherwise
+	// fall back to the household's saved default.
+	prepMode := prefs.PrepModeDefault
+	if req.PrepMode != nil {
+		prepMode = *req.PrepMode
+	}
+
+	// Weekday per slot (Go time.Weekday: 0=Sun..6=Sat), so the selector can prefer
+	// a Sunday/Monday cook day for batch pairs.
+	weekday := make([]int, days)
+	for i := 0; i < days; i++ {
+		weekday[i] = int(today.AddDate(0, 0, i).Weekday())
+	}
+
+	chosen, pairs := selector.SelectWeekPrep(days, skip, locked, weekday, prepMode)
+
+	// Map each slot to its prep role so day construction can stamp cook/leftover
+	// fields. cookSlotOf[leftoverSlot] = cookSlot; leftoverSlotOf[cookSlot] = leftoverSlot.
+	cookSlotOf := make(map[int]int, len(pairs))
+	leftoverSlotOf := make(map[int]int, len(pairs))
+	for _, p := range pairs {
+		cookSlotOf[p.LeftoverSlot] = p.CookSlot
+		leftoverSlotOf[p.CookSlot] = p.LeftoverSlot
+	}
 
 	// Build menu days from the chosen week.
 	menuDays := make([]domain.MenuDay, 0, days)
@@ -262,9 +288,24 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 			Date:     date,
 			Servings: servings,
 		}
-		if skip[i] {
+		cookSlot, isLeftover := cookSlotOf[i]
+		leftoverSlot, isCook := leftoverSlotOf[i]
+		switch {
+		case skip[i]:
 			day.Skip = true
-		} else {
+		case isLeftover:
+			// Leftovers day: reuse the cook day's batch, no new groceries, base
+			// servings. ExtraPortions on this date fold into the cook day below.
+			day.RecipeID = chosen[i]
+			day.Leftover = true
+			day.CookDate = dates[cookSlot]
+		case isCook:
+			// Cook day: batch-cook 2× base, plus any extra portions requested on
+			// either the cook date or its leftovers date (they fold into one cook).
+			day.RecipeID = chosen[i]
+			folded := req.ExtraPortions[date] + req.ExtraPortions[dates[leftoverSlot]]
+			day.Servings = domain.BatchMultiplier*servings + folded
+		default:
 			day.RecipeID = chosen[i]
 			if extra, ok := req.ExtraPortions[date]; ok {
 				day.Servings = servings + extra
@@ -295,7 +336,9 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 	// full recipes for the scorer.
 	chosenIDs := make([]string, 0, days)
 	for i := range menuDays {
-		if !menuDays[i].Skip && menuDays[i].RecipeID != "" {
+		// Leftovers days reuse the cook day's batch — counting them again would
+		// double-count a batched recipe, so they are excluded like skip days.
+		if !menuDays[i].Skip && !menuDays[i].Leftover && menuDays[i].RecipeID != "" {
 			chosenIDs = append(chosenIDs, menuDays[i].RecipeID)
 		}
 	}
@@ -310,6 +353,40 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		Days:    enrichedDays,
 		Economy: economy,
 	}, nil
+}
+
+// normalizeLeftoverDays demotes inconsistent meal-prep leftover days to normal
+// days. A leftover day is only kept as such when its CookDate references a
+// non-leftover day in the SAME menu whose RecipeID equals the leftover day's
+// RecipeID (the cook day whose 2× batch covers it). Any leftover day that fails
+// this — dangling CookDate, mismatched recipe, or self/leftover reference — has
+// its Leftover flag and CookDate cleared so the shopping list still buys its
+// ingredients. Returns a fresh slice; the input is not mutated.
+func normalizeLeftoverDays(in []domain.MenuDay) []domain.MenuDay {
+	// Index the cook-day candidates by date: a non-leftover, non-skip day with a
+	// recipe can serve as a cook day for a leftover that points at it.
+	cookRecipeByDate := make(map[string]string, len(in))
+	for _, d := range in {
+		if !d.Leftover && !d.Skip && d.RecipeID != "" {
+			cookRecipeByDate[d.Date] = d.RecipeID
+		}
+	}
+
+	out := make([]domain.MenuDay, len(in))
+	copy(out, in)
+	for i := range out {
+		d := &out[i]
+		if !d.Leftover {
+			continue
+		}
+		cookRecipe, ok := cookRecipeByDate[d.CookDate]
+		if !ok || d.CookDate == d.Date || cookRecipe != d.RecipeID {
+			// Inconsistent leftover → demote to a normal day so shopping keeps it.
+			d.Leftover = false
+			d.CookDate = ""
+		}
+	}
+	return out
 }
 
 func (s *MenuService) UpdateCurrent(householdID string, req domain.UpdateMenuRequest) (*domain.MenuResponse, error) {
@@ -327,8 +404,16 @@ func (s *MenuService) UpdateCurrent(householdID string, req domain.UpdateMenuReq
 		return nil, domain.ErrInvalidDays
 	}
 
+	// Sanitize client-supplied leftover days. A leftover day is excluded from the
+	// shopping list on the assumption a matching cook day covers its groceries; if
+	// the client submits a leftover whose CookDate does not point to a non-leftover
+	// day in the same menu with the same RecipeID, those ingredients would silently
+	// vanish from the shopping list. Demote any such inconsistent day to a normal
+	// day (clear Leftover + CookDate) so shopping never drops it.
+	days := normalizeLeftoverDays(req.Days)
+
 	// Update the menu days
-	menu.Days = req.Days
+	menu.Days = days
 
 	if err := s.menuStorage.Update(menu); err != nil {
 		sentry.CaptureException(err)

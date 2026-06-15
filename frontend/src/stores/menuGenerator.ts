@@ -39,10 +39,34 @@ export interface DraftMenuDay {
   recipeName?: string
   emoji?: string
   servings: number
+  /** True when this day reuses leftovers from a prior cook day (prep mode). */
+  leftover?: boolean
+  /** The date of the cook day this leftovers day draws from. */
+  cookDate?: string
+  /** True when this day is a cook day (some other day's cookDate === its date). */
+  isCookDay?: boolean
 }
 
 export interface DraftMenu {
   days: DraftMenuDay[]
+}
+
+const PREP_MODE_STORAGE_KEY = 'maltiden_prep_mode'
+
+function loadPrepMode(): boolean {
+  try {
+    return localStorage.getItem(PREP_MODE_STORAGE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function persistPrepMode(value: boolean): void {
+  try {
+    localStorage.setItem(PREP_MODE_STORAGE_KEY, value ? 'true' : 'false')
+  } catch {
+    // ignore storage failures (e.g. private mode)
+  }
 }
 
 // ============================================
@@ -112,6 +136,21 @@ function getDayShort(date: Date): string {
   return dayShorts[date.getDay()]!
 }
 
+/**
+ * Derive `isCookDay` for each day over the FINAL set of days.
+ *
+ * A cook day is one whose date is referenced as another day's `cookDate`. This
+ * MUST run over the complete merged week (not a regenerated subset) so the
+ * "Lagas (2 dagar)" badge always lands on the day that actually owns the batch
+ * — even after a regenerate relocates the pair or a locked partner is absent
+ * from the response. Mutates each day's `isCookDay` in place.
+ */
+function deriveCookDays(days: DraftMenuDay[]): void {
+  for (const day of days) {
+    day.isCookDay = days.some((d) => d.cookDate === day.date)
+  }
+}
+
 // ============================================
 // STORE DEFINITION
 // ============================================
@@ -136,6 +175,16 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
 
   const weekStart = ref<string>('') // Monday ISO date
   const servings = ref(4) // Default servings
+
+  // Prep mode (batch cooking): per-week toggle, persisted like other planning
+  // prefs so it survives reloads and defaults the next generation.
+  const prepMode = ref(loadPrepMode())
+
+  /** Set prep mode and persist it. */
+  function setPrepMode(value: boolean): void {
+    prepMode.value = value
+    persistPrepMode(value)
+  }
 
   // ============================================
   // GETTERS
@@ -259,7 +308,8 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
         days: 7,
         servings: servings.value,
         skipDays: [],
-        lockedDays: {}
+        lockedDays: {},
+        prepMode: prepMode.value
       })
 
       // Adopt the backend's dates as the single source of truth.
@@ -270,8 +320,9 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       // end-to-end, regardless of which weekday "today" is. Weekday labels are
       // derived from the backend date strings so the display stays correct.
       if (draftMenu.value && menu.days) {
+        const apiDays = menu.days
         draftMenu.value = {
-          days: menu.days.map((apiDay) => {
+          days: apiDays.map((apiDay) => {
             const date = parseDateISO(apiDay.date)
             return {
               date: apiDay.date,
@@ -280,11 +331,15 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
               recipeId: apiDay.recipeId,
               recipeName: apiDay.recipeName,
               emoji: apiDay.emoji,
-              servings: apiDay.servings
+              servings: apiDay.servings,
+              leftover: apiDay.leftover,
+              cookDate: apiDay.cookDate
             }
           })
         }
-        weekStart.value = menu.days[0]?.date ?? weekStart.value
+        // Flag cook days over the full week so the "Lagas" badge lands right.
+        deriveCookDays(draftMenu.value.days)
+        weekStart.value = apiDays[0]?.date ?? weekStart.value
       }
 
       // Store ingredient economy returned by the server
@@ -324,13 +379,15 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
         days: 7,
         servings: servings.value,
         skipDays: [],
-        lockedDays: lockedMap
+        lockedDays: lockedMap,
+        prepMode: prepMode.value
       })
 
       // Map the response by date: locked days come back unchanged,
       // unlocked days are replaced.
       if (draftMenu.value && newMenu.days) {
-        const newDaysByDate = new Map(newMenu.days.map((d) => [d.date, d]))
+        const newDays = newMenu.days
+        const newDaysByDate = new Map(newDays.map((d) => [d.date, d]))
 
         draftMenu.value.days.forEach((day, index) => {
           const newDay = newDaysByDate.get(day.date)
@@ -340,10 +397,16 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
               recipeId: newDay.recipeId,
               recipeName: newDay.recipeName,
               emoji: newDay.emoji,
-              servings: newDay.servings
+              servings: newDay.servings,
+              leftover: newDay.leftover,
+              cookDate: newDay.cookDate
             }
           }
         })
+        // Re-derive cook days over the FINAL merged week — not just the
+        // regenerated subset — so a relocated batch pair flags the new cook day
+        // and clears the old one.
+        deriveCookDays(draftMenu.value.days)
       }
 
       // Store the new ingredient economy returned by the server
@@ -358,9 +421,17 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   }
 
   /**
-   * Toggle lock state for a day
+   * Toggle lock state for a day.
+   *
+   * In prep mode, lock/skip acts on the COOK day; a leftovers day follows its
+   * cook day and is not independently lockable. We guard here so that even if a
+   * leftovers date is passed, it is ignored (its cook day owns the lock).
    */
   function toggleDayLock(date: string): void {
+    const day = draftMenu.value?.days.find((d) => d.date === date)
+    if (day?.leftover) {
+      return
+    }
     if (lockedDays.value.has(date)) {
       lockedDays.value.delete(date)
     } else {
@@ -385,6 +456,8 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
         recipeId: day.recipeId,
         servings: day.servings,
         skip: !day.recipeId,
+        leftover: day.leftover,
+        cookDate: day.cookDate,
       }))
 
       await saveMenu(days)
@@ -419,6 +492,8 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     weekStart.value = ''
     error.value = null
     economy.value = null
+    // prepMode is a persisted planning preference (like activeDays) and
+    // deliberately survives clearDraft so it defaults the next generation.
   }
 
   /**
@@ -466,6 +541,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     error,
     weekStart,
     servings,
+    prepMode,
 
     // Getters
     orderedDays,
@@ -478,6 +554,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     isReadyToSave,
 
     // Actions
+    setPrepMode,
     initializeWeek,
     generateInitialMenu,
     regenerateUnlockedDays,

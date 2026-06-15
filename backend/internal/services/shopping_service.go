@@ -441,7 +441,9 @@ func (s *ShoppingService) GetShoppingList(menuID, householdID string) (*domain.S
 	recipeIDs := make([]string, 0, len(menu.Days))
 	recipeIDSet := make(map[string]bool)
 	for _, day := range menu.Days {
-		if !day.Skip && day.RecipeID != "" {
+		// Leftovers days reuse the batch cooked on their cook day (whose 2×
+		// servings already covers both), so they buy nothing and are skipped here.
+		if !day.Skip && !day.Leftover && day.RecipeID != "" {
 			if !recipeIDSet[day.RecipeID] {
 				recipeIDs = append(recipeIDs, day.RecipeID)
 				recipeIDSet[day.RecipeID] = true
@@ -460,6 +462,11 @@ func (s *ShoppingService) GetShoppingList(menuID, householdID string) (*domain.S
 
 	for _, day := range menu.Days {
 		if day.Skip || day.RecipeID == "" {
+			continue
+		}
+		// Leftovers days add no groceries: the cook day's 2× servings already
+		// covers them (see the distinct-id collection above).
+		if day.Leftover {
 			continue
 		}
 

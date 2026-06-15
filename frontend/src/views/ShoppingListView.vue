@@ -3,6 +3,7 @@ import { onMounted, computed, ref, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useShoppingList } from '@/composables/useShoppingList'
 import { useDashboardStore } from '@/stores/dashboard'
+import { getCurrentMenu } from '@/api/menu.api'
 import { useSkeleton } from '@/composables/useSkeleton'
 import ErrorState from '@/components/common/ErrorState.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -16,6 +17,7 @@ import {
   ChevronRight,
   Check,
   Trash2,
+  Refrigerator,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -82,6 +84,11 @@ async function submitNewItem() {
   await addCustomItem(name)
 }
 
+// Prep-mode note: true when the current menu batch-cooks (any leftovers day).
+// Leftovers days contribute nothing to the shopping list (folded into the cook
+// day's quantities by the backend), so we surface a short explanatory note.
+const usedPrepMode = ref(false)
+
 // Search input ref
 const searchInput = ref<HTMLInputElement | null>(null)
 
@@ -98,6 +105,12 @@ onMounted(async () => {
   }
   if (menuId.value) {
     fetchList(menuId.value)
+  }
+  try {
+    const menu = await getCurrentMenu()
+    usedPrepMode.value = menu?.days.some((d) => d.leftover) ?? false
+  } catch {
+    usedPrepMode.value = false
   }
 })
 </script>
@@ -231,6 +244,12 @@ onMounted(async () => {
 
         <!-- Shopping list -->
         <template v-else>
+          <!-- Prep-mode note -->
+          <p v-if="usedPrepMode" class="prep-note">
+            <Refrigerator :size="16" :stroke-width="2" class="prep-note-icon" />
+            <span>Rester-dagar ingår i lagningsdagens mängder.</span>
+          </p>
+
           <!-- Category sections -->
           <section
             v-for="category in uncheckedCategories"
@@ -592,6 +611,27 @@ onMounted(async () => {
 .list-container {
   max-width: 640px;
   margin: 0 auto;
+}
+
+/* Prep-mode note */
+.prep-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--accent-bg);
+  border-radius: var(--radius-md);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.prep-note-icon {
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
 /* Category sections */

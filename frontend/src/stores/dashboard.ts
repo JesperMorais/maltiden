@@ -105,6 +105,11 @@ export const useDashboardStore = defineStore('dashboard', () => {
         meal,
         isToday,
         isSkipped: apiDay.skip ?? false,
+        // Preserve prep-mode markers so dashboard saves round-trip losslessly
+        // (otherwise the leftover flag is dropped and the shopping list
+        // double-buys the batch recipe).
+        leftover: apiDay.leftover,
+        cookDate: apiDay.cookDate,
       }
     })
 
@@ -366,6 +371,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
       recipeId: day.meal?.id,
       servings: day.date === date ? totalServings : (day.meal?.portions ?? 4),
       skip: day.isSkipped,
+      leftover: day.leftover,
+      cookDate: day.cookDate,
     }))
 
     try {
@@ -418,6 +425,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
       recipeId: d.date === date ? newRecipeId : d.meal?.id,
       servings: d.meal?.portions ?? 4,
       skip: d.isSkipped && d.date !== date,
+      leftover: d.leftover,
+      cookDate: d.cookDate,
     }))
 
     try {
