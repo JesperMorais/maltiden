@@ -368,6 +368,192 @@ func TestSelectorNext_OverlapDoesNotBreakVegetarianQuota(t *testing.T) {
 	}
 }
 
+func TestVarietyTags_DropsScheduleAndVegTags(t *testing.T) {
+	tests := []struct {
+		name string
+		r    domain.RecipeSummary
+		want []string
+	}{
+		{"cuisine and protein kept, lowercased", rec("a", "Fisk", "Asiatiskt"), []string{"fisk", "asiatiskt"}},
+		{"vegetarian tag dropped", rec("b", "vegetariskt", "indiskt"), []string{"indiskt"}},
+		{"schedule tags dropped", rec("c", "vardag", "helg", "barn", "kyckling"), []string{"kyckling"}},
+		{"only schedule/veg -> empty", rec("d", "vegetariskt", "vardag"), []string{}},
+		{"no tags -> empty", rec("e"), []string{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := varietyTags(tt.r); !sameSet(got, tt.want) {
+				t.Errorf("varietyTags() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// tagOf returns the variety tags of a picked recipe id, looked up against the
+// recipe set keyed by ID.
+func tagOf(id string, byID map[string]domain.RecipeSummary) []string {
+	return varietyTags(byID[id])
+}
+
+func TestSelectorNext_VarietyPenaltySpacesSameCuisine(t *testing.T) {
+	// Three fish dishes and three distinct others, no ingredient overlap. The
+	// variety + recency penalties must keep fish from being front-loaded or
+	// clustered: no two fish dishes back-to-back over a 6-day week.
+	recipes := []domain.RecipeSummary{
+		rec("fisk_1", "fisk"),
+		rec("fisk_2", "fisk"),
+		rec("fisk_3", "fisk"),
+		rec("kott_1", "nötkött"),
+		rec("kyck_1", "kyckling"),
+		rec("flask_1", "fläsk"),
+	}
+	byID := map[string]domain.RecipeSummary{}
+	for _, r := range recipes {
+		byID[r.ID] = r
+	}
+	prefs := domain.DefaultMenuPreferences("hh_1")
+
+	isFisk := func(id string) bool {
+		ts := tagOf(id, byID)
+		return len(ts) > 0 && ts[0] == "fisk"
+	}
+
+	for _, seed := range []uint64{1, 2, 3, 7, 42} {
+		sel, ok := newMenuSelector(recipes, prefs, rand.New(rand.NewPCG(seed, seed+1)), nil)
+		if !ok {
+			t.Fatalf("seed %d: selector failed to build", seed)
+		}
+		// Fill exactly the 6 distinct recipes (one full cycle): the penalties
+		// must interleave the three fish dishes with the three others rather
+		// than front-loading or clustering them. With three non-fish dishes
+		// available, no two fish dishes should be adjacent while a non-fish
+		// dish remains fresh — checked via the first four slots, where a
+		// non-fish option always exists.
+		picks := make([]string, 6)
+		for i := range picks {
+			picks[i] = sel.Next()
+		}
+		// (a) Not all three fish dishes crammed into the first three slots.
+		fishInFirst3 := 0
+		for _, p := range picks[:3] {
+			if isFisk(p) {
+				fishInFirst3++
+			}
+		}
+		if fishInFirst3 == 3 {
+			t.Errorf("seed %d: all fish front-loaded into first 3 slots (%v)", seed, picks)
+		}
+		// (b) No two adjacent fish dishes among the first four slots, where a
+		// non-fish dish is always still available to break them up.
+		for i := 1; i < 4; i++ {
+			if isFisk(picks[i-1]) && isFisk(picks[i]) {
+				t.Errorf("seed %d: fish dishes adjacent at %d while non-fish available (%v)", seed, i, picks)
+			}
+		}
+	}
+}
+
+func TestSelectorNext_RecencyPenaltySpacesRepeats(t *testing.T) {
+	// Only two cuisines available but more than two slots: cycling will repeat,
+	// yet the recency penalty must alternate them rather than emit AABB.
+	recipes := []domain.RecipeSummary{
+		rec("ita_1", "italienskt"),
+		rec("asi_1", "asiatiskt"),
+	}
+	prefs := domain.DefaultMenuPreferences("hh_1")
+	sel, ok := newMenuSelector(recipes, prefs, rand.New(rand.NewPCG(5, 6)), nil)
+	if !ok {
+		t.Fatalf("selector failed to build")
+	}
+	picks := make([]string, 4)
+	for i := range picks {
+		picks[i] = sel.Next()
+	}
+	for i := 1; i < len(picks); i++ {
+		if picks[i] == picks[i-1] {
+			t.Errorf("recency penalty failed to space repeats at %d: %v", i, picks)
+		}
+	}
+}
+
+func TestSelectorNext_OverlapStillBeatsVarietyPenalty(t *testing.T) {
+	// rec_a and rec_b share both a tag (fisk) AND an ingredient (torsk); rec_c
+	// shares neither. After picking a fish dish, its torsk-sharing fish partner
+	// carries a variety penalty but a +1 overlap reward that must still win it
+	// the slot over the no-overlap rec_c — one overlap point outweighs one tag
+	// repeat. Guards the #258 overlap feature against the new penalties.
+	recipes := []domain.RecipeSummary{rec("rec_a", "fisk"), rec("rec_b", "fisk"), rec("rec_c", "kyckling")}
+	ings := map[string][]domain.Ingredient{
+		"rec_a": ing("torsk", "potatis"),
+		"rec_b": ing("torsk", "dill"),
+		"rec_c": ing("kyckling", "ris"),
+	}
+	prefs := domain.DefaultMenuPreferences("hh_1")
+	for _, seed := range []uint64{1, 2, 3, 99} {
+		sel := selWithIngredients(t, recipes, prefs, ings, seed, seed+1)
+		first := sel.Next()
+		second := sel.Next()
+		var wantPartner string
+		switch first {
+		case "rec_a":
+			wantPartner = "rec_b"
+		case "rec_b":
+			wantPartner = "rec_a"
+		}
+		if wantPartner != "" && second != wantPartner {
+			t.Errorf("seed %d: after %q expected overlap to win %q despite variety penalty, got %q", seed, first, wantPartner, second)
+		}
+	}
+}
+
+func TestSelectorNext_VarietyDoesNotBreakVegetarianQuota(t *testing.T) {
+	// Both veg dishes share a (non-veg) tag; the variety penalty between them
+	// must not stop the quota from placing two vegetarian dishes first.
+	recipes := []domain.RecipeSummary{
+		rec("veg_1", "vegetariskt", "indiskt"),
+		rec("veg_2", "vegetariskt", "indiskt"),
+		rec("meat_1", "kyckling"),
+		rec("meat_2", "fisk"),
+	}
+	prefs := domain.DefaultMenuPreferences("hh_1")
+	prefs.VegetarianDays = 2
+	sel, ok := newMenuSelector(recipes, prefs, rand.New(rand.NewPCG(13, 14)), nil)
+	if !ok {
+		t.Fatalf("selector failed to build")
+	}
+	first, second := sel.Next(), sel.Next()
+	vegCount := 0
+	for _, id := range []string{first, second} {
+		if id == "veg_1" || id == "veg_2" {
+			vegCount++
+		}
+	}
+	if vegCount != 2 {
+		t.Errorf("expected first 2 picks vegetarian despite shared-tag variety penalty, got %d (%s, %s)", vegCount, first, second)
+	}
+}
+
+func TestSelectorNext_PenaltiesDeterministic(t *testing.T) {
+	recipes := []domain.RecipeSummary{
+		rec("a", "fisk"), rec("b", "fisk"), rec("c", "kyckling"), rec("d", "nötkött"),
+	}
+	prefs := domain.DefaultMenuPreferences("hh_1")
+	collect := func() []string {
+		sel, _ := newMenuSelector(recipes, prefs, rand.New(rand.NewPCG(321, 654)), nil)
+		out := make([]string, 6)
+		for i := range out {
+			out[i] = sel.Next()
+		}
+		return out
+	}
+	a, b := collect(), collect()
+	for i := range a {
+		if a[i] != b[i] {
+			t.Fatalf("variety/recency selection not deterministic: %v vs %v", a, b)
+		}
+	}
+}
+
 func sameSet(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

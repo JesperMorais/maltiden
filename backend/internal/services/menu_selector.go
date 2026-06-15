@@ -11,14 +11,63 @@ import (
 // dish. Matches the Swedish tag used across the seed recipes.
 const vegetarianTag = "vegetariskt"
 
+// Scoring weights. The selector's score is
+//
+//	score = overlapReward·overlap − varietyWeight·varietyPenalty − recencyWeight·recencyPenalty
+//
+// overlap is weighted above the penalties so a genuine shopping-economy win
+// (a shared perishable ingredient) still beats a small repeat-a-cuisine cost,
+// while the penalties break what would otherwise be overlap ties toward more
+// varied, better-spaced weeks. They are deliberately small relative to one
+// overlap point so they never override the ingredient-overlap feature (#258)
+// and never the vegetarian quota (which is enforced before scoring).
+const (
+	overlapReward  = 1.0
+	varietyWeight  = 0.34 // per prior use of a shared tag this week
+	recencyWeight  = 0.5  // scaled by how recently that tag was last used
+	recencyDecaySl = 3    // recency penalty fades to ~0 after this many slots
+)
+
+// scheduleTagsExcluded lists tags that describe *when* a dish is eaten or who
+// it is for (weekday/weekend/kid-friendly) rather than what it is. Penalizing
+// repeats of these would wrongly push the week away from, e.g., weeknight-
+// friendly food, so they are excluded from variety/recency scoring. The
+// vegetarian tag is also excluded so variety never fights the veg-day quota.
+var scheduleTagsExcluded = map[string]bool{
+	vegetarianTag: true,
+	"vardag":      true,
+	"helg":        true,
+	"barn":        true,
+	"snabb":       true,
+	"snabbt":      true,
+}
+
+// varietyTags returns the normalized tags of a recipe that count toward the
+// variety/recency penalties: cuisine/protein/course markers, with schedule and
+// vegetarian tags dropped. Blank tags are ignored.
+func varietyTags(r domain.RecipeSummary) []string {
+	out := make([]string, 0, len(r.Tags))
+	for _, t := range r.Tags {
+		n := normalizeTag(t)
+		if n == "" || scheduleTagsExcluded[n] {
+			continue
+		}
+		out = append(out, n)
+	}
+	return out
+}
+
 // menuSelector holds the prepared candidate pool for one generate run. It is
 // the deterministic "selector core": given a recipe catalog and a household's
 // preferences, it (1) hard-filters out recipes carrying any excluded tag, then
 // (2) hands back recipes one slot at a time, preferring vegetarian dishes until
 // the household's vegetarian-days quota is met, and within each phase greedily
-// preferring the candidate whose ingredients overlap most with the recipes
-// already chosen this week (so the shopping list shares ingredients). It cycles
-// through the pool when there are fewer recipes than days.
+// picking the highest-scoring candidate. The score rewards ingredient overlap
+// with the recipes already chosen this week (so the shopping list shares
+// ingredients) and penalizes repeating a cuisine/protein (variety) or repeating
+// one too soon within the week (in-week recency), so a week is varied and
+// similar dishes are spaced out. It cycles through the pool when there are
+// fewer recipes than days.
 //
 // It carries no I/O and no clock, so it is fully unit-testable with a seeded RNG.
 type menuSelector struct {
@@ -39,6 +88,23 @@ type menuSelector struct {
 	picked        map[string]bool
 	chosenKeys    map[string]int
 	hasIngredient bool // true once any ingredient data is present
+
+	// tags maps recipe ID -> its normalized, overlap-relevant tags (cuisine /
+	// protein / course markers like "fisk", "kyckling", "asiatiskt"). These are
+	// the only categorical metadata the catalog carries today, so they stand in
+	// for "same cuisine / same protein" until Phase 0 adds explicit mainProtein /
+	// dietClass fields (issue #248). The vegetarian tag is dropped here so the
+	// variety penalty never fights the vegetarian-day quota.
+	tags map[string][]string
+
+	// chosenTags counts how many already-picked recipes this week carry each tag,
+	// driving the VARIETY penalty (repeating a cuisine/protein costs score).
+	// lastUsedTag records the pick index at which each tag was most recently
+	// used, driving the in-week RECENCY penalty (a cuisine used last night costs
+	// more than one used at the start of the week, so similar dishes spread out).
+	chosenTags  map[string]int
+	lastUsedTag map[string]int
+	pickIndex   int // monotonically increasing slot counter for recency spacing
 }
 
 // filterByExcludedTags returns the subset of recipes that carry none of the
@@ -191,12 +257,18 @@ func newMenuSelector(recipes []domain.RecipeSummary, prefs domain.MenuPreference
 		ingredients:  make(map[string][]string, len(candidates)),
 		picked:       make(map[string]bool, len(candidates)),
 		chosenKeys:   make(map[string]int),
+		tags:         make(map[string][]string, len(candidates)),
+		chosenTags:   make(map[string]int),
+		lastUsedTag:  make(map[string]int),
 	}
 	for _, r := range candidates {
 		if isVegetarian(r) {
 			sel.veg = append(sel.veg, r)
 		} else {
 			sel.nonVeg = append(sel.nonVeg, r)
+		}
+		if vt := varietyTags(r); len(vt) > 0 {
+			sel.tags[r.ID] = vt
 		}
 		if ings, ok := ingredientsByID[r.ID]; ok {
 			keys := overlapKeys(ings)
@@ -239,18 +311,70 @@ func (s *menuSelector) overlapScore(id string) int {
 	return score
 }
 
-// commit records a chosen recipe: it marks the ID as picked and folds its
+// varietyPenalty returns how many times the candidate's variety tags have
+// already been used this week. A dish whose cuisine/protein has not appeared
+// yet scores 0; each prior repeat of a shared tag adds 1, so a third fish dish
+// is penalized more than the second. Recipes with no variety tags (or before
+// any pick) are never penalized.
+func (s *menuSelector) varietyPenalty(id string) float64 {
+	penalty := 0.0
+	for _, t := range s.tags[id] {
+		penalty += float64(s.chosenTags[t])
+	}
+	return penalty
+}
+
+// recencyPenalty returns a spacing penalty for repeating a tag that was used
+// recently *within this week*. A tag used in the immediately preceding slot
+// costs the full weight; the cost decays linearly to 0 once recencyDecaySl
+// slots have passed, so similar dishes get pushed apart rather than clustered.
+// This is in-week recency only — cross-week recency (recipes used in prior
+// weeks) is not scored because the catalog/menu layer exposes no per-recipe
+// last-used data today (issue #248 Phase 0 groundwork).
+func (s *menuSelector) recencyPenalty(id string) float64 {
+	penalty := 0.0
+	for _, t := range s.tags[id] {
+		last, ok := s.lastUsedTag[t]
+		if !ok {
+			continue
+		}
+		gap := s.pickIndex - last
+		if gap >= recencyDecaySl {
+			continue
+		}
+		// gap==1 (used last slot) -> full weight; fades with distance.
+		penalty += float64(recencyDecaySl-gap) / float64(recencyDecaySl)
+	}
+	return penalty
+}
+
+// score combines the ingredient-overlap reward with the variety and in-week
+// recency penalties into the single value pickBest maximizes.
+func (s *menuSelector) score(id string) float64 {
+	return overlapReward*float64(s.overlapScore(id)) -
+		varietyWeight*s.varietyPenalty(id) -
+		recencyWeight*s.recencyPenalty(id)
+}
+
+// commit records a chosen recipe: it marks the ID as picked, folds its
 // ingredient keys into the running week so subsequent picks can score against
-// them.
+// them, and updates the per-tag variety counts and recency markers.
 func (s *menuSelector) commit(id string) {
 	s.picked[id] = true
 	for _, k := range s.ingredients[id] {
 		s.chosenKeys[k]++
 	}
+	s.pickIndex++
+	for _, t := range s.tags[id] {
+		s.chosenTags[t]++
+		s.lastUsedTag[t] = s.pickIndex
+	}
 }
 
-// pickBest chooses the highest-overlap recipe from candidates, preferring those
-// not yet used this week; ties (including the very first pick, when nothing has
+// pickBest chooses the highest-scoring recipe from candidates, preferring those
+// not yet used this week. The score rewards ingredient overlap and penalizes
+// repeating a cuisine/protein (variety) or repeating one too soon (in-week
+// recency); see score(). Ties (including the very first pick, when nothing has
 // been chosen yet) resolve to the candidate earliest in the shuffled order, so
 // selection stays deterministic under a seeded RNG. onlyFresh restricts the
 // choice to recipes not already picked; when every candidate is already picked
@@ -258,13 +382,13 @@ func (s *menuSelector) commit(id string) {
 // candidates is empty.
 func (s *menuSelector) pickBest(candidates []domain.RecipeSummary, onlyFresh bool) string {
 	bestID := ""
-	bestScore := -1
+	var bestScore float64
 	for _, r := range candidates {
 		if onlyFresh && s.picked[r.ID] {
 			continue
 		}
-		score := s.overlapScore(r.ID)
-		if score > bestScore {
+		score := s.score(r.ID)
+		if bestID == "" || score > bestScore {
 			bestScore = score
 			bestID = r.ID
 		}
