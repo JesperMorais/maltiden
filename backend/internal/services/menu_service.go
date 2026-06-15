@@ -78,6 +78,34 @@ func (s *MenuService) UpdatePreferences(householdID string, req domain.UpdateMen
 	return prefs, nil
 }
 
+// loadIngredients batch-fetches the full recipes for the given summaries and
+// returns a map of recipe ID -> ingredients, used by the selector for overlap
+// scoring. A load error is non-fatal: it returns an empty map so generation
+// proceeds with overlap scoring disabled rather than hard-failing.
+func (s *MenuService) loadIngredients(recipes []domain.RecipeSummary) map[string][]domain.Ingredient {
+	ids := make([]string, 0, len(recipes))
+	for _, r := range recipes {
+		if r.ID != "" {
+			ids = append(ids, r.ID)
+		}
+	}
+	out := make(map[string][]domain.Ingredient, len(ids))
+	if len(ids) == 0 {
+		return out
+	}
+	full, err := s.recipeStorage.GetByIDs(ids)
+	if err != nil {
+		sentry.CaptureException(err)
+		return out
+	}
+	for id, r := range full {
+		if r != nil {
+			out[id] = r.Ingredients
+		}
+	}
+	return out
+}
+
 // enrichMenuDays converts MenuDay slice to MenuResponseDay slice,
 // populating recipeName and emoji from recipe storage.
 func (s *MenuService) enrichMenuDays(days []domain.MenuDay) ([]domain.MenuResponseDay, error) {
@@ -151,10 +179,17 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		return nil, nil
 	}
 
-	// Build the selector core: hard-filters excluded tags and applies the
-	// vegetarian-day preference. If every recipe is filtered out, there is
-	// nothing to generate from (treated the same as an empty catalog).
-	selector, ok := newMenuSelector(recipes, prefs, nil)
+	// Fetch full recipes so the selector can score ingredient overlap. The
+	// summaries from GetAll carry no ingredients, so we batch-load them by ID
+	// (same access pattern as enrichMenuDays / the shopping list). On error we
+	// degrade to overlap-less selection rather than failing generation.
+	ingredientsByID := s.loadIngredients(recipes)
+
+	// Build the selector core: hard-filters excluded tags, applies the
+	// vegetarian-day preference, and greedily prefers high ingredient-overlap
+	// dishes. If every recipe is filtered out, there is nothing to generate
+	// from (treated the same as an empty catalog).
+	selector, ok := newMenuSelector(recipes, prefs, nil, ingredientsByID)
 	if !ok {
 		return nil, nil
 	}
