@@ -30,6 +30,11 @@ var (
 	// Resource
 	ErrInvalidDays = errors.New("invalid_days")
 
+	// Menu preferences
+	ErrInvalidVegetarianDays = errors.New("invalid_vegetarian_days")
+	ErrTooManyExcludedTags   = errors.New("too_many_excluded_tags")
+	ErrInvalidExcludedTag    = errors.New("invalid_excluded_tag")
+
 	// Recipe validation
 	ErrNameRequired         = errors.New("name_required")
 	ErrInvalidServings      = errors.New("invalid_servings")

@@ -130,9 +130,9 @@ func TestRunMigrations_RecordsAllVersions(t *testing.T) {
 		t.Fatalf("rows.Err: %v", err)
 	}
 
-	// Migrations 1..15 are defined in runMigrations.
-	want := make([]int, 0, 15)
-	for v := 1; v <= 15; v++ {
+	// Migrations 1..16 are defined in runMigrations.
+	want := make([]int, 0, 16)
+	for v := 1; v <= 16; v++ {
 		want = append(want, v)
 	}
 	if !sort.IntsAreSorted(versions) {
