@@ -35,6 +35,9 @@ func (m *mockMenuStorage) GetHouseholdIDByMenuID(menuID string) (string, error) 
 	}
 	return "", nil
 }
+func (m *mockMenuStorage) GetRecentRecipeIDs(householdID string, windowMenus int) (map[string]bool, error) {
+	return map[string]bool{}, nil
+}
 
 type mockShoppingRecipeStorage struct{}
 

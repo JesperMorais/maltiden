@@ -2,19 +2,130 @@
  * Menu API Mock Data
  */
 
-import type { Menu, GenerateMenuRequest, SaveMenuDay } from '@/api/menu.api'
+import type { Menu, GenerateMenuRequest, SaveMenuDay, MenuEconomy } from '@/api/menu.api'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-const mockRecipes = [
-  { id: 'rec_1', name: 'Pasta Carbonara', emoji: '🍝' },
-  { id: 'rec_2', name: 'Kycklingwok', emoji: '🥘' },
-  { id: 'rec_3', name: 'Tacos', emoji: '🌮' },
-  { id: 'rec_4', name: 'Laxfilé med potatis', emoji: '🐟' },
-  { id: 'rec_5', name: 'Köttfärssås', emoji: '🍖' },
-  { id: 'rec_6', name: 'Vegetarisk curry', emoji: '🥗' },
-  { id: 'rec_7', name: 'Pizza', emoji: '🍕' }
+interface MockRecipe {
+  id: string
+  name: string
+  emoji: string
+  ingredients: { canonicalName: string; name: string }[]
+}
+
+const mockRecipes: MockRecipe[] = [
+  {
+    id: 'rec_1',
+    name: 'Pasta Carbonara',
+    emoji: '🍝',
+    ingredients: [
+      { canonicalName: 'pasta', name: 'Pasta' },
+      { canonicalName: 'agg', name: 'Ägg' },
+      { canonicalName: 'parmesan', name: 'Parmesan' },
+      { canonicalName: 'lok', name: 'Gul lök' }
+    ]
+  },
+  {
+    id: 'rec_2',
+    name: 'Kycklingwok',
+    emoji: '🥘',
+    ingredients: [
+      { canonicalName: 'kyckling', name: 'Kycklingfilé' },
+      { canonicalName: 'ris', name: 'Ris' },
+      { canonicalName: 'lok', name: 'Gul lök' },
+      { canonicalName: 'paprika', name: 'Paprika' }
+    ]
+  },
+  {
+    id: 'rec_3',
+    name: 'Tacos',
+    emoji: '🌮',
+    ingredients: [
+      { canonicalName: 'kottfars', name: 'Nötfärs' },
+      { canonicalName: 'paprika', name: 'Paprika' },
+      { canonicalName: 'lok', name: 'Gul lök' },
+      { canonicalName: 'tortilla', name: 'Tortillabröd' }
+    ]
+  },
+  {
+    id: 'rec_4',
+    name: 'Laxfilé med potatis',
+    emoji: '🐟',
+    ingredients: [
+      { canonicalName: 'lax', name: 'Laxfilé' },
+      { canonicalName: 'potatis', name: 'Potatis' },
+      { canonicalName: 'smor', name: 'Smör' }
+    ]
+  },
+  {
+    id: 'rec_5',
+    name: 'Köttfärssås',
+    emoji: '🍖',
+    ingredients: [
+      { canonicalName: 'kottfars', name: 'Nötfärs' },
+      { canonicalName: 'pasta', name: 'Pasta' },
+      { canonicalName: 'lok', name: 'Gul lök' },
+      { canonicalName: 'tomat', name: 'Krossade tomater' }
+    ]
+  },
+  {
+    id: 'rec_6',
+    name: 'Vegetarisk curry',
+    emoji: '🥗',
+    ingredients: [
+      { canonicalName: 'ris', name: 'Ris' },
+      { canonicalName: 'paprika', name: 'Paprika' },
+      { canonicalName: 'tomat', name: 'Krossade tomater' },
+      { canonicalName: 'lok', name: 'Gul lök' }
+    ]
+  },
+  {
+    id: 'rec_7',
+    name: 'Pizza',
+    emoji: '🍕',
+    ingredients: [
+      { canonicalName: 'mjol', name: 'Vetemjöl' },
+      { canonicalName: 'tomat', name: 'Krossade tomater' },
+      { canonicalName: 'ost', name: 'Riven ost' }
+    ]
+  }
 ]
+
+const recipeById = new Map(mockRecipes.map((r) => [r.id, r]))
+
+/**
+ * Derive a plausible ingredient economy from the chosen recipes:
+ * shared ingredients (used by 2+ recipes), total ingredient refs and
+ * distinct items to buy.
+ */
+function computeMockEconomy(recipeIds: string[]): MenuEconomy {
+  const refs: { canonicalName: string; name: string }[] = []
+  for (const id of recipeIds) {
+    const recipe = recipeById.get(id)
+    if (recipe) refs.push(...recipe.ingredients)
+  }
+
+  const counts = new Map<string, { name: string; recipeCount: number }>()
+  for (const ref of refs) {
+    const existing = counts.get(ref.canonicalName)
+    if (existing) {
+      existing.recipeCount += 1
+    } else {
+      counts.set(ref.canonicalName, { name: ref.name, recipeCount: 1 })
+    }
+  }
+
+  const sharedIngredients = [...counts.entries()]
+    .filter(([, v]) => v.recipeCount >= 2)
+    .map(([canonicalName, v]) => ({ canonicalName, name: v.name, recipeCount: v.recipeCount }))
+    .sort((a, b) => b.recipeCount - a.recipeCount)
+
+  return {
+    sharedIngredients,
+    distinctItemsToBuy: counts.size,
+    totalIngredientRefs: refs.length
+  }
+}
 
 /** Module-level state so shopping mock can read current servings */
 let currentMockMenu: Menu | null = null
@@ -26,7 +137,12 @@ export function getMockMenuState(): Menu | null {
 function getDateString(daysFromNow: number): string {
   const date = new Date()
   date.setDate(date.getDate() + daysFromNow)
-  return date.toISOString().split('T')[0]!
+  // Local calendar date (not UTC) so mock dates match the store's
+  // local-anchored placeholder dates and the backend's local day.
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Menu> {
@@ -34,26 +150,43 @@ export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Me
 
   const days = []
   const skipDays = new Set(request.skipDays || [])
+  const lockedDays = request.lockedDays ?? {}
+  const chosenRecipeIds: string[] = []
+
+  // Cursor used to fill unlocked days by cycling through the recipe list.
+  let cycle = 0
 
   for (let i = 0; i < request.days; i++) {
     const date = getDateString(i)
-    const recipe = mockRecipes[i % mockRecipes.length]!
 
     if (skipDays.has(date)) {
       days.push({ date, skip: true, servings: 0 })
-    } else {
-      const extraPortions = request.extraPortions?.[date] || 0
-      days.push({
-        date,
-        recipeId: recipe.id,
-        recipeName: recipe.name,
-        emoji: recipe.emoji,
-        servings: request.servings + extraPortions
-      })
+      continue
     }
+
+    const extraPortions = request.extraPortions?.[date] || 0
+
+    // Honor locked days: keep the exact recipe the client locked.
+    const lockedRecipeId = lockedDays[date]
+    const recipe = lockedRecipeId
+      ? (recipeById.get(lockedRecipeId) ?? mockRecipes[cycle++ % mockRecipes.length]!)
+      : mockRecipes[cycle++ % mockRecipes.length]!
+
+    chosenRecipeIds.push(recipe.id)
+    days.push({
+      date,
+      recipeId: recipe.id,
+      recipeName: recipe.name,
+      emoji: recipe.emoji,
+      servings: request.servings + extraPortions
+    })
   }
 
-  const menu: Menu = { id: 'menu_mock_' + Date.now(), days }
+  const menu: Menu = {
+    id: 'menu_mock_' + Date.now(),
+    days,
+    economy: computeMockEconomy(chosenRecipeIds)
+  }
   currentMockMenu = menu
   return menu
 }

@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { generateMenu, saveMenu } from '@/api/menu.api'
-import type { SaveMenuDay } from '@/api/menu.api'
+import type { SaveMenuDay, MenuEconomy } from '@/api/menu.api'
 import { useDashboardStore } from './dashboard'
 import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'
@@ -50,27 +50,22 @@ export interface DraftMenu {
 // ============================================
 
 /**
- * Get the Monday of the current week (or a specific week)
+ * Get a 7-day window starting at `startDate` (default: today), today-anchored.
+ *
+ * IMPORTANT: the backend builds menu day dates from `time.Now()` (today +0..+6),
+ * NOT from the Monday of the week. The frontend must use the same anchor so the
+ * placeholder dates we roll on match the dates the server returns — otherwise
+ * date-keyed merges and locked-day maps never line up except when today is
+ * Monday.
  */
-function getMonday(date: Date = new Date()): Date {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Adjust when day is Sunday
-  d.setDate(diff)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
+function getWeekDates(startDate: Date = new Date()): Date[] {
+  const start = new Date(startDate)
+  start.setHours(0, 0, 0, 0)
 
-/**
- * Get Monday–Sunday dates for a given week (full 7-day week).
- */
-function getWeekDates(startDate?: Date): Date[] {
-  const monday = getMonday(startDate)
   const dates: Date[] = []
-
   for (let i = 0; i < 7; i++) {
-    const date = new Date(monday)
-    date.setDate(monday.getDate() + i)
+    const date = new Date(start)
+    date.setDate(start.getDate() + i)
     dates.push(date)
   }
 
@@ -78,10 +73,27 @@ function getWeekDates(startDate?: Date): Date[] {
 }
 
 /**
- * Format date as ISO string (YYYY-MM-DD)
+ * Format date as ISO string (YYYY-MM-DD) using the LOCAL calendar date.
+ *
+ * NOTE: deliberately not `toISOString()` — that converts to UTC and, for
+ * Sweden (UTC+1/+2), rolls a late-evening local date to the next/previous
+ * day. Frontend-generated date strings (skipDays, week labels) must match the
+ * user's local calendar day and the backend's local day.
  */
 function formatDateISO(date: Date): string {
-  return date.toISOString().split('T')[0]!
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * Parse a local "YYYY-MM-DD" date string into a local Date (midnight local).
+ * Using `new Date('YYYY-MM-DD')` would parse as UTC, so we build it explicitly.
+ */
+function parseDateISO(iso: string): Date {
+  const [year, month, day] = iso.split('-').map(Number)
+  return new Date(year!, (month ?? 1) - 1, day ?? 1)
 }
 
 /**
@@ -114,6 +126,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
 
   const draftMenu = ref<DraftMenu | null>(null)
   const lockedDays = ref<Set<string>>(new Set())
+  const economy = ref<MenuEconomy | null>(null)
 
   const isGenerating = ref(false)
   const isRegenerating = ref(false)
@@ -202,13 +215,17 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   // ============================================
 
   /**
-   * Initialize week dates (Monday-Friday)
+   * Initialize the 7-day window with placeholder dates.
+   *
+   * Today-anchored to match the backend (which builds dates from time.Now()).
+   * generateInitialMenu later adopts the exact dates the server returns, but
+   * starting from the same anchor keeps the slot-machine animation (which is
+   * keyed by date string) consistent across the API call.
    */
   function initializeWeek(startDate?: Date): void {
-    const monday = getMonday(startDate)
-    weekStart.value = formatDateISO(monday)
-
     const dates = getWeekDates(startDate)
+
+    weekStart.value = formatDateISO(dates[0]!)
 
     // Create empty draft menu with dates
     draftMenu.value = {
@@ -241,23 +258,37 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       const menu = await generateMenu({
         days: 7,
         servings: servings.value,
-        skipDays: []
+        skipDays: [],
+        lockedDays: {}
       })
 
-      // Map API response to draft menu days
+      // Adopt the backend's dates as the single source of truth.
+      //
+      // Build draftMenu.days directly from the response so that
+      // draftMenu.days[].date == the backend's date strings. This keeps locked
+      // maps (date→recipeId) and the date-keyed regenerate merge consistent
+      // end-to-end, regardless of which weekday "today" is. Weekday labels are
+      // derived from the backend date strings so the display stays correct.
       if (draftMenu.value && menu.days) {
-        menu.days.forEach((apiDay, index) => {
-          if (draftMenu.value && draftMenu.value.days[index]) {
-            draftMenu.value.days[index] = {
-              ...draftMenu.value.days[index],
+        draftMenu.value = {
+          days: menu.days.map((apiDay) => {
+            const date = parseDateISO(apiDay.date)
+            return {
+              date: apiDay.date,
+              dayName: getDayName(date),
+              dayShort: getDayShort(date),
               recipeId: apiDay.recipeId,
               recipeName: apiDay.recipeName,
               emoji: apiDay.emoji,
               servings: apiDay.servings
             }
-          }
-        })
+          })
+        }
+        weekStart.value = menu.days[0]?.date ?? weekStart.value
       }
+
+      // Store ingredient economy returned by the server
+      economy.value = menu.economy ?? null
     } catch (e: unknown) {
       console.error('Failed to generate menu:', e)
       error.value = getSwedishMenuError(e, 'Kunde inte generera meny. Försök igen.')
@@ -279,35 +310,44 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     error.value = null
 
     try {
-      // Generate new menu across the full week
+      // Build locked map (date → recipeId) from the locked Set so the server
+      // keeps and scores those days.
+      const lockedMap: Record<string, string> = {}
+      draftMenu.value.days.forEach((day) => {
+        if (lockedDays.value.has(day.date) && day.recipeId) {
+          lockedMap[day.date] = day.recipeId
+        }
+      })
+
+      // Server returns the full week respecting locks.
       const newMenu = await generateMenu({
         days: 7,
         servings: servings.value,
-        skipDays: []
+        skipDays: [],
+        lockedDays: lockedMap
       })
 
-      // Merge: Keep locked days, replace unlocked days with new recipes
+      // Map the response by date: locked days come back unchanged,
+      // unlocked days are replaced.
       if (draftMenu.value && newMenu.days) {
-        let newDayIndex = 0
+        const newDaysByDate = new Map(newMenu.days.map((d) => [d.date, d]))
 
         draftMenu.value.days.forEach((day, index) => {
-          if (!lockedDays.value.has(day.date)) {
-            // Unlocked - replace with new recipe
-            const newDay = newMenu.days[newDayIndex]
-            if (newDay) {
-              draftMenu.value!.days[index] = {
-                ...day,
-                recipeId: newDay.recipeId,
-                recipeName: newDay.recipeName,
-                emoji: newDay.emoji,
-                servings: newDay.servings
-              }
+          const newDay = newDaysByDate.get(day.date)
+          if (newDay) {
+            draftMenu.value!.days[index] = {
+              ...day,
+              recipeId: newDay.recipeId,
+              recipeName: newDay.recipeName,
+              emoji: newDay.emoji,
+              servings: newDay.servings
             }
-            newDayIndex++
           }
-          // Locked - keep unchanged
         })
       }
+
+      // Store the new ingredient economy returned by the server
+      economy.value = newMenu.economy ?? null
     } catch (e: unknown) {
       console.error('Failed to regenerate menu:', e)
       error.value = getSwedishMenuError(e, 'Kunde inte generera nya recept. Försök igen.')
@@ -378,6 +418,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     lockedDays.value.clear()
     weekStart.value = ''
     error.value = null
+    economy.value = null
   }
 
   /**
@@ -416,6 +457,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     // State
     draftMenu,
     lockedDays,
+    economy,
     isGenerating,
     isRegenerating,
     isSaving,

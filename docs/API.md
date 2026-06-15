@@ -563,14 +563,28 @@ Parse recipe text and immediately save it to the database. **Auth required.**
 **Auth required:** `Authorization: Bearer <token>`
 
 ### POST /menus/generate
+Generates a weekly menu with the smart selector: a deterministic, in-process
+scorer (no AI, no external calls) that maximizes shared-ingredient overlap while
+spreading proteins, avoiding repeats/near-duplicates, and deprioritizing recipes
+used in the last few menus. Each call uses a fresh random seed, so regenerating
+yields a different (still valid) week.
+
 ```json
 // Request
 {
   "days": 5,
   "skipDays": ["2025-01-22"],
   "servings": 4,
-  "extraPortions": { "2025-01-23": 2 }
+  "extraPortions": { "2025-01-23": 2 },
+  "lockedDays": { "2025-01-20": "rec_001" }
 }
+// lockedDays (optional): map of date → recipeId. A locked day keeps its recipe
+//   across regeneration (it is never replaced) but is still counted when scoring
+//   the rest of the week (overlap, protein variety, recency, vegetarian quota).
+//   A recipeId not in the household's own catalog — unknown, deleted, or
+//   belonging to another household — is silently ignored (that day is generated
+//   normally); foreign recipes are never fetched or returned.
+//   A date present in both skipDays and lockedDays is treated as skipped.
 
 // Response 201
 {
@@ -580,9 +594,25 @@ Parse recipe text and immediately save it to the database. **Auth required.**
     { "date": "2025-01-21", "recipeId": "rec_002", "recipeName": "Laxpasta", "emoji": "🐟", "servings": 4 },
     { "date": "2025-01-22", "skip": true, "servings": 0 },
     { "date": "2025-01-23", "recipeId": "rec_003", "recipeName": "Kycklinggryta", "emoji": "🍗", "servings": 6 }
-  ]
+  ],
+  "economy": {
+    "sharedIngredients": [
+      { "canonicalName": "lök", "name": "Gul lök", "recipeCount": 3 },
+      { "canonicalName": "grädde", "name": "Grädde", "recipeCount": 2 }
+    ],
+    "distinctItemsToBuy": 18,
+    "totalIngredientRefs": 24
+  }
 }
 // Note: recipeName and emoji are optional — omitted for skip days and when not set on the recipe.
+// economy (optional): a summary of ingredient reuse across the generated week.
+//   - sharedIngredients: non-staple ingredients used by ≥2 recipes, sorted by
+//     recipeCount desc (capped to the top 8). `name` is a human-readable label
+//     for `canonicalName`.
+//   - distinctItemsToBuy: count of unique non-staple ingredients to buy.
+//   - totalIngredientRefs: sum of per-recipe non-staple ingredient counts.
+//   Pantry staples (salt, oil, flour, water, garlic, …) are excluded from every
+//   economy figure.
 
 // Error 400
 { "error": "invalid_days" }

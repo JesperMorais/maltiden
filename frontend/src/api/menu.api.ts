@@ -16,9 +16,22 @@ export interface MenuDay {
   skip?: boolean
 }
 
+export interface SharedIngredient {
+  canonicalName: string
+  name: string
+  recipeCount: number
+}
+
+export interface MenuEconomy {
+  sharedIngredients: SharedIngredient[]
+  distinctItemsToBuy: number
+  totalIngredientRefs: number
+}
+
 export interface Menu {
   id: string
   days: MenuDay[]
+  economy?: MenuEconomy
 }
 
 export interface GenerateMenuRequest {
@@ -26,6 +39,8 @@ export interface GenerateMenuRequest {
   skipDays?: string[]
   servings: number
   extraPortions?: Record<string, number>
+  /** Locked days kept and scored server-side: date "YYYY-MM-DD" → recipeId */
+  lockedDays?: Record<string, string>
 }
 
 /**

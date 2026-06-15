@@ -61,6 +61,9 @@ type MenuRepository interface {
 	GetCurrentByHousehold(householdID string) (*Menu, error)
 	GetByID(id string) (*Menu, error)
 	GetHouseholdIDByMenuID(menuID string) (string, error)
+	// GetRecentRecipeIDs returns the set of recipe ids used across the
+	// household's windowMenus most recent menus, for the recency penalty.
+	GetRecentRecipeIDs(householdID string, windowMenus int) (map[string]bool, error)
 }
 
 // MenuPreferencesRepository defines storage operations for per-household

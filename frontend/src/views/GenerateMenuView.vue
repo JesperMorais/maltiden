@@ -9,6 +9,7 @@ import { useFocusTrap } from '@/composables/useFocusTrap'
 import MenuDayCard from '@/components/menu/MenuDayCard.vue'
 import GenerateMenuEmptyState from '@/components/menu/GenerateMenuEmptyState.vue'
 import MenuGeneratorActions from '@/components/menu/MenuGeneratorActions.vue'
+import MenuEconomyBar from '@/components/menu/MenuEconomyBar.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import GenerateMenuSkeleton from '@/components/skeleton/layouts/GenerateMenuSkeleton.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
@@ -232,6 +233,9 @@ onBeforeRouteLeave((to, from, next) => {
             @toggle-lock="handleLockToggle(day.date)"
           />
         </div>
+
+        <!-- Ingredient economy: shared ingredients across the week -->
+        <MenuEconomyBar v-if="hasMenu" :economy="store.economy" />
 
         <!-- Error state -->
         <ErrorState v-if="store.error" :description="store.error" @retry="handleInitialGenerate" />

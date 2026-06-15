@@ -57,7 +57,27 @@ func (m *mockRecipeStorageForMenus) GetByID(id string) (*domain.Recipe, error) {
 }
 
 func (m *mockRecipeStorageForMenus) GetByIDs(ids []string) (map[string]*domain.Recipe, error) {
-	return map[string]*domain.Recipe{}, nil
+	// The selector scores on full recipes (with ingredients), so the menu
+	// service re-fetches them by id. Return a full recipe for each known summary
+	// so generation has a candidate pool.
+	byID := make(map[string]domain.RecipeSummary, len(m.recipes))
+	for _, s := range m.recipes {
+		byID[s.ID] = s
+	}
+	out := make(map[string]*domain.Recipe, len(ids))
+	for _, id := range ids {
+		if s, ok := byID[id]; ok {
+			out[id] = &domain.Recipe{
+				ID:          s.ID,
+				Name:        s.Name,
+				Servings:    s.Servings,
+				Tags:        s.Tags,
+				MainProtein: s.MainProtein,
+				DietClass:   s.DietClass,
+			}
+		}
+	}
+	return out, nil
 }
 
 func (m *mockRecipeStorageForMenus) Create(recipe *domain.Recipe) error { return nil }

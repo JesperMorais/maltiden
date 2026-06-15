@@ -3,6 +3,7 @@ package services
 import (
 	"maltiden/internal/domain"
 	"maltiden/internal/storage/sqlite"
+	"math/rand/v2"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 type menuTestEnv struct {
 	menuService   *MenuService
 	recipeService *RecipeService
+	authService   *AuthService
 	householdID   string
 }
 
@@ -31,6 +33,7 @@ func newMenuTestEnv(t *testing.T) *menuTestEnv {
 	return &menuTestEnv{
 		menuService:   NewMenuService(menuStorage, recipeStorage, menuPrefsStorage),
 		recipeService: NewRecipeService(recipeStorage),
+		authService:   authService,
 		householdID:   user.User.HouseholdID,
 	}
 }
@@ -459,6 +462,215 @@ func TestMenuGetCurrent_Success(t *testing.T) {
 	}
 	if len(current.Days) != 3 {
 		t.Errorf("expected 3 days, got %d", len(current.Days))
+	}
+}
+
+// seedRecipesWithIngredients creates recipes carrying real (non-staple) and
+// staple ingredients so the economy summary has something to compute. It
+// returns the created recipe ids.
+func (env *menuTestEnv) seedRecipesWithIngredients(t *testing.T) []string {
+	t.Helper()
+	specs := []struct {
+		name       string
+		mainProt   string
+		ingredients []domain.Ingredient
+	}{
+		{"Köttfärssås", "nöt", []domain.Ingredient{
+			{Name: "Köttfärs", CanonicalName: "köttfärs", Amount: 500, Unit: "g"},
+			{Name: "Gul lök", CanonicalName: "lök", Amount: 1, Unit: "st"},
+			{Name: "Salt", CanonicalName: "salt", Amount: 1, Unit: "tsk", IsPantryStaple: true},
+		}},
+		{"Korv Stroganoff", "fläsk", []domain.Ingredient{
+			{Name: "Falukorv", CanonicalName: "korv", Amount: 400, Unit: "g"},
+			{Name: "Lök", CanonicalName: "lök", Amount: 1, Unit: "st"},
+			{Name: "Salt", CanonicalName: "salt", Amount: 1, Unit: "tsk", IsPantryStaple: true},
+		}},
+		{"Laxpasta", "fisk", []domain.Ingredient{
+			{Name: "Lax", CanonicalName: "lax", Amount: 300, Unit: "g"},
+			{Name: "Pasta", CanonicalName: "pasta", Amount: 400, Unit: "g"},
+		}},
+	}
+	ids := make([]string, len(specs))
+	for i, s := range specs {
+		resp, err := env.recipeService.Create(domain.CreateRecipeRequest{
+			Name:         s.name,
+			Servings:     4,
+			MainProtein:  s.mainProt,
+			Ingredients:  s.ingredients,
+			Instructions: []string{"Do something"},
+		}, env.householdID)
+		if err != nil {
+			t.Fatalf("seed recipe %q: %v", s.name, err)
+		}
+		ids[i] = resp.ID
+	}
+	return ids
+}
+
+func TestMenuGenerate_SeededDeterministic(t *testing.T) {
+	// A generate persists a menu, which then feeds the recency penalty — so two
+	// runs in the SAME household see different recency. To prove "same seed →
+	// same week", we use two fresh households that share the seed recipes (NULL
+	// household_id) and each start with empty menu history. With identical
+	// candidates, identical (empty) recency, and the same pinned seed, the weeks
+	// must match exactly.
+	env := newMenuTestEnv(t)
+	env.menuService.WithRNG(func() *rand.Rand { return rand.New(rand.NewPCG(99, 99)) })
+
+	second := createTestUser(t, env.authService, "menu-det-2@test.com", "MenuDet2")
+
+	collect := func(hh string) []string {
+		resp, err := env.menuService.Generate(hh, domain.GenerateMenuRequest{Days: 5, Servings: 4})
+		if err != nil {
+			t.Fatalf("Generate: %v", err)
+		}
+		out := make([]string, len(resp.Days))
+		for i, d := range resp.Days {
+			out[i] = d.RecipeID
+		}
+		return out
+	}
+
+	a := collect(env.householdID)
+	b := collect(second.User.HouseholdID)
+	for i := range a {
+		if a[i] != b[i] {
+			t.Fatalf("same seed + empty recency should yield identical week: %v vs %v", a, b)
+		}
+	}
+}
+
+func TestMenuGenerate_LockedDaysRoundTrip(t *testing.T) {
+	env := newMenuTestEnv(t)
+	ids := env.seedRecipesWithIngredients(t)
+
+	today := time.Now()
+	lockDate := today.AddDate(0, 0, 1).Format("2006-01-02")
+	lockedRecipe := ids[2] // Laxpasta
+
+	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{
+		Days:       4,
+		Servings:   4,
+		LockedDays: map[string]string{lockDate: lockedRecipe},
+	})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if resp.Days[1].Date != lockDate {
+		t.Fatalf("expected slot 1 to be the lock date")
+	}
+	if resp.Days[1].RecipeID != lockedRecipe {
+		t.Errorf("locked day not honored: got %q want %q", resp.Days[1].RecipeID, lockedRecipe)
+	}
+}
+
+func TestMenuGenerate_UnknownLockIgnored(t *testing.T) {
+	env := newMenuTestEnv(t)
+	env.seedRecipesWithIngredients(t)
+
+	today := time.Now()
+	lockDate := today.Format("2006-01-02")
+
+	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{
+		Days:       3,
+		Servings:   4,
+		LockedDays: map[string]string{lockDate: "rec_does_not_exist"},
+	})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	// Unknown lock → slot treated as open and filled with a real recipe.
+	if resp.Days[0].RecipeID == "" || resp.Days[0].RecipeID == "rec_does_not_exist" {
+		t.Errorf("unknown lock should be filled with a real recipe, got %q", resp.Days[0].RecipeID)
+	}
+}
+
+func TestMenuGenerate_ForeignLockNotLeaked(t *testing.T) {
+	// SECURITY: a client must not be able to pin (and thus surface) a recipe that
+	// belongs to another household by passing its id in lockedDays. The foreign
+	// id must be dropped silently — never fetched, never placed.
+	env := newMenuTestEnv(t)
+	env.seedRecipesWithIngredients(t)
+
+	// A second household with a PRIVATE recipe not visible to the first.
+	other := createTestUser(t, env.authService, "menu-foreign@test.com", "ForeignHH")
+	foreign, err := env.recipeService.Create(domain.CreateRecipeRequest{
+		Name:         "Secret Recipe",
+		Servings:     4,
+		Ingredients:  []domain.Ingredient{{Name: "Truffel", CanonicalName: "truffel", Amount: 1, Unit: "st"}},
+		Instructions: []string{"Secret"},
+	}, other.User.HouseholdID)
+	if err != nil {
+		t.Fatalf("create foreign recipe: %v", err)
+	}
+
+	today := time.Now()
+	lockDate := today.Format("2006-01-02")
+
+	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{
+		Days:       3,
+		Servings:   4,
+		LockedDays: map[string]string{lockDate: foreign.ID},
+	})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	// The foreign recipe must appear nowhere in the generated week.
+	for i, d := range resp.Days {
+		if d.RecipeID == foreign.ID {
+			t.Errorf("day %d leaked foreign recipe %q", i, foreign.ID)
+		}
+	}
+	// The locked day is treated as open and filled with one of the first
+	// household's own recipes.
+	if resp.Days[0].RecipeID == "" {
+		t.Errorf("foreign-locked day should be filled with an own recipe, got empty")
+	}
+}
+
+func TestMenuGenerate_PopulatesEconomy(t *testing.T) {
+	env := newMenuTestEnv(t)
+	ids := env.seedRecipesWithIngredients(t)
+
+	// Lock the two lök-sharing recipes onto the week so the economy is
+	// deterministic regardless of which restart wins.
+	today := time.Now()
+	d0 := today.Format("2006-01-02")
+	d1 := today.AddDate(0, 0, 1).Format("2006-01-02")
+
+	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{
+		Days:     2,
+		Servings: 4,
+		LockedDays: map[string]string{
+			d0: ids[0], // Köttfärssås (lök + köttfärs + salt-staple)
+			d1: ids[1], // Korv Stroganoff (lök + korv + salt-staple)
+		},
+	})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if resp.Economy == nil {
+		t.Fatal("expected economy to be populated")
+	}
+	// Staples (salt) must never appear among shared ingredients or counts.
+	for _, s := range resp.Economy.SharedIngredients {
+		if s.CanonicalName == "salt" {
+			t.Errorf("staple 'salt' leaked into economy shared ingredients")
+		}
+	}
+	// lök is shared across both locked recipes.
+	foundLok := false
+	for _, s := range resp.Economy.SharedIngredients {
+		if s.CanonicalName == "lök" && s.RecipeCount == 2 {
+			foundLok = true
+		}
+	}
+	if !foundLok {
+		t.Errorf("expected 'lök' shared across 2 recipes, got %+v", resp.Economy.SharedIngredients)
+	}
+	// Distinct non-staple items: köttfärs, lök, korv = 3 (salt excluded).
+	if resp.Economy.DistinctItemsToBuy != 3 {
+		t.Errorf("expected 3 distinct items to buy, got %d", resp.Economy.DistinctItemsToBuy)
 	}
 }
 

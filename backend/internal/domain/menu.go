@@ -21,6 +21,12 @@ type GenerateMenuRequest struct {
 	Servings      int            `json:"servings"`
 	SkipDays      []string       `json:"skipDays"`
 	ExtraPortions map[string]int `json:"extraPortions"`
+
+	// LockedDays pins specific dates to a chosen recipe (date → recipeId). The
+	// generator keeps these recipes in place and never replaces them, but still
+	// counts them when scoring the rest of the week (overlap, protein variety,
+	// recency, vegetarian quota). An unknown recipeId is silently ignored.
+	LockedDays map[string]string `json:"lockedDays,omitempty"`
 }
 
 type UpdateMenuRequest struct {
@@ -37,8 +43,73 @@ type MenuResponseDay struct {
 }
 
 type MenuResponse struct {
-	ID   string            `json:"id"`
-	Days []MenuResponseDay `json:"days"`
+	ID      string            `json:"id"`
+	Days    []MenuResponseDay `json:"days"`
+	Economy *MenuEconomy      `json:"economy,omitempty"`
+}
+
+// SharedIngredient is a non-staple ingredient that appears across two or more
+// recipes in the generated week. Name is the first raw (display) name seen for
+// the canonical, so the UI can show "Lök" rather than the canonical key.
+type SharedIngredient struct {
+	CanonicalName string `json:"canonicalName"`
+	Name          string `json:"name"`
+	RecipeCount   int    `json:"recipeCount"`
+}
+
+// MenuEconomy summarizes how much the generated week reuses ingredients across
+// its recipes. Pantry staples (salt, oil, flour, …) are excluded from every
+// figure so the numbers reflect what actually has to be bought.
+type MenuEconomy struct {
+	SharedIngredients   []SharedIngredient `json:"sharedIngredients"`
+	DistinctItemsToBuy  int                `json:"distinctItemsToBuy"`
+	TotalIngredientRefs int                `json:"totalIngredientRefs"`
+}
+
+// Scoring constants for the smart menu generator. The selector maximizes a
+// single signed score: λ·overlap − μ·proteinRepeats − duplicates − recency.
+const (
+	// OverlapReward (λ) is awarded per extra recipe sharing a non-staple
+	// ingredient — it pulls the week toward dishes that reuse groceries.
+	OverlapReward = 1.0
+	// ProteinVarietyPenalty (μ) discourages repeating the same main protein.
+	ProteinVarietyPenalty = 2.0
+	// DuplicateRecipePenalty makes the selector treat the same recipe (or a
+	// near-duplicate) appearing twice as a near-hard error.
+	DuplicateRecipePenalty = 100.0
+	// RecencyPenalty discourages picking recipes used in the recent weeks.
+	RecencyPenalty = 1.5
+	// RecencyWindowMenus is how many of the household's most recent menus feed
+	// the recency penalty.
+	RecencyWindowMenus = 3
+	// SelectorRestarts is how many randomized greedy constructions are tried;
+	// the best-scoring week wins (ties broken by lowest restart index).
+	SelectorRestarts = 24
+)
+
+// DietCompatible reports whether a recipe's diet class is acceptable for a
+// household diet profile. Both an empty profile and an empty recipe class are
+// treated as "unknown" and accepted gracefully, so missing metadata never
+// silently drops recipes.
+func DietCompatible(profile, recipeClass string) bool {
+	if profile == "" || recipeClass == "" {
+		return true
+	}
+	switch profile {
+	case DietClassOmnivore:
+		return true
+	case DietClassVegetarian:
+		return recipeClass == DietClassVegetarian || recipeClass == DietClassVegan
+	case DietClassVegan:
+		return recipeClass == DietClassVegan
+	case DietClassPescetarian:
+		return recipeClass == DietClassPescetarian ||
+			recipeClass == DietClassVegetarian ||
+			recipeClass == DietClassVegan
+	default:
+		// Unknown profile value — accept everything rather than filter blindly.
+		return true
+	}
 }
 
 // MenuPreferences holds a household's persisted menu-generation preferences.

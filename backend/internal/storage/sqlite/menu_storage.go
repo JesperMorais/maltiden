@@ -3,7 +3,9 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"maltiden/internal/domain"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -208,6 +210,75 @@ func (s *MenuStorage) GetByID(id string) (*domain.Menu, error) {
 	}
 
 	return &menu, rows.Err()
+}
+
+// GetRecentRecipeIDs returns the set of recipe ids used across a household's
+// most recent windowMenus menus. It is used by the menu generator's recency
+// penalty to deprioritize recently-cooked dishes. Both queries hit existing
+// indexes (idx_menus_household, idx_menu_days_menu); no migration required.
+func (s *MenuStorage) GetRecentRecipeIDs(householdID string, windowMenus int) (map[string]bool, error) {
+	ids := make(map[string]bool)
+	if windowMenus <= 0 {
+		return ids, nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Most recent menus for the household. The secondary "id DESC" key makes the
+	// ordering deterministic when several menus share the same created_at second
+	// (CURRENT_TIMESTAMP has 1s resolution), so the recency window is stable.
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id FROM menus WHERE household_id = ? ORDER BY created_at DESC, id DESC LIMIT ?`,
+		householdID, windowMenus,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var menuIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		menuIDs = append(menuIDs, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(menuIDs) == 0 {
+		return ids, nil
+	}
+
+	// Recipe ids across those menus' days.
+	placeholders := make([]string, len(menuIDs))
+	args := make([]interface{}, len(menuIDs))
+	for i, id := range menuIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+	query := fmt.Sprintf(
+		`SELECT recipe_id FROM menu_days WHERE menu_id IN (%s) AND recipe_id IS NOT NULL`,
+		strings.Join(placeholders, ","),
+	)
+
+	dayRows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer dayRows.Close()
+
+	for dayRows.Next() {
+		var recipeID string
+		if err := dayRows.Scan(&recipeID); err != nil {
+			return nil, err
+		}
+		ids[recipeID] = true
+	}
+
+	return ids, dayRows.Err()
 }
 
 // GetHouseholdIDByMenuID returns the household_id for a given menu_id.
