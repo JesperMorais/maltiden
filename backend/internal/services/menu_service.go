@@ -246,9 +246,20 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		return nil, err
 	}
 
+	// Surface the overlap economy to the user: which ingredients are reused
+	// across the week's recipes. Reuses the ingredient map already loaded for
+	// overlap scoring, so no extra storage round-trip.
+	chosenIDs := make([]string, 0, len(menu.Days))
+	for _, d := range menu.Days {
+		if d.RecipeID != "" {
+			chosenIDs = append(chosenIDs, d.RecipeID)
+		}
+	}
+
 	return &domain.MenuResponse{
-		ID:   menu.ID,
-		Days: enrichedDays,
+		ID:                menu.ID,
+		Days:              enrichedDays,
+		SharedIngredients: computeSharedIngredients(chosenIDs, ingredientsByID),
 	}, nil
 }
 

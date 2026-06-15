@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { generateMenu, saveMenu } from '@/api/menu.api'
-import type { SaveMenuDay } from '@/api/menu.api'
+import type { SaveMenuDay, SharedIngredient } from '@/api/menu.api'
 import { useDashboardStore } from './dashboard'
 import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'
@@ -124,6 +124,10 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   const weekStart = ref<string>('') // Monday ISO date
   const servings = ref(4) // Default servings
 
+  // Ingredients reused across the week's recipes (from the overlap-aware
+  // generator). Surfaced in the UI so the shopping-economy benefit is visible.
+  const sharedIngredients = ref<SharedIngredient[]>([])
+
   // ============================================
   // GETTERS
   // ============================================
@@ -191,6 +195,11 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   })
 
   /**
+   * Number of distinct ingredients reused across the week's recipes.
+   */
+  const sharedIngredientsCount = computed(() => sharedIngredients.value.length)
+
+  /**
    * Check if any loading state is active
    */
   const isLoading = computed(() => {
@@ -222,6 +231,9 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
 
     // Clear locked days
     lockedDays.value.clear()
+
+    // Reset shared-ingredient info for the new week.
+    sharedIngredients.value = []
   }
 
   /**
@@ -243,6 +255,9 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
         servings: servings.value,
         skipDays: []
       })
+
+      // Surface which ingredients are reused across the week's recipes.
+      sharedIngredients.value = menu.sharedIngredients ?? []
 
       // Map API response to draft menu days
       if (draftMenu.value && menu.days) {
@@ -285,6 +300,13 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
         servings: servings.value,
         skipDays: []
       })
+
+      // Refresh shared-ingredient info from the freshly generated week. When
+      // days are locked the merged draft differs from this week, so only trust
+      // the count for a fully-unlocked regenerate; otherwise clear it to avoid
+      // showing a figure that doesn't match what's on screen.
+      sharedIngredients.value =
+        lockedDays.value.size === 0 ? (newMenu.sharedIngredients ?? []) : []
 
       // Merge: Keep locked days, replace unlocked days with new recipes
       if (draftMenu.value && newMenu.days) {
@@ -378,6 +400,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     lockedDays.value.clear()
     weekStart.value = ''
     error.value = null
+    sharedIngredients.value = []
   }
 
   /**
@@ -424,6 +447,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     error,
     weekStart,
     servings,
+    sharedIngredients,
 
     // Getters
     orderedDays,
@@ -434,6 +458,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     hasMenu,
     unlockedDates,
     isReadyToSave,
+    sharedIngredientsCount,
 
     // Actions
     initializeWeek,

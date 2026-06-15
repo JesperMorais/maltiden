@@ -386,3 +386,49 @@ func sameSet(a, b []string) bool {
 	}
 	return true
 }
+
+func TestComputeSharedIngredients(t *testing.T) {
+	ingredients := map[string][]domain.Ingredient{
+		"rec_a": ing("Kyckling", "Ris", "Salt"),         // Salt = pantry staple
+		"rec_b": ing("kyckling", "Paprika", "Olivolja"), // shares kyckling (diff case); olja = staple
+		"rec_c": ing("Ris", "Lök", "Lök"),               // dup Lök within recipe must not self-share
+		"rec_d": ing("Pasta"),                           // shares nothing
+	}
+
+	got := computeSharedIngredients([]string{"rec_a", "rec_b", "rec_c", "rec_d"}, ingredients)
+
+	// Kyckling shared by a+b (case-insensitive) = 2; Ris shared by a+c = 2.
+	// Lök appears in one recipe only (dup ignored) -> not shared.
+	// Salt/Olivolja are pantry staples -> excluded.
+	if len(got) != 2 {
+		t.Fatalf("want 2 shared ingredients, got %d: %+v", len(got), got)
+	}
+	// Sorted by count desc then name asc; both count 2 so alphabetical: Kyckling, Ris.
+	if got[0].Name != "Kyckling" || got[0].RecipeCount != 2 {
+		t.Errorf("got[0] = %+v, want {Kyckling 2}", got[0])
+	}
+	if got[1].Name != "Ris" || got[1].RecipeCount != 2 {
+		t.Errorf("got[1] = %+v, want {Ris 2}", got[1])
+	}
+}
+
+func TestComputeSharedIngredientsDedupesCycledRecipes(t *testing.T) {
+	ingredients := map[string][]domain.Ingredient{
+		"rec_a": ing("Kyckling", "Ris"),
+	}
+	// Same recipe twice (cycling) must not make its own ingredients look shared.
+	got := computeSharedIngredients([]string{"rec_a", "rec_a"}, ingredients)
+	if len(got) != 0 {
+		t.Fatalf("a recipe shared with itself must yield nothing, got %+v", got)
+	}
+}
+
+func TestComputeSharedIngredientsEmptyWhenNoOverlap(t *testing.T) {
+	ingredients := map[string][]domain.Ingredient{
+		"rec_a": ing("Kyckling"),
+		"rec_b": ing("Lax"),
+	}
+	if got := computeSharedIngredients([]string{"rec_a", "rec_b"}, ingredients); len(got) != 0 {
+		t.Fatalf("want empty, got %+v", got)
+	}
+}
