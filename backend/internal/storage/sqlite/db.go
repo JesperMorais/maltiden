@@ -115,6 +115,7 @@ func runMigrations(db *sql.DB, fs embed.FS) error {
 		{15, "015_password_reset_tokens.sql"},
 		{16, "016_create_menu_preferences.sql"},
 		{17, "017_add_disliked_ingredients.sql"},
+		{18, "018_add_recipe_nutrition.sql"},
 	}
 
 	for _, m := range migrationFiles {

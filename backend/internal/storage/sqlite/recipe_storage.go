@@ -86,16 +86,18 @@ func (s *RecipeStorage) GetByID(id string) (*domain.Recipe, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	query := `SELECT id, name, servings, emoji, tags, ingredients, instructions, household_id, created_at
+	query := `SELECT id, name, servings, emoji, tags, ingredients, instructions, household_id, calories, protein_g, carbs_g, fat_g, created_at
 			  FROM recipes WHERE id = ?`
 
 	var r domain.Recipe
 	var emoji, householdID sql.NullString
 	var tagsJSON, ingredientsJSON, instructionsJSON string
+	var cal, prot, carb, fat sql.NullFloat64
 
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&r.ID, &r.Name, &r.Servings, &emoji,
-		&tagsJSON, &ingredientsJSON, &instructionsJSON, &householdID, &r.CreatedAt,
+		&tagsJSON, &ingredientsJSON, &instructionsJSON, &householdID,
+		&cal, &prot, &carb, &fat, &r.CreatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -111,6 +113,7 @@ func (s *RecipeStorage) GetByID(id string) (*domain.Recipe, error) {
 	if householdID.Valid {
 		r.HouseholdID = householdID.String
 	}
+	r.Nutrition = scanNutrition(cal, prot, carb, fat)
 
 	if err := json.Unmarshal([]byte(tagsJSON), &r.Tags); err != nil {
 		r.Tags = []string{}
@@ -142,7 +145,7 @@ func (s *RecipeStorage) GetByIDs(ids []string) (map[string]*domain.Recipe, error
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, name, servings, emoji, tags, ingredients, instructions, created_at
+		SELECT id, name, servings, emoji, tags, ingredients, instructions, calories, protein_g, carbs_g, fat_g, created_at
 		FROM recipes WHERE id IN (%s)
 	`, strings.Join(placeholders, ","))
 
@@ -157,10 +160,12 @@ func (s *RecipeStorage) GetByIDs(ids []string) (map[string]*domain.Recipe, error
 		var r domain.Recipe
 		var emoji sql.NullString
 		var tagsJSON, ingredientsJSON, instructionsJSON string
+		var cal, prot, carb, fat sql.NullFloat64
 
 		err := rows.Scan(
 			&r.ID, &r.Name, &r.Servings, &emoji,
-			&tagsJSON, &ingredientsJSON, &instructionsJSON, &r.CreatedAt,
+			&tagsJSON, &ingredientsJSON, &instructionsJSON,
+			&cal, &prot, &carb, &fat, &r.CreatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -169,6 +174,7 @@ func (s *RecipeStorage) GetByIDs(ids []string) (map[string]*domain.Recipe, error
 		if emoji.Valid {
 			r.Emoji = emoji.String
 		}
+		r.Nutrition = scanNutrition(cal, prot, carb, fat)
 
 		if err := json.Unmarshal([]byte(tagsJSON), &r.Tags); err != nil {
 			r.Tags = []string{}
@@ -292,14 +298,18 @@ func (s *RecipeStorage) Update(recipe *domain.Recipe) error {
 		return err
 	}
 
+	cal, prot, carb, fat := nutritionArgs(recipe.Nutrition)
+
 	query := `
-		UPDATE recipes SET name = ?, servings = ?, emoji = ?, tags = ?, ingredients = ?, instructions = ?
+		UPDATE recipes SET name = ?, servings = ?, emoji = ?, tags = ?, ingredients = ?, instructions = ?,
+			calories = ?, protein_g = ?, carbs_g = ?, fat_g = ?
 		WHERE id = ?
 	`
 
 	result, err := s.db.ExecContext(ctx, query,
 		recipe.Name, recipe.Servings, recipe.Emoji,
 		string(tagsJSON), string(ingredientsJSON), string(instructionsJSON),
+		cal, prot, carb, fat,
 		recipe.ID,
 	)
 	if err != nil {
@@ -362,16 +372,60 @@ func (s *RecipeStorage) Create(recipe *domain.Recipe) error {
 		householdID = recipe.HouseholdID
 	}
 
+	cal, prot, carb, fat := nutritionArgs(recipe.Nutrition)
+
 	query := `
-		INSERT INTO recipes (id, name, servings, emoji, tags, ingredients, instructions, household_id, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO recipes (id, name, servings, emoji, tags, ingredients, instructions, household_id, calories, protein_g, carbs_g, fat_g, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = s.db.ExecContext(ctx, query,
 		recipe.ID, recipe.Name, recipe.Servings, recipe.Emoji,
 		string(tagsJSON), string(ingredientsJSON), string(instructionsJSON),
-		householdID, recipe.CreatedAt,
+		householdID, cal, prot, carb, fat, recipe.CreatedAt,
 	)
 
 	return err
+}
+
+// nutritionArgs maps an optional Nutrition struct to four nullable SQL args.
+// A nil Nutrition (or nil field) becomes a NULL column, keeping the per-serving
+// nutrition data fully optional.
+func nutritionArgs(n *domain.Nutrition) (cal, prot, carb, fat interface{}) {
+	if n == nil {
+		return nil, nil, nil, nil
+	}
+	toArg := func(v *float64) interface{} {
+		if v == nil {
+			return nil
+		}
+		return *v
+	}
+	return toArg(n.Calories), toArg(n.ProteinG), toArg(n.CarbsG), toArg(n.FatG)
+}
+
+// scanNutrition assembles a Nutrition struct from four nullable columns,
+// returning nil when every field is NULL (recipe has no nutrition data).
+func scanNutrition(cal, prot, carb, fat sql.NullFloat64) *domain.Nutrition {
+	if !cal.Valid && !prot.Valid && !carb.Valid && !fat.Valid {
+		return nil
+	}
+	n := &domain.Nutrition{}
+	if cal.Valid {
+		v := cal.Float64
+		n.Calories = &v
+	}
+	if prot.Valid {
+		v := prot.Float64
+		n.ProteinG = &v
+	}
+	if carb.Valid {
+		v := carb.Float64
+		n.CarbsG = &v
+	}
+	if fat.Valid {
+		v := fat.Float64
+		n.FatG = &v
+	}
+	return n
 }
