@@ -14,6 +14,18 @@ type Ingredient struct {
 	Unit   string  `json:"unit"`
 }
 
+// Nutrition holds per-serving nutritional values for a recipe (issue #248,
+// Phase 3 prereq). All fields are optional: a nil pointer means the value is
+// unknown for that recipe (existing recipes have no nutrition data). This is
+// the data-layer foundation only — menu-level macro aggregation/balancing is
+// the Phase 3 feature built on top of it, not part of this struct.
+type Nutrition struct {
+	Calories *float64 `json:"calories,omitempty"`
+	ProteinG *float64 `json:"proteinG,omitempty"`
+	CarbsG   *float64 `json:"carbsG,omitempty"`
+	FatG     *float64 `json:"fatG,omitempty"`
+}
+
 type Recipe struct {
 	ID           string       `json:"id"`
 	Name         string       `json:"name"`
@@ -23,7 +35,9 @@ type Recipe struct {
 	Ingredients  []Ingredient `json:"ingredients"`
 	Instructions []string     `json:"instructions"`
 	HouseholdID  string       `json:"householdId,omitempty"`
-	CreatedAt    time.Time    `json:"createdAt"`
+	// Nutrition is per serving and optional; omitted when no data exists.
+	Nutrition *Nutrition `json:"nutrition,omitempty"`
+	CreatedAt time.Time  `json:"createdAt"`
 }
 
 type RecipeSummary struct {

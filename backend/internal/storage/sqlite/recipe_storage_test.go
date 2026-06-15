@@ -179,6 +179,120 @@ func TestRecipeStorage_GetByIDs(t *testing.T) {
 	}
 }
 
+func fptr(v float64) *float64 { return &v }
+
+func TestRecipeStorage_NutritionRoundTrip(t *testing.T) {
+	s, hhID := setupRecipeTestDB(t)
+	r := newTestRecipe("rec_nutri", hhID)
+	r.Nutrition = &domain.Nutrition{
+		Calories: fptr(520),
+		ProteinG: fptr(31.5),
+		CarbsG:   fptr(48),
+		FatG:     fptr(18.2),
+	}
+
+	if err := s.Create(r); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := s.GetByID(r.ID)
+	if err != nil {
+		t.Fatalf("GetByID: %v", err)
+	}
+	if got.Nutrition == nil {
+		t.Fatal("expected nutrition to round-trip, got nil")
+	}
+	if got.Nutrition.Calories == nil || *got.Nutrition.Calories != 520 {
+		t.Errorf("calories not preserved: %+v", got.Nutrition.Calories)
+	}
+	if got.Nutrition.ProteinG == nil || *got.Nutrition.ProteinG != 31.5 {
+		t.Errorf("protein not preserved: %+v", got.Nutrition.ProteinG)
+	}
+	if got.Nutrition.CarbsG == nil || *got.Nutrition.CarbsG != 48 {
+		t.Errorf("carbs not preserved: %+v", got.Nutrition.CarbsG)
+	}
+	if got.Nutrition.FatG == nil || *got.Nutrition.FatG != 18.2 {
+		t.Errorf("fat not preserved: %+v", got.Nutrition.FatG)
+	}
+
+	// GetByIDs should also surface nutrition.
+	m, err := s.GetByIDs([]string{r.ID})
+	if err != nil {
+		t.Fatalf("GetByIDs: %v", err)
+	}
+	if m[r.ID] == nil || m[r.ID].Nutrition == nil || m[r.ID].Nutrition.Calories == nil {
+		t.Errorf("GetByIDs did not surface nutrition: %+v", m[r.ID])
+	}
+}
+
+func TestRecipeStorage_NutritionNullableAndPartial(t *testing.T) {
+	s, hhID := setupRecipeTestDB(t)
+
+	// A recipe with no nutrition data at all stays valid; Nutrition is nil.
+	noData := newTestRecipe("rec_nutri_none", hhID)
+	if err := s.Create(noData); err != nil {
+		t.Fatalf("Create no-data: %v", err)
+	}
+	got, err := s.GetByID(noData.ID)
+	if err != nil {
+		t.Fatalf("GetByID no-data: %v", err)
+	}
+	if got.Nutrition != nil {
+		t.Errorf("expected nil nutrition for recipe without data, got %+v", got.Nutrition)
+	}
+
+	// Partial nutrition (only protein) round-trips with the rest NULL.
+	partial := newTestRecipe("rec_nutri_partial", hhID)
+	partial.Nutrition = &domain.Nutrition{ProteinG: fptr(40)}
+	if err := s.Create(partial); err != nil {
+		t.Fatalf("Create partial: %v", err)
+	}
+	gotP, err := s.GetByID(partial.ID)
+	if err != nil {
+		t.Fatalf("GetByID partial: %v", err)
+	}
+	if gotP.Nutrition == nil || gotP.Nutrition.ProteinG == nil || *gotP.Nutrition.ProteinG != 40 {
+		t.Fatalf("partial protein not preserved: %+v", gotP.Nutrition)
+	}
+	if gotP.Nutrition.Calories != nil || gotP.Nutrition.CarbsG != nil || gotP.Nutrition.FatG != nil {
+		t.Errorf("expected unset fields to stay nil: %+v", gotP.Nutrition)
+	}
+}
+
+func TestRecipeStorage_NutritionUpdate(t *testing.T) {
+	s, hhID := setupRecipeTestDB(t)
+	r := newTestRecipe("rec_nutri_upd", hhID)
+	if err := s.Create(r); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// Add nutrition via Update.
+	r.Nutrition = &domain.Nutrition{Calories: fptr(600), ProteinG: fptr(25)}
+	if err := s.Update(r); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	got, err := s.GetByID(r.ID)
+	if err != nil {
+		t.Fatalf("GetByID: %v", err)
+	}
+	if got.Nutrition == nil || got.Nutrition.Calories == nil || *got.Nutrition.Calories != 600 {
+		t.Fatalf("nutrition not persisted on update: %+v", got.Nutrition)
+	}
+
+	// Clearing nutrition via Update writes NULLs back.
+	r.Nutrition = nil
+	if err := s.Update(r); err != nil {
+		t.Fatalf("Update clear: %v", err)
+	}
+	gotCleared, err := s.GetByID(r.ID)
+	if err != nil {
+		t.Fatalf("GetByID after clear: %v", err)
+	}
+	if gotCleared.Nutrition != nil {
+		t.Errorf("expected nutrition cleared to nil, got %+v", gotCleared.Nutrition)
+	}
+}
+
 func TestRecipeStorage_Create_DuplicateID(t *testing.T) {
 	s, hhID := setupRecipeTestDB(t)
 	r := newTestRecipe("rec_dup_test", hhID)
