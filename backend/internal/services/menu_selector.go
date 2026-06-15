@@ -11,6 +11,23 @@ import (
 // dish. Matches the Swedish tag used across the seed recipes.
 const vegetarianTag = "vegetariskt"
 
+// batchTag marks a recipe as suitable for batch cooking — one cook session,
+// eaten across two day-slots ("laga en gång, ät två gånger", #248 Phase 2).
+// Until Phase 0 adds an explicit recipe-level `batchable` field, batchability
+// is carried as a tag, mirroring how the vegetarian quota reads `vegetariskt`.
+const batchTag = "batchcook"
+
+// isBatchable reports whether a recipe is marked for batch cooking via the
+// batch tag. Case-insensitive and space-trimmed, like the other tag checks.
+func isBatchable(r domain.RecipeSummary) bool {
+	for _, t := range r.Tags {
+		if normalizeTag(t) == batchTag {
+			return true
+		}
+	}
+	return false
+}
+
 // Scoring weights. The selector's score is
 //
 //	score = overlapReward·overlap − varietyWeight·varietyPenalty − recencyWeight·recencyPenalty
@@ -35,6 +52,7 @@ const (
 // vegetarian tag is also excluded so variety never fights the veg-day quota.
 var scheduleTagsExcluded = map[string]bool{
 	vegetarianTag: true,
+	batchTag:      true, // describes prep (batch cooking), not cuisine/protein
 	"vardag":      true,
 	"helg":        true,
 	"barn":        true,
@@ -271,6 +289,68 @@ func computeSharedIngredients(recipeIDs []string, ingredientsByID map[string][]d
 		return shared[i].Name < shared[j].Name
 	})
 	return shared
+}
+
+// applyBatchCooking turns batchable cook-days into cook-once-eat-twice pairs
+// (#248 Phase 2). It walks the week and, for each non-skipped day whose recipe
+// is batchable (per batchableIDs) and not already part of a batch pair, finds
+// the next non-skipped day and converts it into a leftovers day: same recipe,
+// LeftoverOf = the cook-day's date, and no extra cooking. The cook-day is
+// marked PrepModeBatch and its servings doubled (cook twice the portions in one
+// session). Each recipe is batched at most once per week, and a day already
+// reused as leftovers is never itself made a cook-day, so chains never form.
+//
+// It is a deterministic post-pass over the selector's output: it never changes
+// which recipes were chosen (so prefs/overlap/variety/disliked/veg-quota are
+// untouched), only how two already-placed slots relate. Cook-days are preferred
+// early in the week (the natural left-to-right scan favors Sunday/Monday-style
+// front placement), matching the issue's "prefer Sunday/Monday" intent given
+// generation starts from today.
+//
+// days is mutated in place and returned for convenience. A nil/empty
+// batchableIDs map (no batchable recipes, or prep mode off) is a no-op.
+func applyBatchCooking(days []domain.MenuDay, batchableIDs map[string]bool) []domain.MenuDay {
+	if len(batchableIDs) == 0 {
+		return days
+	}
+
+	batched := make(map[string]bool) // recipe IDs already given a batch pair
+	consumed := make(map[int]bool)   // day indexes already used as a leftovers slot
+
+	for i := range days {
+		d := days[i]
+		if d.Skip || d.RecipeID == "" || consumed[i] {
+			continue
+		}
+		if !batchableIDs[d.RecipeID] || batched[d.RecipeID] {
+			continue
+		}
+		// Find the next eligible day to hold the leftovers: non-skipped, with a
+		// recipe assigned, not already consumed by another batch.
+		leftoverIdx := -1
+		for j := i + 1; j < len(days); j++ {
+			if days[j].Skip || consumed[j] || days[j].RecipeID == "" {
+				continue
+			}
+			leftoverIdx = j
+			break
+		}
+		if leftoverIdx == -1 {
+			continue // no room left this week to eat the leftovers
+		}
+
+		// Cook-day: double the portions, mark it a batch day.
+		days[i].PrepMode = domain.PrepModeBatch
+		days[i].Servings = d.Servings * 2
+		// Leftovers day: reuse the same dish, reference the cook-day, no re-cook.
+		days[leftoverIdx].RecipeID = d.RecipeID
+		days[leftoverIdx].LeftoverOf = d.Date
+		days[leftoverIdx].PrepMode = ""
+
+		batched[d.RecipeID] = true
+		consumed[leftoverIdx] = true
+	}
+	return days
 }
 
 // isPantryStaple reports whether an ingredient is a pantry staple that should
