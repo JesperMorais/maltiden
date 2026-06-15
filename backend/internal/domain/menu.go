@@ -2,11 +2,23 @@ package domain
 
 import "time"
 
+// PrepModeBatch marks a menu day as a batch-cook day: the recipe is cooked
+// once at double servings and reused as leftovers on a later day (#248 Phase 2,
+// "laga en gång, ät två gånger"). The empty string means an ordinary day.
+const PrepModeBatch = "batch"
+
 type MenuDay struct {
 	Date     string `json:"date"`
 	RecipeID string `json:"recipeId,omitempty"`
 	Servings int    `json:"servings"`
 	Skip     bool   `json:"skip,omitempty"`
+	// PrepMode marks how the day is prepared. "" is an ordinary day;
+	// PrepModeBatch marks a cook-once-eat-twice day (batch cooking, #248).
+	PrepMode string `json:"prepMode,omitempty"`
+	// LeftoverOf, when set, is the date of the batch cook-day this day reuses.
+	// A leftovers day carries the same RecipeID as its cook-day but is not
+	// cooked again. Empty for cook-days and ordinary days.
+	LeftoverOf string `json:"leftoverOf,omitempty"`
 }
 
 type Menu struct {
@@ -21,6 +33,10 @@ type GenerateMenuRequest struct {
 	Servings      int            `json:"servings"`
 	SkipDays      []string       `json:"skipDays"`
 	ExtraPortions map[string]int `json:"extraPortions"`
+	// PrepMode, when true, enables batch cooking for the week (#248 Phase 2):
+	// a batchable recipe is placed on a cook-day at double servings and reused
+	// as leftovers on the next eligible day. Defaults to off.
+	PrepMode bool `json:"prepMode,omitempty"`
 }
 
 type UpdateMenuRequest struct {
@@ -34,6 +50,11 @@ type MenuResponseDay struct {
 	Emoji      string `json:"emoji,omitempty"`
 	Servings   int    `json:"servings"`
 	Skip       bool   `json:"skip,omitempty"`
+	// PrepMode / LeftoverOf surface batch cooking to the UX (#248 Phase 2).
+	// PrepModeBatch marks a cook-once-eat-twice cook-day; LeftoverOf is the
+	// cook-day date a leftovers day reuses. Both omitempty for ordinary days.
+	PrepMode   string `json:"prepMode,omitempty"`
+	LeftoverOf string `json:"leftoverOf,omitempty"`
 }
 
 // SharedIngredient is one ingredient reused across two or more recipes in a

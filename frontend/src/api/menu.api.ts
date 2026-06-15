@@ -14,6 +14,10 @@ export interface MenuDay {
   emoji?: string
   servings: number
   skip?: boolean
+  /** "batch" marks a cook-once-eat-twice cook-day (batch cooking, #248). */
+  prepMode?: string
+  /** The cook-day date this day reuses as leftovers, when set. */
+  leftoverOf?: string
 }
 
 /** An ingredient reused across two or more of the week's recipes. */
@@ -34,6 +38,8 @@ export interface GenerateMenuRequest {
   skipDays?: string[]
   servings: number
   extraPortions?: Record<string, number>
+  /** Enable batch cooking for the week: batchable recipes occupy 2 slots (#248). */
+  prepMode?: boolean
 }
 
 /**

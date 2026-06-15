@@ -135,10 +135,12 @@ func (s *MenuService) enrichMenuDays(days []domain.MenuDay) ([]domain.MenuRespon
 	result := make([]domain.MenuResponseDay, len(days))
 	for i, d := range days {
 		rd := domain.MenuResponseDay{
-			Date:     d.Date,
-			RecipeID: d.RecipeID,
-			Servings: d.Servings,
-			Skip:     d.Skip,
+			Date:       d.Date,
+			RecipeID:   d.RecipeID,
+			Servings:   d.Servings,
+			Skip:       d.Skip,
+			PrepMode:   d.PrepMode,
+			LeftoverOf: d.LeftoverOf,
 		}
 		if r, ok := recipeMap[d.RecipeID]; ok {
 			rd.RecipeName = r.Name
@@ -231,6 +233,21 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		}
 
 		menuDays = append(menuDays, day)
+	}
+
+	// Batch cooking (#248 Phase 2): when prep mode is on, pair each batchable
+	// recipe's cook-day with a later leftovers day (cook once, eat twice). This
+	// is a deterministic post-pass that never alters which recipes the selector
+	// chose, so the prefs / overlap / variety / disliked / veg-quota chain is
+	// untouched — it only relates two already-placed slots.
+	if req.PrepMode {
+		batchableIDs := make(map[string]bool)
+		for _, r := range recipes {
+			if isBatchable(r) {
+				batchableIDs[r.ID] = true
+			}
+		}
+		menuDays = applyBatchCooking(menuDays, batchableIDs)
 	}
 
 	// Create menu
