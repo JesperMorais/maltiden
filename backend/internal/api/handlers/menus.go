@@ -85,6 +85,60 @@ func (h *MenuHandler) UpdateCurrent(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, menu)
 }
 
+func (h *MenuHandler) GetPreferences(w http.ResponseWriter, r *http.Request) {
+	householdID := middleware.GetHouseholdID(r)
+	if householdID == "" {
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	prefs, err := h.menuService.GetPreferences(householdID)
+	if err != nil {
+		sentry.CaptureException(err)
+		log.Printf("ERROR [GetMenuPreferences] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, prefs)
+}
+
+func (h *MenuHandler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
+	householdID := middleware.GetHouseholdID(r)
+	if householdID == "" {
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var req domain.UpdateMenuPreferencesRequest
+	if !DecodeJSON(w, r, maxBodySize, &req) {
+		return
+	}
+
+	prefs, err := h.menuService.UpdatePreferences(householdID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrInvalidDays):
+			WriteError(w, http.StatusBadRequest, "invalid_days")
+		case errors.Is(err, domain.ErrInvalidServings):
+			WriteError(w, http.StatusBadRequest, "invalid_servings")
+		case errors.Is(err, domain.ErrInvalidVegetarianDays):
+			WriteError(w, http.StatusBadRequest, "invalid_vegetarian_days")
+		case errors.Is(err, domain.ErrTooManyExcludedTags):
+			WriteError(w, http.StatusBadRequest, "too_many_excluded_tags")
+		case errors.Is(err, domain.ErrInvalidExcludedTag):
+			WriteError(w, http.StatusBadRequest, "invalid_excluded_tag")
+		default:
+			sentry.CaptureException(err)
+			log.Printf("ERROR [UpdateMenuPreferences] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, prefs)
+}
+
 func (h *MenuHandler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 	// Get household ID from auth context
 	householdID := middleware.GetHouseholdID(r)

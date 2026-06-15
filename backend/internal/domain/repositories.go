@@ -63,6 +63,16 @@ type MenuRepository interface {
 	GetHouseholdIDByMenuID(menuID string) (string, error)
 }
 
+// MenuPreferencesRepository defines storage operations for per-household
+// menu-generation preferences.
+type MenuPreferencesRepository interface {
+	// Get returns the preferences for a household, or nil if none have been
+	// saved (callers should fall back to DefaultMenuPreferences).
+	Get(householdID string) (*MenuPreferences, error)
+	// Upsert creates or replaces the preferences for a household.
+	Upsert(prefs *MenuPreferences) error
+}
+
 // ShoppingRepository defines the interface for shopping storage operations.
 type ShoppingRepository interface {
 	GetCheckedItems(menuID string) (map[string]bool, error)

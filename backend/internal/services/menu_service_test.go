@@ -19,6 +19,7 @@ func newMenuTestEnv(t *testing.T) *menuTestEnv {
 	db := setupTestDB(t)
 	recipeStorage := sqlite.NewRecipeStorage(db)
 	menuStorage := sqlite.NewMenuStorage(db)
+	menuPrefsStorage := sqlite.NewMenuPreferencesStorage(db)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	userStorage := sqlite.NewUserStorage(db)
 	jwtService := setupTestJWTService(t)
@@ -28,7 +29,7 @@ func newMenuTestEnv(t *testing.T) *menuTestEnv {
 	user := createTestUser(t, authService, "menu-test@test.com", "MenuTester")
 
 	return &menuTestEnv{
-		menuService:   NewMenuService(menuStorage, recipeStorage),
+		menuService:   NewMenuService(menuStorage, recipeStorage, menuPrefsStorage),
 		recipeService: NewRecipeService(recipeStorage),
 		householdID:   user.User.HouseholdID,
 	}
@@ -265,6 +266,160 @@ func TestMenuGenerate_ExtraPortions(t *testing.T) {
 	// Other days should have base servings
 	if resp.Days[0].Servings != 4 {
 		t.Errorf("expected 4 servings on normal day, got %d", resp.Days[0].Servings)
+	}
+}
+
+func TestMenuPreferences_DefaultsWhenUnsaved(t *testing.T) {
+	env := newMenuTestEnv(t)
+
+	prefs, err := env.menuService.GetPreferences(env.householdID)
+	if err != nil {
+		t.Fatalf("GetPreferences: %v", err)
+	}
+	if prefs.DefaultDays != 7 || prefs.DefaultServings != 4 {
+		t.Errorf("expected default 7 days / 4 servings, got %+v", prefs)
+	}
+	if len(prefs.ExcludedTags) != 0 {
+		t.Errorf("expected no excluded tags by default, got %v", prefs.ExcludedTags)
+	}
+}
+
+func TestMenuPreferences_UpdateValidation(t *testing.T) {
+	env := newMenuTestEnv(t)
+
+	tests := []struct {
+		name    string
+		req     domain.UpdateMenuPreferencesRequest
+		wantErr error
+	}{
+		{"days too low", domain.UpdateMenuPreferencesRequest{DefaultDays: 0, DefaultServings: 4}, domain.ErrInvalidDays},
+		{"days too high", domain.UpdateMenuPreferencesRequest{DefaultDays: 32, DefaultServings: 4}, domain.ErrInvalidDays},
+		{"servings too low", domain.UpdateMenuPreferencesRequest{DefaultDays: 7, DefaultServings: 0}, domain.ErrInvalidServings},
+		{"veg days exceed total", domain.UpdateMenuPreferencesRequest{DefaultDays: 3, DefaultServings: 4, VegetarianDays: 4}, domain.ErrInvalidVegetarianDays},
+		{"empty tag", domain.UpdateMenuPreferencesRequest{DefaultDays: 7, DefaultServings: 4, ExcludedTags: []string{""}}, domain.ErrInvalidExcludedTag},
+		{"valid", domain.UpdateMenuPreferencesRequest{DefaultDays: 5, DefaultServings: 3, VegetarianDays: 1, ExcludedTags: []string{"fisk"}}, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := env.menuService.UpdatePreferences(env.householdID, tt.req)
+			if err != tt.wantErr {
+				t.Errorf("UpdatePreferences() err = %v, want %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestMenuPreferences_UpsertRoundTrip(t *testing.T) {
+	env := newMenuTestEnv(t)
+
+	_, err := env.menuService.UpdatePreferences(env.householdID, domain.UpdateMenuPreferencesRequest{
+		DefaultDays:     4,
+		DefaultServings: 6,
+		VegetarianDays:  2,
+		ExcludedTags:    []string{"fisk"},
+	})
+	if err != nil {
+		t.Fatalf("UpdatePreferences: %v", err)
+	}
+
+	got, err := env.menuService.GetPreferences(env.householdID)
+	if err != nil {
+		t.Fatalf("GetPreferences: %v", err)
+	}
+	if got.DefaultDays != 4 || got.DefaultServings != 6 || got.VegetarianDays != 2 {
+		t.Errorf("round-trip scalar mismatch: %+v", got)
+	}
+}
+
+func TestMenuGenerate_UsesPreferenceDefaults(t *testing.T) {
+	env := newMenuTestEnv(t)
+	env.seedRecipes(t, 5)
+
+	if _, err := env.menuService.UpdatePreferences(env.householdID, domain.UpdateMenuPreferencesRequest{
+		DefaultDays:     4,
+		DefaultServings: 6,
+	}); err != nil {
+		t.Fatalf("UpdatePreferences: %v", err)
+	}
+
+	// Request omits days+servings, so saved preferences should drive both.
+	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if len(resp.Days) != 4 {
+		t.Errorf("expected 4 days from preference, got %d", len(resp.Days))
+	}
+	for i, d := range resp.Days {
+		if d.Servings != 6 {
+			t.Errorf("day %d: expected 6 servings from preference, got %d", i, d.Servings)
+		}
+	}
+}
+
+func TestMenuGenerate_ExplicitRequestOverridesPreferences(t *testing.T) {
+	env := newMenuTestEnv(t)
+	env.seedRecipes(t, 5)
+
+	if _, err := env.menuService.UpdatePreferences(env.householdID, domain.UpdateMenuPreferencesRequest{
+		DefaultDays:     4,
+		DefaultServings: 6,
+	}); err != nil {
+		t.Fatalf("UpdatePreferences: %v", err)
+	}
+
+	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{
+		Days:     2,
+		Servings: 8,
+	})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if len(resp.Days) != 2 {
+		t.Errorf("explicit days should win: expected 2, got %d", len(resp.Days))
+	}
+	if resp.Days[0].Servings != 8 {
+		t.Errorf("explicit servings should win: expected 8, got %d", resp.Days[0].Servings)
+	}
+}
+
+func TestMenuGenerate_ExcludedTagsFilterRecipes(t *testing.T) {
+	env := newMenuTestEnv(t)
+
+	// Tag a recipe with a unique excluded tag so we can assert it is never
+	// selected. (Seed recipes with NULL household_id are also visible, so we
+	// check the excluded one is absent rather than asserting a single allowed ID.)
+	excluded, err := env.recipeService.Create(domain.CreateRecipeRequest{
+		Name:         "Fish Stew",
+		Servings:     4,
+		Tags:         []string{"mt-exclude-marker"},
+		Ingredients:  []domain.Ingredient{{Name: "Torsk", Amount: 1, Unit: "st"}},
+		Instructions: []string{"Cook"},
+	}, env.householdID)
+	if err != nil {
+		t.Fatalf("create excluded recipe: %v", err)
+	}
+
+	if _, err := env.menuService.UpdatePreferences(env.householdID, domain.UpdateMenuPreferencesRequest{
+		DefaultDays:     7,
+		DefaultServings: 4,
+		ExcludedTags:    []string{"mt-exclude-marker"},
+	}); err != nil {
+		t.Fatalf("UpdatePreferences: %v", err)
+	}
+
+	// Generate a long menu so cycling would surface the excluded recipe if the
+	// filter were not applied.
+	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{Days: 20, Servings: 4})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	for i, d := range resp.Days {
+		if d.RecipeID == excluded.ID {
+			t.Errorf("day %d selected excluded recipe %q", i, excluded.ID)
+		}
 	}
 }
 

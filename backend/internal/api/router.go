@@ -34,6 +34,7 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	recipeStorage := sqlite.NewRecipeStorage(db)
 	menuStorage := sqlite.NewMenuStorage(db)
+	menuPrefsStorage := sqlite.NewMenuPreferencesStorage(db)
 	shoppingStorage := sqlite.NewShoppingStorage(db)
 	feedbackStorage := sqlite.NewFeedbackStorage(db)
 
@@ -41,7 +42,7 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	authService := services.NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := services.NewHouseholdService(householdStorage, userStorage)
 	recipeService := services.NewRecipeService(recipeStorage)
-	menuService := services.NewMenuService(menuStorage, recipeStorage)
+	menuService := services.NewMenuService(menuStorage, recipeStorage, menuPrefsStorage)
 	shoppingService := services.NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 	tjekService := services.NewTjekService()
 	feedbackService := services.NewFeedbackService(feedbackStorage)
@@ -178,6 +179,12 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	))
 	mux.Handle("GET /menus/current", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.menu.GetCurrent),
+	))
+	mux.Handle("GET /menus/preferences", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.menu.GetPreferences),
+	))
+	mux.Handle("PUT /menus/preferences", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.menu.UpdatePreferences),
 	))
 	mux.Handle("GET /shopping-list", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.shopping.GetShoppingList),

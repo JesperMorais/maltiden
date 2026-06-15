@@ -2,7 +2,6 @@ package services
 
 import (
 	"maltiden/internal/domain"
-	"math/rand/v2"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -12,13 +11,71 @@ import (
 type MenuService struct {
 	menuStorage   domain.MenuRepository
 	recipeStorage domain.RecipeRepository
+	prefsStorage  domain.MenuPreferencesRepository
 }
 
-func NewMenuService(menuStorage domain.MenuRepository, recipeStorage domain.RecipeRepository) *MenuService {
+func NewMenuService(menuStorage domain.MenuRepository, recipeStorage domain.RecipeRepository, prefsStorage domain.MenuPreferencesRepository) *MenuService {
 	return &MenuService{
 		menuStorage:   menuStorage,
 		recipeStorage: recipeStorage,
+		prefsStorage:  prefsStorage,
 	}
+}
+
+// effectivePreferences loads a household's saved menu preferences, falling back
+// to the defaults when none exist. A nil prefsStorage (or a load error) also
+// yields defaults so generation never hard-fails on the preferences layer.
+func (s *MenuService) effectivePreferences(householdID string) domain.MenuPreferences {
+	if s.prefsStorage == nil {
+		return domain.DefaultMenuPreferences(householdID)
+	}
+	prefs, err := s.prefsStorage.Get(householdID)
+	if err != nil || prefs == nil {
+		return domain.DefaultMenuPreferences(householdID)
+	}
+	return *prefs
+}
+
+// GetPreferences returns the household's saved menu preferences, or the
+// defaults if none have been saved yet.
+func (s *MenuService) GetPreferences(householdID string) (*domain.MenuPreferences, error) {
+	if s.prefsStorage == nil {
+		def := domain.DefaultMenuPreferences(householdID)
+		return &def, nil
+	}
+	prefs, err := s.prefsStorage.Get(householdID)
+	if err != nil {
+		return nil, err
+	}
+	if prefs == nil {
+		def := domain.DefaultMenuPreferences(householdID)
+		return &def, nil
+	}
+	return prefs, nil
+}
+
+// UpdatePreferences validates and upserts a household's menu preferences,
+// returning the stored result.
+func (s *MenuService) UpdatePreferences(householdID string, req domain.UpdateMenuPreferencesRequest) (*domain.MenuPreferences, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	tags := req.ExcludedTags
+	if tags == nil {
+		tags = []string{}
+	}
+	prefs := &domain.MenuPreferences{
+		HouseholdID:     householdID,
+		ExcludedTags:    tags,
+		DefaultDays:     req.DefaultDays,
+		DefaultServings: req.DefaultServings,
+		VegetarianDays:  req.VegetarianDays,
+	}
+	if err := s.prefsStorage.Upsert(prefs); err != nil {
+		sentry.CaptureException(err)
+		return nil, err
+	}
+	return prefs, nil
 }
 
 // enrichMenuDays converts MenuDay slice to MenuResponseDay slice,
@@ -60,19 +117,25 @@ func (s *MenuService) enrichMenuDays(days []domain.MenuDay) ([]domain.MenuRespon
 }
 
 func (s *MenuService) Generate(householdID string, req domain.GenerateMenuRequest) (*domain.MenuResponse, error) {
-	// Validate and default days (VALID-13)
+	// Load the household's saved preferences (or defaults). These supply the
+	// fallback day/serving counts and the excluded-tag / vegetarian-day rules
+	// the selector core enforces.
+	prefs := s.effectivePreferences(householdID)
+
+	// Validate and default days (VALID-13). An omitted value falls back to the
+	// household preference rather than a hardcoded week.
 	days := req.Days
 	if days == 0 {
-		days = 7 // default to a full Mon–Sun week
+		days = prefs.DefaultDays
 	}
 	if days < 1 || days > 31 {
 		return nil, domain.ErrInvalidDays
 	}
 
-	// Validate and default servings (VALID-14)
+	// Validate and default servings (VALID-14).
 	servings := req.Servings
 	if servings == 0 {
-		servings = 4 // backwards-compatible default
+		servings = prefs.DefaultServings
 	}
 	if servings < 1 || servings > 100 {
 		return nil, domain.ErrInvalidServings
@@ -88,23 +151,23 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		return nil, nil
 	}
 
+	// Build the selector core: hard-filters excluded tags and applies the
+	// vegetarian-day preference. If every recipe is filtered out, there is
+	// nothing to generate from (treated the same as an empty catalog).
+	selector, ok := newMenuSelector(recipes, prefs, nil)
+	if !ok {
+		return nil, nil
+	}
+
 	// Build skip days map
 	skipDays := make(map[string]bool)
 	for _, d := range req.SkipDays {
 		skipDays[d] = true
 	}
 
-	// Shuffle recipes for variety, cycle if fewer recipes than days
-	shuffled := make([]domain.RecipeSummary, len(recipes))
-	copy(shuffled, recipes)
-	rand.Shuffle(len(shuffled), func(i, j int) {
-		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
-	})
-
 	// Generate menu days
 	menuDays := make([]domain.MenuDay, 0, days)
 	today := time.Now()
-	recipeIdx := 0
 
 	for i := 0; i < days; i++ {
 		date := today.AddDate(0, 0, i).Format("2006-01-02")
@@ -118,9 +181,8 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		if skipDays[date] {
 			day.Skip = true
 		} else {
-			// Pick recipe from shuffled list, cycling through if needed
-			day.RecipeID = shuffled[recipeIdx%len(shuffled)].ID
-			recipeIdx++
+			// Pick the next recipe from the selector (preference-aware, cycling).
+			day.RecipeID = selector.Next()
 
 			// Check for extra portions
 			if extra, ok := req.ExtraPortions[date]; ok {
