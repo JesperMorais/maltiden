@@ -31,9 +31,12 @@ var (
 	ErrInvalidDays = errors.New("invalid_days")
 
 	// Menu preferences
-	ErrInvalidVegetarianDays = errors.New("invalid_vegetarian_days")
-	ErrTooManyExcludedTags   = errors.New("too_many_excluded_tags")
-	ErrInvalidExcludedTag    = errors.New("invalid_excluded_tag")
+	ErrInvalidVegetarianDays      = errors.New("invalid_vegetarian_days")
+	ErrTooManyExcludedTags        = errors.New("too_many_excluded_tags")
+	ErrInvalidExcludedTag         = errors.New("invalid_excluded_tag")
+	ErrInvalidDietProfile         = errors.New("invalid_diet_profile")
+	ErrTooManyDislikedIngredients = errors.New("too_many_disliked_ingredients")
+	ErrInvalidDislikedIngredient  = errors.New("invalid_disliked_ingredient")
 
 	// Recipe validation
 	ErrNameRequired         = errors.New("name_required")
@@ -54,6 +57,9 @@ var (
 	ErrIngredientNameTooLong = errors.New("ingredient_name_too_long")
 	ErrRecipeTooLarge       = errors.New("recipe_too_large")
 	ErrContainsControlChar  = errors.New("contains_control_char")
+	ErrInvalidDietClass     = errors.New("invalid_diet_class")
+	ErrInvalidCookMinutes   = errors.New("invalid_cook_minutes")
+	ErrInvalidGramsEquiv    = errors.New("invalid_grams_equiv")
 
 	// Auth validation
 	ErrInvalidEmail = errors.New("invalid_email")

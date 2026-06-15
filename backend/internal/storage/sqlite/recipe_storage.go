@@ -22,7 +22,7 @@ func (s *RecipeStorage) GetAll(filter *domain.RecipeFilter, householdID string) 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	query := `SELECT id, name, servings, emoji, tags FROM recipes WHERE 1=1`
+	query := `SELECT id, name, servings, emoji, tags, main_protein, diet_class, batchable, cook_minutes FROM recipes WHERE 1=1`
 	args := []interface{}{}
 
 	// Scope by household: own recipes + seed recipes (NULL household_id)
@@ -59,7 +59,8 @@ func (s *RecipeStorage) GetAll(filter *domain.RecipeFilter, householdID string) 
 		var emoji sql.NullString
 		var tagsJSON string
 
-		err := rows.Scan(&r.ID, &r.Name, &r.Servings, &emoji, &tagsJSON)
+		err := rows.Scan(&r.ID, &r.Name, &r.Servings, &emoji, &tagsJSON,
+			&r.MainProtein, &r.DietClass, &r.Batchable, &r.CookMinutes)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +87,8 @@ func (s *RecipeStorage) GetByID(id string) (*domain.Recipe, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	query := `SELECT id, name, servings, emoji, tags, ingredients, instructions, household_id, created_at
+	query := `SELECT id, name, servings, emoji, tags, ingredients, instructions, household_id, created_at,
+			  main_protein, diet_class, batchable, cook_minutes
 			  FROM recipes WHERE id = ?`
 
 	var r domain.Recipe
@@ -96,6 +98,7 @@ func (s *RecipeStorage) GetByID(id string) (*domain.Recipe, error) {
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&r.ID, &r.Name, &r.Servings, &emoji,
 		&tagsJSON, &ingredientsJSON, &instructionsJSON, &householdID, &r.CreatedAt,
+		&r.MainProtein, &r.DietClass, &r.Batchable, &r.CookMinutes,
 	)
 
 	if err == sql.ErrNoRows {
@@ -142,7 +145,8 @@ func (s *RecipeStorage) GetByIDs(ids []string) (map[string]*domain.Recipe, error
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, name, servings, emoji, tags, ingredients, instructions, created_at
+		SELECT id, name, servings, emoji, tags, ingredients, instructions, created_at,
+		       main_protein, diet_class, batchable, cook_minutes
 		FROM recipes WHERE id IN (%s)
 	`, strings.Join(placeholders, ","))
 
@@ -161,6 +165,7 @@ func (s *RecipeStorage) GetByIDs(ids []string) (map[string]*domain.Recipe, error
 		err := rows.Scan(
 			&r.ID, &r.Name, &r.Servings, &emoji,
 			&tagsJSON, &ingredientsJSON, &instructionsJSON, &r.CreatedAt,
+			&r.MainProtein, &r.DietClass, &r.Batchable, &r.CookMinutes,
 		)
 		if err != nil {
 			return nil, err
@@ -231,7 +236,7 @@ func (s *RecipeStorage) GetAllPaginated(filter *domain.RecipeFilter, householdID
 
 	// Get paginated results
 	query := fmt.Sprintf(`
-		SELECT id, name, servings, emoji, tags
+		SELECT id, name, servings, emoji, tags, main_protein, diet_class, batchable, cook_minutes
 		FROM recipes %s
 		ORDER BY name
 		LIMIT ? OFFSET ?
@@ -250,7 +255,8 @@ func (s *RecipeStorage) GetAllPaginated(filter *domain.RecipeFilter, householdID
 		var emoji sql.NullString
 		var tagsJSON string
 
-		err := rows.Scan(&r.ID, &r.Name, &r.Servings, &emoji, &tagsJSON)
+		err := rows.Scan(&r.ID, &r.Name, &r.Servings, &emoji, &tagsJSON,
+			&r.MainProtein, &r.DietClass, &r.Batchable, &r.CookMinutes)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -293,13 +299,15 @@ func (s *RecipeStorage) Update(recipe *domain.Recipe) error {
 	}
 
 	query := `
-		UPDATE recipes SET name = ?, servings = ?, emoji = ?, tags = ?, ingredients = ?, instructions = ?
+		UPDATE recipes SET name = ?, servings = ?, emoji = ?, tags = ?, ingredients = ?, instructions = ?,
+			main_protein = ?, diet_class = ?, batchable = ?, cook_minutes = ?
 		WHERE id = ?
 	`
 
 	result, err := s.db.ExecContext(ctx, query,
 		recipe.Name, recipe.Servings, recipe.Emoji,
 		string(tagsJSON), string(ingredientsJSON), string(instructionsJSON),
+		recipe.MainProtein, recipe.DietClass, recipe.Batchable, recipe.CookMinutes,
 		recipe.ID,
 	)
 	if err != nil {
@@ -363,14 +371,16 @@ func (s *RecipeStorage) Create(recipe *domain.Recipe) error {
 	}
 
 	query := `
-		INSERT INTO recipes (id, name, servings, emoji, tags, ingredients, instructions, household_id, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO recipes (id, name, servings, emoji, tags, ingredients, instructions, household_id, created_at,
+			main_protein, diet_class, batchable, cook_minutes)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = s.db.ExecContext(ctx, query,
 		recipe.ID, recipe.Name, recipe.Servings, recipe.Emoji,
 		string(tagsJSON), string(ingredientsJSON), string(instructionsJSON),
 		householdID, recipe.CreatedAt,
+		recipe.MainProtein, recipe.DietClass, recipe.Batchable, recipe.CookMinutes,
 	)
 
 	return err

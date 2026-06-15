@@ -128,6 +128,12 @@ func (h *MenuHandler) UpdatePreferences(w http.ResponseWriter, r *http.Request) 
 			WriteError(w, http.StatusBadRequest, "too_many_excluded_tags")
 		case errors.Is(err, domain.ErrInvalidExcludedTag):
 			WriteError(w, http.StatusBadRequest, "invalid_excluded_tag")
+		case errors.Is(err, domain.ErrInvalidDietProfile):
+			WriteError(w, http.StatusBadRequest, "invalid_diet_profile")
+		case errors.Is(err, domain.ErrTooManyDislikedIngredients):
+			WriteError(w, http.StatusBadRequest, "too_many_disliked_ingredients")
+		case errors.Is(err, domain.ErrInvalidDislikedIngredient):
+			WriteError(w, http.StatusBadRequest, "invalid_disliked_ingredient")
 		default:
 			sentry.CaptureException(err)
 			log.Printf("ERROR [UpdateMenuPreferences] %v", err)

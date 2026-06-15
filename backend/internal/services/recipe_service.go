@@ -35,6 +35,32 @@ func validateRecipeContent(name string, tags []string, ingredients []domain.Ingr
 	return nil
 }
 
+// maxCookMinutes bounds the cook_minutes metadata to a sane upper limit (24h).
+const maxCookMinutes = 1440
+
+// validateRecipeMetadata validates the optional Phase-0 metadata fields shared
+// by create and update. Empty/zero values mean "unknown" and are accepted.
+func validateRecipeMetadata(dietClass string, cookMinutes int, ingredients []domain.Ingredient) error {
+	if !domain.IsValidDietClass(dietClass) {
+		return domain.ErrInvalidDietClass
+	}
+	if cookMinutes < 0 || cookMinutes > maxCookMinutes {
+		return domain.ErrInvalidCookMinutes
+	}
+	for _, ing := range ingredients {
+		if ing.GramsEquiv < 0 {
+			return domain.ErrInvalidGramsEquiv
+		}
+		if utf8.RuneCountInString(ing.CanonicalName) > 80 {
+			return domain.ErrIngredientNameTooLong
+		}
+		if err := domain.ValidateContent(ing.CanonicalName); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func stripRecipeEmoji(r *domain.Recipe) {
 	r.Name = domain.StripEmoji(r.Name)
 	for i, tag := range r.Tags {
@@ -151,6 +177,10 @@ func (s *RecipeService) Update(id string, householdID string, req domain.UpdateR
 		return nil, err
 	}
 
+	if err := validateRecipeMetadata(req.DietClass, req.CookMinutes, req.Ingredients); err != nil {
+		return nil, err
+	}
+
 	// Update fields on existing recipe
 	existing.Name = req.Name
 	existing.Servings = req.Servings
@@ -158,6 +188,10 @@ func (s *RecipeService) Update(id string, householdID string, req domain.UpdateR
 	existing.Tags = normalizedTags
 	existing.Ingredients = req.Ingredients
 	existing.Instructions = req.Instructions
+	existing.MainProtein = req.MainProtein
+	existing.DietClass = req.DietClass
+	existing.Batchable = req.Batchable
+	existing.CookMinutes = req.CookMinutes
 
 	if existing.Tags == nil {
 		existing.Tags = []string{}
@@ -233,6 +267,10 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 		return nil, err
 	}
 
+	if err := validateRecipeMetadata(req.DietClass, req.CookMinutes, req.Ingredients); err != nil {
+		return nil, err
+	}
+
 	recipe := &domain.Recipe{
 		ID:           "rec_" + uuid.New().String(),
 		Name:         req.Name,
@@ -243,6 +281,10 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 		Instructions: req.Instructions,
 		HouseholdID:  householdID,
 		CreatedAt:    time.Now(),
+		MainProtein:  req.MainProtein,
+		DietClass:    req.DietClass,
+		Batchable:    req.Batchable,
+		CookMinutes:  req.CookMinutes,
 	}
 
 	if recipe.Tags == nil {

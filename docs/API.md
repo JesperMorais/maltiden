@@ -355,11 +355,16 @@ Only members and owners may create invite codes. Guests receive 403.
       "name": "Köttfärssås",
       "servings": 4,
       "emoji": "🍝",            // optional — omitted when empty
-      "tags": ["vardag", "barn"]
+      "tags": ["vardag", "barn"],
+      "mainProtein": "nötkött",  // optional — omitted when unknown
+      "dietClass": "omnivore",   // optional — one of omnivore|vegetarian|vegan|pescetarian
+      "batchable": true,          // optional — omitted when false/unknown
+      "cookMinutes": 30           // optional — omitted when 0/unknown
     }
   ]
 }
 ```
+**Optional recipe metadata** (`mainProtein`, `dietClass`, `batchable`, `cookMinutes`) is omitted whenever the value is unknown (empty string / `0` / `false`). It is populated by the AI parser and the metadata backfill; legacy recipes simply omit it.
 
 ### GET /recipes/:id
 ```json
@@ -371,7 +376,16 @@ Only members and owners may create invite codes. Guests receive 403.
   "emoji": "🍝",            // optional — omitted when empty
   "householdId": "hh_xyz",  // optional — present for household-specific recipes
   "ingredients": [
-    { "name": "Köttfärs", "amount": 400, "unit": "g" },
+    // Per-ingredient metadata fields are optional and omitted when unknown:
+    {
+      "name": "Köttfärs",
+      "amount": 400,
+      "unit": "g",
+      "canonicalName": "köttfärs",  // optional — normalized Swedish lemma
+      "gramsEquiv": 400,             // optional — best-effort grams, omitted when 0/unknown
+      "isPantryStaple": false,       // optional — omitted when false/unknown
+      "isPerishable": true           // optional — omitted when false/unknown
+    },
     { "name": "Krossade tomater", "amount": 400, "unit": "g" }
   ],
   "instructions": [
@@ -380,6 +394,10 @@ Only members and owners may create invite codes. Guests receive 403.
     "Låt sjuda 20 min"
   ],
   "tags": ["vardag", "barn"],
+  "mainProtein": "nötkött",  // optional — omitted when unknown
+  "dietClass": "omnivore",   // optional — one of omnivore|vegetarian|vegan|pescetarian
+  "batchable": true,          // optional — omitted when false/unknown
+  "cookMinutes": 30,          // optional — omitted when 0/unknown
   "createdAt": "2026-02-01T10:00:00Z"
 }
 ```
@@ -479,7 +497,9 @@ Parse unstructured recipe text into structured data using AI. **Auth required.**
     "name": "Köttfärssås",
     "servings": 4,
     "ingredients": [
-      { "name": "Köttfärs", "amount": 400, "unit": "g" },
+      // Per-ingredient metadata is optional, omitted when unknown:
+      { "name": "Köttfärs", "amount": 400, "unit": "g",
+        "canonicalName": "köttfärs", "gramsEquiv": 400, "isPerishable": true },
       { "name": "Krossade tomater", "amount": 400, "unit": "g" }
     ],
     "instructions": [
@@ -488,7 +508,11 @@ Parse unstructured recipe text into structured data using AI. **Auth required.**
       "Låt sjuda 20 min"
     ],
     "tags": ["vardag", "barn"],
-    "emoji": "🍝"  // optional
+    "emoji": "🍝",  // optional
+    "mainProtein": "nötkött",  // optional — omitted when unknown
+    "dietClass": "omnivore",   // optional — one of omnivore|vegetarian|vegan|pescetarian
+    "batchable": true,          // optional — omitted when false/unknown
+    "cookMinutes": 30           // optional — omitted when 0/unknown
   },
   "confidence": 0.95,
   "warnings": ["Could not parse exact cooking time"],  // optional
@@ -516,10 +540,11 @@ Parse recipe text and immediately save it to the database. **Auth required.**
   "recipe": {
     "name": "Köttfärssås",
     "servings": 4,
-    "ingredients": [...],
+    "ingredients": [...],   // includes optional per-ingredient metadata (see GET /recipes/:id)
     "instructions": [...],
     "tags": ["vardag", "barn"],
     "emoji": "🍝"
+    // also includes optional mainProtein/dietClass/batchable/cookMinutes (omitted when unknown)
   },
   "confidence": 0.95,
   "warnings": [],
@@ -615,6 +640,48 @@ Use this to replace the generated menu's day assignments without regenerating fr
 
 // Response 404 (ingen aktiv meny)
 { "error": "no_active_menu" }
+```
+
+### GET /menus/preferences
+Fetch the household's persisted menu-generation preferences. **Auth required.** A household that has never saved preferences receives the defaults.
+```json
+// Response 200
+{
+  "householdId": "hh_xyz",
+  "excludedTags": ["fisk"],
+  "defaultDays": 7,
+  "defaultServings": 4,
+  "vegetarianDays": 0,
+  "dietProfile": "vegetarian",          // optional — one of omnivore|vegetarian|vegan|pescetarian; "" = unset
+  "dislikedIngredients": ["koriander"], // free-text ingredients to avoid (matching deferred to a later phase)
+  "updatedAt": "2026-06-15T10:00:00Z"   // optional
+}
+```
+
+### PUT /menus/preferences
+Upsert the household's menu-generation preferences. **Auth required.**
+```json
+// Request
+{
+  "excludedTags": ["fisk"],
+  "defaultDays": 7,
+  "defaultServings": 4,
+  "vegetarianDays": 0,
+  "dietProfile": "vegetarian",          // optional — empty/omitted = unset
+  "dislikedIngredients": ["koriander"]  // optional — max 50 entries, each 1–50 chars
+}
+
+// Response 200 — full preferences object (same shape as GET)
+
+// Errors 400
+{ "error": "invalid_days" }
+{ "error": "invalid_servings" }
+{ "error": "invalid_vegetarian_days" }
+{ "error": "too_many_excluded_tags" }
+{ "error": "invalid_excluded_tag" }
+{ "error": "invalid_diet_profile" }            // dietProfile is non-empty but not a recognized diet class
+{ "error": "too_many_disliked_ingredients" }   // more than 50 entries
+{ "error": "invalid_disliked_ingredient" }     // an entry is empty or longer than 50 chars
 ```
 
 ---
@@ -882,6 +949,10 @@ Alla errors följer samma struktur:
 | `instructions_required` | 400 | Instruktioner saknas |
 | `name_too_long` | 400 | Receptnamnet är för långt |
 | `too_many_ingredients` | 400 | För många ingredienser |
+| `invalid_diet_class` | 400 | Ogiltig dietklass på recept (måste vara tom eller omnivore/vegetarian/vegan/pescetarian) |
+| `invalid_diet_profile` | 400 | Ogiltig dietprofil i preferenser (tom eller omnivore/vegetarian/vegan/pescetarian) |
+| `too_many_disliked_ingredients` | 400 | Fler än 50 ogillade ingredienser |
+| `invalid_disliked_ingredient` | 400 | Ogillad ingrediens är tom eller längre än 50 tecken |
 | `cannot_remove` | 403 | Kan inte ta bort sig själv eller ägaren |
 | `forbidden` | 403 | Åtkomst nekad (otillräckliga rättigheter eller fel hushåll) |
 | `menu_not_found` | 404 | Angivet menuId hittades inte |

@@ -96,6 +96,72 @@ func TestMenuPreferencesStorage_UpsertReplaces(t *testing.T) {
 	}
 }
 
+func TestMenuPreferencesStorage_DietFieldsRoundTrip(t *testing.T) {
+	s, hh := setupPrefsTestStorage(t)
+
+	in := &domain.MenuPreferences{
+		HouseholdID:         hh,
+		ExcludedTags:        []string{"fisk"},
+		DefaultDays:         7,
+		DefaultServings:     4,
+		VegetarianDays:      0,
+		DietProfile:         domain.DietClassVegetarian,
+		DislikedIngredients: []string{"koriander", "oliver"},
+	}
+	if err := s.Upsert(in); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+
+	got, err := s.Get(hh)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.DietProfile != domain.DietClassVegetarian {
+		t.Errorf("diet profile mismatch: %q", got.DietProfile)
+	}
+	if len(got.DislikedIngredients) != 2 || got.DislikedIngredients[0] != "koriander" {
+		t.Errorf("disliked ingredients mismatch: %v", got.DislikedIngredients)
+	}
+
+	// Upsert again replacing the diet fields.
+	in.DietProfile = ""
+	in.DislikedIngredients = []string{}
+	if err := s.Upsert(in); err != nil {
+		t.Fatalf("second Upsert: %v", err)
+	}
+	got, err = s.Get(hh)
+	if err != nil {
+		t.Fatalf("Get after replace: %v", err)
+	}
+	if got.DietProfile != "" || len(got.DislikedIngredients) != 0 {
+		t.Errorf("expected diet fields cleared, got profile=%q disliked=%v", got.DietProfile, got.DislikedIngredients)
+	}
+}
+
+func TestMenuPreferencesStorage_NilDislikedStoredAsEmpty(t *testing.T) {
+	s, hh := setupPrefsTestStorage(t)
+
+	if err := s.Upsert(&domain.MenuPreferences{
+		HouseholdID:         hh,
+		ExcludedTags:        []string{},
+		DefaultDays:         7,
+		DefaultServings:     4,
+		DislikedIngredients: nil,
+	}); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+	got, err := s.Get(hh)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.DislikedIngredients == nil {
+		t.Errorf("expected non-nil empty slice, got nil")
+	}
+	if len(got.DislikedIngredients) != 0 {
+		t.Errorf("expected empty disliked ingredients, got %v", got.DislikedIngredients)
+	}
+}
+
 func TestMenuPreferencesStorage_NilTagsStoredAsEmpty(t *testing.T) {
 	s, hh := setupPrefsTestStorage(t)
 

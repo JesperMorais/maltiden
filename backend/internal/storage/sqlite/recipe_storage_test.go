@@ -179,6 +179,82 @@ func TestRecipeStorage_GetByIDs(t *testing.T) {
 	}
 }
 
+func TestRecipeStorage_MetadataRoundTrip(t *testing.T) {
+	s, hhID := setupRecipeTestDB(t)
+	r := newTestRecipe("rec_meta", hhID)
+	r.MainProtein = "kyckling"
+	r.DietClass = domain.DietClassOmnivore
+	r.Batchable = true
+	r.CookMinutes = 40
+	r.Ingredients = []domain.Ingredient{
+		{
+			Name: "kycklingfilé", Amount: 500, Unit: "g",
+			CanonicalName: "kyckling", GramsEquiv: 500, IsPantryStaple: false, IsPerishable: true,
+		},
+	}
+
+	if err := s.Create(r); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := s.GetByID(r.ID)
+	if err != nil {
+		t.Fatalf("GetByID: %v", err)
+	}
+	if got.MainProtein != "kyckling" || got.DietClass != domain.DietClassOmnivore || !got.Batchable || got.CookMinutes != 40 {
+		t.Errorf("recipe metadata not preserved: %+v", got)
+	}
+	if len(got.Ingredients) != 1 {
+		t.Fatalf("expected 1 ingredient, got %d", len(got.Ingredients))
+	}
+	ing := got.Ingredients[0]
+	if ing.CanonicalName != "kyckling" || ing.GramsEquiv != 500 || ing.IsPantryStaple || !ing.IsPerishable {
+		t.Errorf("ingredient metadata not preserved: %+v", ing)
+	}
+
+	// Update path also persists metadata changes.
+	got.DietClass = domain.DietClassPescetarian
+	got.Ingredients[0].CanonicalName = "fisk"
+	if err := s.Update(got); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	after, err := s.GetByID(r.ID)
+	if err != nil {
+		t.Fatalf("GetByID after update: %v", err)
+	}
+	if after.DietClass != domain.DietClassPescetarian || after.Ingredients[0].CanonicalName != "fisk" {
+		t.Errorf("metadata update not persisted: %+v", after)
+	}
+}
+
+func TestRecipeStorage_LegacyRowReadsEmptyMetadata(t *testing.T) {
+	s, _ := setupRecipeTestDB(t)
+
+	// Raw-INSERT a recipe the way a pre-Phase-0 row would exist, with an
+	// ingredient JSON that has no metadata keys.
+	_, err := s.db.Exec(`INSERT INTO recipes (id, name, servings, emoji, tags, ingredients, instructions, created_at)
+	                     VALUES (?, ?, ?, '', '[]', ?, '[]', CURRENT_TIMESTAMP)`,
+		"rec_legacy", "Legacy", 4, `[{"name":"köttfärs","amount":400,"unit":"g"}]`)
+	if err != nil {
+		t.Fatalf("raw insert: %v", err)
+	}
+
+	got, err := s.GetByID("rec_legacy")
+	if err != nil {
+		t.Fatalf("GetByID: %v", err)
+	}
+	if got.MainProtein != "" || got.DietClass != "" || got.Batchable || got.CookMinutes != 0 {
+		t.Errorf("expected empty recipe metadata for legacy row, got %+v", got)
+	}
+	if len(got.Ingredients) != 1 {
+		t.Fatalf("expected 1 ingredient, got %d", len(got.Ingredients))
+	}
+	ing := got.Ingredients[0]
+	if ing.CanonicalName != "" || ing.GramsEquiv != 0 || ing.IsPantryStaple || ing.IsPerishable {
+		t.Errorf("expected empty ingredient metadata for legacy row, got %+v", ing)
+	}
+}
+
 func TestRecipeStorage_Create_DuplicateID(t *testing.T) {
 	s, hhID := setupRecipeTestDB(t)
 	r := newTestRecipe("rec_dup_test", hhID)

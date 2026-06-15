@@ -114,6 +114,8 @@ func runMigrations(db *sql.DB, fs embed.FS) error {
 		{14, "014_clean_recipe_content.sql"},
 		{15, "015_password_reset_tokens.sql"},
 		{16, "016_create_menu_preferences.sql"},
+		{17, "017_add_recipe_metadata.sql"},
+		{18, "018_add_preferences_diet_profile.sql"},
 	}
 
 	for _, m := range migrationFiles {

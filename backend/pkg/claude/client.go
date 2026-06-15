@@ -13,7 +13,9 @@ import (
 
 const (
 	BaseURL        = "https://api.anthropic.com/v1/messages"
+	BatchURL       = "https://api.anthropic.com/v1/messages/batches"
 	DefaultModel   = "claude-sonnet-4-5-20250929"
+	HaikuModel     = "claude-haiku-4-5-20251001"
 	DefaultTimeout = 30 * time.Second
 )
 
@@ -29,10 +31,23 @@ type Message struct {
 }
 
 type Request struct {
-	Model     string    `json:"model"`
-	MaxTokens int       `json:"max_tokens"`
-	Messages  []Message `json:"messages"`
-	System    string    `json:"system,omitempty"`
+	Model        string        `json:"model"`
+	MaxTokens    int           `json:"max_tokens"`
+	Messages     []Message     `json:"messages"`
+	System       string        `json:"system,omitempty"`
+	OutputConfig *OutputConfig `json:"output_config,omitempty"`
+}
+
+// OutputConfig carries structured-output settings. Only the batch path sets it;
+// the interactive parse path leaves it nil to preserve graceful degradation.
+type OutputConfig struct {
+	Format *OutputFormat `json:"format,omitempty"`
+}
+
+// OutputFormat constrains the response to a JSON schema (Type "json_schema").
+type OutputFormat struct {
+	Type   string                 `json:"type"`
+	Schema map[string]interface{} `json:"schema"`
 }
 
 type Response struct {
@@ -76,7 +91,29 @@ func (c *Client) SendMessage(ctx context.Context, req Request) (*Response, error
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", BaseURL, bytes.NewReader(body))
+	respBody, err := c.do(ctx, "POST", BaseURL, body)
+	if err != nil {
+		return nil, err
+	}
+
+	var response Response
+	if err := json.Unmarshal(respBody, &response); err != nil {
+		return nil, fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	return &response, nil
+}
+
+// do performs an authenticated HTTP call against the Anthropic API and returns
+// the raw response body on a 2xx status. It is the single HTTP seam used by
+// SendMessage and the Batch API methods; tests stub it via httpClient.Transport.
+func (c *Client) do(ctx context.Context, method, url string, body []byte) ([]byte, error) {
+	var reader io.Reader
+	if body != nil {
+		reader = bytes.NewReader(body)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, method, url, reader)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -96,14 +133,9 @@ func (c *Client) SendMessage(ctx context.Context, req Request) (*Response, error
 		return nil, fmt.Errorf("read response: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(respBody))
 	}
 
-	var response Response
-	if err := json.Unmarshal(respBody, &response); err != nil {
-		return nil, fmt.Errorf("unmarshal response: %w", err)
-	}
-
-	return &response, nil
+	return respBody, nil
 }

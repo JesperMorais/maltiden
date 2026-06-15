@@ -52,6 +52,12 @@ type MenuPreferences struct {
 	DefaultServings int       `json:"defaultServings"`
 	VegetarianDays  int       `json:"vegetarianDays"`
 	UpdatedAt       time.Time `json:"updatedAt,omitempty"`
+
+	// DietProfile is an optional household-wide diet class (one of the
+	// DietClass enum values, or empty for "unknown"). DislikedIngredients are
+	// free-text strings the household wants to avoid; Phase 0 only STORES them.
+	DietProfile         string   `json:"dietProfile,omitempty"`
+	DislikedIngredients []string `json:"dislikedIngredients"`
 }
 
 // UpdateMenuPreferencesRequest is the payload for upserting a household's
@@ -61,17 +67,22 @@ type UpdateMenuPreferencesRequest struct {
 	DefaultDays     int      `json:"defaultDays"`
 	DefaultServings int      `json:"defaultServings"`
 	VegetarianDays  int      `json:"vegetarianDays"`
+
+	DietProfile         string   `json:"dietProfile,omitempty"`
+	DislikedIngredients []string `json:"dislikedIngredients"`
 }
 
 // DefaultMenuPreferences returns the preferences applied to a household that
 // has never saved any (no excluded tags, full week, 4 servings).
 func DefaultMenuPreferences(householdID string) MenuPreferences {
 	return MenuPreferences{
-		HouseholdID:     householdID,
-		ExcludedTags:    []string{},
-		DefaultDays:     7,
-		DefaultServings: 4,
-		VegetarianDays:  0,
+		HouseholdID:         householdID,
+		ExcludedTags:        []string{},
+		DefaultDays:         7,
+		DefaultServings:     4,
+		VegetarianDays:      0,
+		DietProfile:         "",
+		DislikedIngredients: []string{},
 	}
 }
 
@@ -87,12 +98,28 @@ func (r UpdateMenuPreferencesRequest) Validate() error {
 	if r.VegetarianDays < 0 || r.VegetarianDays > r.DefaultDays {
 		return ErrInvalidVegetarianDays
 	}
-	if len(r.ExcludedTags) > 50 {
-		return ErrTooManyExcludedTags
+	if err := validateStringList(r.ExcludedTags, ErrTooManyExcludedTags, ErrInvalidExcludedTag); err != nil {
+		return err
 	}
-	for _, tag := range r.ExcludedTags {
-		if len(tag) == 0 || len(tag) > 50 {
-			return ErrInvalidExcludedTag
+	// Diet profile (empty = unknown, always accepted)
+	if !IsValidDietClass(r.DietProfile) {
+		return ErrInvalidDietProfile
+	}
+	if err := validateStringList(r.DislikedIngredients, ErrTooManyDislikedIngredients, ErrInvalidDislikedIngredient); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateStringList enforces the shared "≤50 entries, each 1–50 chars" bound
+// used by both excluded tags and disliked ingredients.
+func validateStringList(items []string, errTooMany, errInvalid error) error {
+	if len(items) > 50 {
+		return errTooMany
+	}
+	for _, item := range items {
+		if len(item) == 0 || len(item) > 50 {
+			return errInvalid
 		}
 	}
 	return nil

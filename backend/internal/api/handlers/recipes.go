@@ -101,6 +101,14 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusBadRequest, "too_many_tags")
 		case errors.Is(err, domain.ErrTagTooLong):
 			WriteError(w, http.StatusBadRequest, "tag_too_long")
+		case errors.Is(err, domain.ErrInvalidDietClass):
+			WriteError(w, http.StatusBadRequest, "invalid_diet_class")
+		case errors.Is(err, domain.ErrInvalidCookMinutes):
+			WriteError(w, http.StatusBadRequest, "invalid_cook_minutes")
+		case errors.Is(err, domain.ErrInvalidGramsEquiv):
+			WriteError(w, http.StatusBadRequest, "invalid_grams_equiv")
+		case errors.Is(err, domain.ErrIngredientNameTooLong):
+			WriteError(w, http.StatusBadRequest, "ingredient_name_too_long")
 		default:
 			sentry.CaptureException(err)
 			log.Printf("ERROR [UpdateRecipe] %v", err)
@@ -165,6 +173,14 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusBadRequest, "too_many_tags")
 		case errors.Is(err, domain.ErrTagTooLong):
 			WriteError(w, http.StatusBadRequest, "tag_too_long")
+		case errors.Is(err, domain.ErrInvalidDietClass):
+			WriteError(w, http.StatusBadRequest, "invalid_diet_class")
+		case errors.Is(err, domain.ErrInvalidCookMinutes):
+			WriteError(w, http.StatusBadRequest, "invalid_cook_minutes")
+		case errors.Is(err, domain.ErrInvalidGramsEquiv):
+			WriteError(w, http.StatusBadRequest, "invalid_grams_equiv")
+		case errors.Is(err, domain.ErrIngredientNameTooLong):
+			WriteError(w, http.StatusBadRequest, "ingredient_name_too_long")
 		default:
 			sentry.CaptureException(err)
 			log.Printf("ERROR [CreateRecipe] %v", err)

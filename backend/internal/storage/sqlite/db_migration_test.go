@@ -130,9 +130,9 @@ func TestRunMigrations_RecordsAllVersions(t *testing.T) {
 		t.Fatalf("rows.Err: %v", err)
 	}
 
-	// Migrations 1..16 are defined in runMigrations.
-	want := make([]int, 0, 16)
-	for v := 1; v <= 16; v++ {
+	// Migrations 1..18 are defined in runMigrations.
+	want := make([]int, 0, 18)
+	for v := 1; v <= 18; v++ {
 		want = append(want, v)
 	}
 	if !sort.IntsAreSorted(versions) {
@@ -174,6 +174,61 @@ func TestRunMigrations_ExpectedColumns(t *testing.T) {
 	}
 }
 
+// TestRunMigrations_Phase0Columns asserts the Phase 0 (issue #248) migrations
+// added the recipe metadata columns and the preferences diet columns, and that
+// a pre-existing recipe row reads back with the column defaults.
+func TestRunMigrations_Phase0Columns(t *testing.T) {
+	db := newMigratedMemoryDB(t)
+
+	recipeCols := columnNames(t, db, "recipes")
+	for _, col := range []string{"main_protein", "diet_class", "batchable", "cook_minutes"} {
+		if !recipeCols[col] {
+			t.Errorf("expected recipes column %q after migration 017, present: %v", col, recipeCols)
+		}
+	}
+
+	prefCols := columnNames(t, db, "menu_preferences")
+	for _, col := range []string{"diet_profile", "disliked_ingredients"} {
+		if !prefCols[col] {
+			t.Errorf("expected menu_preferences column %q after migration 018, present: %v", col, prefCols)
+		}
+	}
+
+	// A row inserted without the new columns must read back with defaults.
+	_, err := db.Exec(`INSERT INTO recipes (id, name, servings, ingredients, instructions)
+	                   VALUES ('rec_phase0', 'Test', 4, '[]', '[]')`)
+	if err != nil {
+		t.Fatalf("insert legacy-shaped recipe: %v", err)
+	}
+	var (
+		mainProtein, dietClass string
+		batchable, cookMinutes int
+	)
+	err = db.QueryRow(`SELECT main_protein, diet_class, batchable, cook_minutes
+	                   FROM recipes WHERE id = 'rec_phase0'`).
+		Scan(&mainProtein, &dietClass, &batchable, &cookMinutes)
+	if err != nil {
+		t.Fatalf("read back metadata defaults: %v", err)
+	}
+	if mainProtein != "" || dietClass != "" || batchable != 0 || cookMinutes != 0 {
+		t.Errorf("expected metadata defaults, got mainProtein=%q dietClass=%q batchable=%d cookMinutes=%d",
+			mainProtein, dietClass, batchable, cookMinutes)
+	}
+
+	if reached := schemaVersion(t, db); reached != 18 {
+		t.Errorf("expected schema to reach version 18, got %d", reached)
+	}
+}
+
+func schemaVersion(t *testing.T, db *sql.DB) int {
+	t.Helper()
+	var v int
+	if err := db.QueryRow("SELECT MAX(version) FROM schema_migrations").Scan(&v); err != nil {
+		t.Fatalf("max schema version: %v", err)
+	}
+	return v
+}
+
 // TestRunMigrations_ExpectedIndexes asserts named indexes created by the
 // migrations exist (covers the dedicated index migration #007 plus inline ones).
 func TestRunMigrations_ExpectedIndexes(t *testing.T) {
@@ -187,6 +242,8 @@ func TestRunMigrations_ExpectedIndexes(t *testing.T) {
 		"idx_menu_days_menu",
 		"idx_menu_days_menu_date", // migration 007
 		"idx_shopping_items_menu",
+		"idx_recipes_diet_class",   // migration 017
+		"idx_recipes_main_protein", // migration 017
 	}
 	for _, idx := range expected {
 		if !indexExists(t, db, idx) {

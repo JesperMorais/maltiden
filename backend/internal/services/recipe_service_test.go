@@ -49,6 +49,107 @@ func TestRecipeCreate_NameTooLong(t *testing.T) {
 	}
 }
 
+func TestRecipeCreate_PersistsMetadata(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.MainProtein = "kyckling"
+	req.DietClass = domain.DietClassOmnivore
+	req.Batchable = true
+	req.CookMinutes = 35
+	req.Ingredients[0].CanonicalName = "spaghetti"
+	req.Ingredients[0].GramsEquiv = 400
+	req.Ingredients[0].IsPerishable = false
+
+	resp, err := svc.Create(req, "hh_test")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	got, err := svc.GetByID(resp.ID)
+	if err != nil || got == nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.MainProtein != "kyckling" || got.DietClass != domain.DietClassOmnivore || !got.Batchable || got.CookMinutes != 35 {
+		t.Errorf("recipe-level metadata not persisted: %+v", got)
+	}
+	if got.Ingredients[0].CanonicalName != "spaghetti" || got.Ingredients[0].GramsEquiv != 400 {
+		t.Errorf("ingredient metadata not persisted: %+v", got.Ingredients[0])
+	}
+}
+
+func TestRecipeCreate_RejectsInvalidDietClass(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.DietClass = "keto"
+
+	_, err := svc.Create(req, "hh_test")
+	if err != domain.ErrInvalidDietClass {
+		t.Errorf("expected ErrInvalidDietClass, got %v", err)
+	}
+}
+
+func TestRecipeCreate_RejectsNegativeCookMinutes(t *testing.T) {
+	svc := newTestRecipeService(t)
+	req := validCreateRecipeReq()
+	req.CookMinutes = -5
+
+	_, err := svc.Create(req, "hh_test")
+	if err != domain.ErrInvalidCookMinutes {
+		t.Errorf("expected ErrInvalidCookMinutes, got %v", err)
+	}
+}
+
+func TestRecipeUpdate_PersistsMetadata(t *testing.T) {
+	svc := newTestRecipeService(t)
+	resp, err := svc.Create(validCreateRecipeReq(), "hh_test")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	upd := domain.UpdateRecipeRequest{
+		Name:         "Pasta Carbonara",
+		Servings:     4,
+		Ingredients:  []domain.Ingredient{{Name: "Spaghetti", Amount: 400, Unit: "g"}},
+		Instructions: []string{"Koka pastan"},
+		Tags:         []string{"pasta"},
+		MainProtein:  "fläsk",
+		DietClass:    domain.DietClassOmnivore,
+		Batchable:    true,
+		CookMinutes:  20,
+	}
+	if _, err := svc.Update(resp.ID, "hh_test", upd); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+
+	got, err := svc.GetByID(resp.ID)
+	if err != nil || got == nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.MainProtein != "fläsk" || !got.Batchable || got.CookMinutes != 20 {
+		t.Errorf("update did not persist metadata: %+v", got)
+	}
+}
+
+func TestRecipeUpdate_RejectsInvalidDietClass(t *testing.T) {
+	svc := newTestRecipeService(t)
+	resp, err := svc.Create(validCreateRecipeReq(), "hh_test")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	upd := domain.UpdateRecipeRequest{
+		Name:         "Pasta Carbonara",
+		Servings:     4,
+		Ingredients:  []domain.Ingredient{{Name: "Spaghetti", Amount: 400, Unit: "g"}},
+		Instructions: []string{"Koka pastan"},
+		Tags:         []string{"pasta"},
+		DietClass:    "keto",
+	}
+	if _, err := svc.Update(resp.ID, "hh_test", upd); err != domain.ErrInvalidDietClass {
+		t.Errorf("expected ErrInvalidDietClass, got %v", err)
+	}
+}
+
 func TestRecipeCreate_ServingsZero(t *testing.T) {
 	svc := newTestRecipeService(t)
 	req := validCreateRecipeReq()
