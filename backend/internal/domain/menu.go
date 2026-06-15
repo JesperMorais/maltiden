@@ -36,9 +36,21 @@ type MenuResponseDay struct {
 	Skip       bool   `json:"skip,omitempty"`
 }
 
+// SharedIngredient is one ingredient reused across two or more recipes in a
+// generated week. It surfaces the shopping-economy benefit of the greedy
+// overlap selection (#258) to the user: fewer distinct items to buy. Pantry
+// staples (spices, oils, sauces) are excluded, mirroring the overlap scorer.
+type SharedIngredient struct {
+	Name        string `json:"name"`        // display name (first-seen casing)
+	RecipeCount int    `json:"recipeCount"` // distinct recipes this week using it (>= 2)
+}
+
 type MenuResponse struct {
 	ID   string            `json:"id"`
 	Days []MenuResponseDay `json:"days"`
+	// SharedIngredients lists ingredients reused across the week's recipes,
+	// most-shared first. Empty when nothing is shared (or no ingredient data).
+	SharedIngredients []SharedIngredient `json:"sharedIngredients,omitempty"`
 }
 
 // MenuPreferences holds a household's persisted menu-generation preferences.

@@ -233,6 +233,38 @@ onBeforeRouteLeave((to, from, next) => {
           />
         </div>
 
+        <!-- Shared-ingredient economy: highlights ingredients reused across the
+             week's recipes so the overlap-aware generation is visible. -->
+        <section
+          v-if="hasMenu && store.sharedIngredientsCount > 0"
+          class="shared-ingredients"
+          aria-labelledby="shared-ingredients-title"
+        >
+          <div class="shared-header">
+            <span class="shared-icon" aria-hidden="true">🛒</span>
+            <h2 id="shared-ingredients-title" class="shared-title">
+              {{ store.sharedIngredientsCount }}
+              {{ store.sharedIngredientsCount === 1 ? 'delad ingrediens' : 'delade ingredienser' }}
+              denna vecka
+            </h2>
+          </div>
+          <p class="shared-subtitle">
+            Recepten återanvänder ingredienser — färre varor att handla och mindre svinn.
+          </p>
+          <ul class="shared-chips">
+            <li
+              v-for="ing in store.sharedIngredients"
+              :key="ing.name"
+              class="shared-chip"
+            >
+              <span class="chip-name">{{ ing.name }}</span>
+              <span class="chip-count" :title="`Används i ${ing.recipeCount} recept`">
+                ×{{ ing.recipeCount }}
+              </span>
+            </li>
+          </ul>
+        </section>
+
         <!-- Error state -->
         <ErrorState v-if="store.error" :description="store.error" @retry="handleInitialGenerate" />
       </div>
@@ -346,6 +378,77 @@ onBeforeRouteLeave((to, from, next) => {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 1.5rem;
+}
+
+/* Shared-ingredient economy panel */
+.shared-ingredients {
+  margin-top: 2rem;
+  padding: 1.5rem 1.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.shared-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.shared-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.shared-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 1.35rem;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.shared-subtitle {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0 1rem;
+  line-height: 1.5;
+}
+
+.shared-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.shared-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 100px;
+  font-family: 'Nunito', sans-serif;
+}
+
+.chip-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.chip-count {
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--accent-text);
 }
 
 /* Modal */

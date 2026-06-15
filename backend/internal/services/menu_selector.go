@@ -3,6 +3,7 @@ package services
 import (
 	"maltiden/internal/domain"
 	"math/rand/v2"
+	"sort"
 	"strings"
 )
 
@@ -105,6 +106,59 @@ func overlapKeys(ings []domain.Ingredient) []string {
 		keys = append(keys, strings.ToLower(name))
 	}
 	return keys
+}
+
+// computeSharedIngredients reports which non-staple ingredients are used by two
+// or more of the given recipes, so the UX can surface the shopping-economy
+// benefit of overlap selection (#248/#258). recipeIDs is the week's chosen
+// recipes (duplicates from cycling are de-duplicated, so a recipe appearing
+// twice counts once); ingredientsByID is the same ingredient map the selector
+// scored against. Names are matched case-insensitively (same keying as overlap
+// scoring) but displayed in their first-seen casing. Pantry staples are
+// excluded. The result is sorted most-shared first, then alphabetically for a
+// stable order, and is empty when nothing is shared.
+func computeSharedIngredients(recipeIDs []string, ingredientsByID map[string][]domain.Ingredient) []domain.SharedIngredient {
+	counts := make(map[string]int)      // normalized key -> distinct recipe count
+	display := make(map[string]string)  // normalized key -> first-seen display name
+	seenRecipe := make(map[string]bool) // de-duplicate cycled recipes
+	for _, id := range recipeIDs {
+		if id == "" || seenRecipe[id] {
+			continue
+		}
+		seenRecipe[id] = true
+		// Count each ingredient once per recipe (a recipe listing an ingredient
+		// twice must not look "shared" with itself).
+		seenKey := make(map[string]bool)
+		for _, ing := range ingredientsByID[id] {
+			name := strings.TrimSpace(ing.Name)
+			if name == "" || isPantryStaple(name) {
+				continue
+			}
+			key := strings.ToLower(name)
+			if seenKey[key] {
+				continue
+			}
+			seenKey[key] = true
+			counts[key]++
+			if _, ok := display[key]; !ok {
+				display[key] = name
+			}
+		}
+	}
+
+	shared := make([]domain.SharedIngredient, 0)
+	for key, n := range counts {
+		if n >= 2 {
+			shared = append(shared, domain.SharedIngredient{Name: display[key], RecipeCount: n})
+		}
+	}
+	sort.Slice(shared, func(i, j int) bool {
+		if shared[i].RecipeCount != shared[j].RecipeCount {
+			return shared[i].RecipeCount > shared[j].RecipeCount
+		}
+		return shared[i].Name < shared[j].Name
+	})
+	return shared
 }
 
 // isPantryStaple reports whether an ingredient is a pantry staple that should
