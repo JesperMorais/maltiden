@@ -40,3 +40,60 @@ type MenuResponse struct {
 	ID   string            `json:"id"`
 	Days []MenuResponseDay `json:"days"`
 }
+
+// MenuPreferences holds a household's persisted menu-generation preferences.
+// These are applied by the selector core as hard filters (ExcludedTags) and as
+// defaults (DefaultDays, DefaultServings) when a generate request omits a value.
+// VegetarianDays is the minimum number of vegetarian days to prefer per week.
+type MenuPreferences struct {
+	HouseholdID     string    `json:"householdId"`
+	ExcludedTags    []string  `json:"excludedTags"`
+	DefaultDays     int       `json:"defaultDays"`
+	DefaultServings int       `json:"defaultServings"`
+	VegetarianDays  int       `json:"vegetarianDays"`
+	UpdatedAt       time.Time `json:"updatedAt,omitempty"`
+}
+
+// UpdateMenuPreferencesRequest is the payload for upserting a household's
+// menu preferences.
+type UpdateMenuPreferencesRequest struct {
+	ExcludedTags    []string `json:"excludedTags"`
+	DefaultDays     int      `json:"defaultDays"`
+	DefaultServings int      `json:"defaultServings"`
+	VegetarianDays  int      `json:"vegetarianDays"`
+}
+
+// DefaultMenuPreferences returns the preferences applied to a household that
+// has never saved any (no excluded tags, full week, 4 servings).
+func DefaultMenuPreferences(householdID string) MenuPreferences {
+	return MenuPreferences{
+		HouseholdID:     householdID,
+		ExcludedTags:    []string{},
+		DefaultDays:     7,
+		DefaultServings: 4,
+		VegetarianDays:  0,
+	}
+}
+
+// Validate checks an update request against the same bounds the generator
+// enforces, so preferences can never persist values the generator would reject.
+func (r UpdateMenuPreferencesRequest) Validate() error {
+	if r.DefaultDays < 1 || r.DefaultDays > 31 {
+		return ErrInvalidDays
+	}
+	if r.DefaultServings < 1 || r.DefaultServings > 100 {
+		return ErrInvalidServings
+	}
+	if r.VegetarianDays < 0 || r.VegetarianDays > r.DefaultDays {
+		return ErrInvalidVegetarianDays
+	}
+	if len(r.ExcludedTags) > 50 {
+		return ErrTooManyExcludedTags
+	}
+	for _, tag := range r.ExcludedTags {
+		if len(tag) == 0 || len(tag) > 50 {
+			return ErrInvalidExcludedTag
+		}
+	}
+	return nil
+}

@@ -36,7 +36,7 @@ func newShoppingTestEnv(t *testing.T) *shoppingTestEnv {
 	user := createTestUser(t, authService, "shop-test@test.com", "Shopper")
 
 	recipeService := NewRecipeService(recipeStorage)
-	menuService := NewMenuService(menuStorage, recipeStorage)
+	menuService := NewMenuService(menuStorage, recipeStorage, sqlite.NewMenuPreferencesStorage(db))
 	shoppingService := NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 
 	// Seed at least one recipe so menu generation succeeds.
@@ -115,7 +115,7 @@ func newShoppingTestEnvWithDB(t *testing.T) *shoppingTestEnvWithDB {
 	user := createTestUser(t, authService, "shop-test@test.com", "Shopper")
 
 	recipeService := NewRecipeService(recipeStorage)
-	menuService := NewMenuService(menuStorage, recipeStorage)
+	menuService := NewMenuService(menuStorage, recipeStorage, sqlite.NewMenuPreferencesStorage(db))
 	shoppingService := NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 
 	if _, err := recipeService.Create(domain.CreateRecipeRequest{
