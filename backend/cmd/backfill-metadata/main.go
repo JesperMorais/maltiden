@@ -25,11 +25,16 @@ import (
 	"maltiden/internal/domain"
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/claude"
+	"maltiden/pkg/gemini"
 )
 
 // approxCostPerRecipeUSD is a rough Haiku 4.5 Batch cost estimate per recipe,
 // used only to print a heads-up before submitting. Not load-bearing.
 const approxCostPerRecipeUSD = 0.0014
+
+// approxGeminiCostPerRecipeUSD is the equivalent rough estimate for Gemini 2.5
+// Flash-Lite ($0.10/$0.40 per MTok), ~5x cheaper than Haiku.
+const approxGeminiCostPerRecipeUSD = 0.0003
 
 // pollInterval is how long to wait between batch status polls.
 const pollInterval = 45 * time.Second
@@ -97,12 +102,13 @@ type ingredientMetadata struct {
 }
 
 func main() {
-	confirm := flag.Bool("confirm", false, "required: actually submit the batch and spend money")
+	confirm := flag.Bool("confirm", false, "required: actually call the API and spend money")
 	limit := flag.Int("limit", 0, "optional: process at most N recipes (0 = all lacking metadata)")
+	provider := flag.String("provider", "claude", "LLM provider: claude (Haiku Batch) | gemini (Flash-Lite, offline enrichment)")
 	flag.Parse()
 
-	if os.Getenv("ANTHROPIC_API_KEY") == "" {
-		log.Fatal("ANTHROPIC_API_KEY is required to run the backfill")
+	if *provider != "claude" && *provider != "gemini" {
+		log.Fatalf("unknown provider %q (want claude|gemini)", *provider)
 	}
 
 	dbPath := os.Getenv("DATABASE_PATH")
@@ -126,11 +132,30 @@ func main() {
 		return
 	}
 
-	estCost := float64(len(recipes)) * approxCostPerRecipeUSD
-	log.Printf("%d recipes need metadata. Estimated cost: ~$%.4f USD (Haiku 4.5 Batch).", len(recipes), estCost)
+	costPer := approxCostPerRecipeUSD
+	label := "Haiku 4.5 Batch"
+	if *provider == "gemini" {
+		costPer = approxGeminiCostPerRecipeUSD
+		label = "Gemini 2.5 Flash-Lite"
+	}
+	log.Printf("%d recipes need metadata. Estimated cost: ~$%.4f USD (%s).", len(recipes), float64(len(recipes))*costPer, label)
 
 	if !*confirm {
-		log.Println("Dry run — pass --confirm to submit the batch and spend money.")
+		log.Println("Dry run — pass --confirm to call the API and spend money.")
+		return
+	}
+
+	storage := sqlite.NewRecipeStorage(db)
+	ctx := context.Background()
+
+	if *provider == "gemini" {
+		client, err := gemini.NewClient(gemini.FlashLiteModel)
+		if err != nil {
+			log.Fatalf("gemini client: %v", err)
+		}
+		if err := runGeminiBackfill(ctx, client, storage, recipes); err != nil {
+			log.Fatalf("backfill: %v", err)
+		}
 		return
 	}
 
@@ -138,10 +163,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("claude client: %v", err)
 	}
-
-	storage := sqlite.NewRecipeStorage(db)
-	ctx := context.Background()
-
 	if err := runBackfill(ctx, client, storage, recipes); err != nil {
 		log.Fatalf("backfill: %v", err)
 	}
@@ -217,6 +238,77 @@ func runBackfill(ctx context.Context, client *claude.Client, storage *sqlite.Rec
 	}
 
 	log.Printf("Backfill complete: %d updated, %d skipped (errored/expired/invalid).", updated, skipped)
+	return nil
+}
+
+// geminiMetadataSchema mirrors metadataSchema but omits `additionalProperties`,
+// which Gemini's responseSchema (an OpenAPI 3.0 subset) does not support.
+var geminiMetadataSchema = map[string]interface{}{
+	"type": "object",
+	"properties": map[string]interface{}{
+		"mainProtein": map[string]interface{}{"type": "string"},
+		"dietClass": map[string]interface{}{
+			"type": "string",
+			"enum": []string{"omnivore", "vegetarian", "vegan", "pescetarian"},
+		},
+		"batchable":   map[string]interface{}{"type": "boolean"},
+		"cookMinutes": map[string]interface{}{"type": "integer"},
+		"ingredients": map[string]interface{}{
+			"type": "array",
+			"items": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"name":           map[string]interface{}{"type": "string"},
+					"canonicalName":  map[string]interface{}{"type": "string"},
+					"gramsEquiv":     map[string]interface{}{"type": "number"},
+					"isPantryStaple": map[string]interface{}{"type": "boolean"},
+					"isPerishable":   map[string]interface{}{"type": "boolean"},
+				},
+				"required": []string{"name", "canonicalName", "gramsEquiv", "isPantryStaple", "isPerishable"},
+			},
+		},
+	},
+	"required": []string{"mainProtein", "dietClass", "batchable", "cookMinutes", "ingredients"},
+}
+
+// runGeminiBackfill enriches recipes one synchronous call at a time via Gemini
+// structured output. Reuses the same prompt, metadata struct, merge logic, and
+// storage as the Claude path — only the LLM call differs. Failures on a single
+// recipe are logged and skipped (left for a future re-run), never fatal.
+func runGeminiBackfill(ctx context.Context, client *gemini.Client, storage *sqlite.RecipeStorage, recipes []*domain.Recipe) error {
+	var updated, skipped int
+	for _, r := range recipes {
+		userContent := fmt.Sprintf(
+			"Recipe: %s (serves %d)\n\nIngredients:\n%s\n\nInstructions:\n%s",
+			r.Name, r.Servings, ingredientsText(r.Ingredients), instructionsText(r.Instructions),
+		)
+
+		raw, err := client.GenerateJSON(ctx, backfillSystemPrompt, userContent, geminiMetadataSchema)
+		if err != nil {
+			log.Printf("recipe %s: gemini call failed: %v — left un-backfilled", r.ID, err)
+			skipped++
+			continue
+		}
+
+		var meta recipeMetadata
+		if err := json.Unmarshal(raw, &meta); err != nil {
+			log.Printf("recipe %s: parse metadata: %v — left un-backfilled", r.ID, err)
+			skipped++
+			continue
+		}
+
+		mergeMetadata(r, &meta)
+		if err := storage.Update(r); err != nil {
+			log.Printf("recipe %s: update failed: %v", r.ID, err)
+			skipped++
+			continue
+		}
+		updated++
+		if updated%25 == 0 {
+			log.Printf("...%d/%d enriched", updated, len(recipes))
+		}
+	}
+	log.Printf("Backfill complete: %d updated, %d skipped.", updated, skipped)
 	return nil
 }
 
