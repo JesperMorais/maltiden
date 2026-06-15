@@ -64,8 +64,18 @@ func (m *mockRecipeStorageForMenus) Create(recipe *domain.Recipe) error { return
 func (m *mockRecipeStorageForMenus) Update(recipe *domain.Recipe) error { return nil }
 func (m *mockRecipeStorageForMenus) Delete(id string) error             { return nil }
 
+// mockMenuPrefsStorageForMenus is a no-op MenuPreferencesRepository: Get
+// returns nil so the service falls back to DefaultMenuPreferences.
+type mockMenuPrefsStorageForMenus struct{}
+
+func (m *mockMenuPrefsStorageForMenus) Get(householdID string) (*domain.MenuPreferences, error) {
+	return nil, nil
+}
+
+func (m *mockMenuPrefsStorageForMenus) Upsert(prefs *domain.MenuPreferences) error { return nil }
+
 func newTestMenuHandler(menuStore domain.MenuRepository, recipeStore domain.RecipeRepository) *MenuHandler {
-	svc := services.NewMenuService(menuStore, recipeStore)
+	svc := services.NewMenuService(menuStore, recipeStore, &mockMenuPrefsStorageForMenus{})
 	return NewMenuHandler(svc)
 }
 
