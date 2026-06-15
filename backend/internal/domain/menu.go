@@ -54,36 +54,43 @@ type MenuResponse struct {
 }
 
 // MenuPreferences holds a household's persisted menu-generation preferences.
-// These are applied by the selector core as hard filters (ExcludedTags) and as
-// defaults (DefaultDays, DefaultServings) when a generate request omits a value.
-// VegetarianDays is the minimum number of vegetarian days to prefer per week.
+// These are applied by the selector core as hard filters (ExcludedTags,
+// DislikedIngredients) and as defaults (DefaultDays, DefaultServings) when a
+// generate request omits a value. VegetarianDays is the minimum number of
+// vegetarian days to prefer per week. DislikedIngredients is a list of
+// ingredient names; any recipe containing one (name-normalized match) is
+// hard-filtered out of generation.
 type MenuPreferences struct {
-	HouseholdID     string    `json:"householdId"`
-	ExcludedTags    []string  `json:"excludedTags"`
-	DefaultDays     int       `json:"defaultDays"`
-	DefaultServings int       `json:"defaultServings"`
-	VegetarianDays  int       `json:"vegetarianDays"`
-	UpdatedAt       time.Time `json:"updatedAt,omitempty"`
+	HouseholdID         string    `json:"householdId"`
+	ExcludedTags        []string  `json:"excludedTags"`
+	DislikedIngredients []string  `json:"dislikedIngredients"`
+	DefaultDays         int       `json:"defaultDays"`
+	DefaultServings     int       `json:"defaultServings"`
+	VegetarianDays      int       `json:"vegetarianDays"`
+	UpdatedAt           time.Time `json:"updatedAt,omitempty"`
 }
 
 // UpdateMenuPreferencesRequest is the payload for upserting a household's
 // menu preferences.
 type UpdateMenuPreferencesRequest struct {
-	ExcludedTags    []string `json:"excludedTags"`
-	DefaultDays     int      `json:"defaultDays"`
-	DefaultServings int      `json:"defaultServings"`
-	VegetarianDays  int      `json:"vegetarianDays"`
+	ExcludedTags        []string `json:"excludedTags"`
+	DislikedIngredients []string `json:"dislikedIngredients"`
+	DefaultDays         int      `json:"defaultDays"`
+	DefaultServings     int      `json:"defaultServings"`
+	VegetarianDays      int      `json:"vegetarianDays"`
 }
 
 // DefaultMenuPreferences returns the preferences applied to a household that
-// has never saved any (no excluded tags, full week, 4 servings).
+// has never saved any (no excluded tags, no disliked ingredients, full week,
+// 4 servings).
 func DefaultMenuPreferences(householdID string) MenuPreferences {
 	return MenuPreferences{
-		HouseholdID:     householdID,
-		ExcludedTags:    []string{},
-		DefaultDays:     7,
-		DefaultServings: 4,
-		VegetarianDays:  0,
+		HouseholdID:         householdID,
+		ExcludedTags:        []string{},
+		DislikedIngredients: []string{},
+		DefaultDays:         7,
+		DefaultServings:     4,
+		VegetarianDays:      0,
 	}
 }
 
@@ -105,6 +112,14 @@ func (r UpdateMenuPreferencesRequest) Validate() error {
 	for _, tag := range r.ExcludedTags {
 		if len(tag) == 0 || len(tag) > 50 {
 			return ErrInvalidExcludedTag
+		}
+	}
+	if len(r.DislikedIngredients) > 50 {
+		return ErrTooManyDislikedIngredients
+	}
+	for _, ing := range r.DislikedIngredients {
+		if len(ing) == 0 || len(ing) > 80 {
+			return ErrInvalidDislikedIngredient
 		}
 	}
 	return nil

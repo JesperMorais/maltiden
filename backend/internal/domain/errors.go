@@ -31,9 +31,11 @@ var (
 	ErrInvalidDays = errors.New("invalid_days")
 
 	// Menu preferences
-	ErrInvalidVegetarianDays = errors.New("invalid_vegetarian_days")
-	ErrTooManyExcludedTags   = errors.New("too_many_excluded_tags")
-	ErrInvalidExcludedTag    = errors.New("invalid_excluded_tag")
+	ErrInvalidVegetarianDays      = errors.New("invalid_vegetarian_days")
+	ErrTooManyExcludedTags        = errors.New("too_many_excluded_tags")
+	ErrInvalidExcludedTag         = errors.New("invalid_excluded_tag")
+	ErrTooManyDislikedIngredients = errors.New("too_many_disliked_ingredients")
+	ErrInvalidDislikedIngredient  = errors.New("invalid_disliked_ingredient")
 
 	// Recipe validation
 	ErrNameRequired         = errors.New("name_required")

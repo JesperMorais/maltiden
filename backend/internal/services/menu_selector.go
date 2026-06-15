@@ -141,6 +141,52 @@ func recipeHasExcludedTag(r domain.RecipeSummary, excluded map[string]bool) bool
 	return false
 }
 
+// normalizeIngredientName lower-cases and trims an ingredient or disliked-name
+// so a user's "Räkor " matches a recipe's "räkor". This mirrors the casing the
+// overlap scorer uses for ingredient keys.
+func normalizeIngredientName(name string) string {
+	return strings.ToLower(strings.TrimSpace(name))
+}
+
+// filterByDislikedIngredients returns the subset of recipes that contain none
+// of the disliked ingredients. A recipe is dropped if any of its ingredient
+// names matches a disliked name after normalization (lower-cased, trimmed) —
+// the same name-normalized matching the overlap step uses. ingredientsByID
+// supplies each recipe's ingredients (the summaries carry none); a recipe with
+// no ingredient data is kept (we cannot prove it contains a disliked one).
+// Blank disliked entries are ignored.
+func filterByDislikedIngredients(recipes []domain.RecipeSummary, disliked []string, ingredientsByID map[string][]domain.Ingredient) []domain.RecipeSummary {
+	keys := make(map[string]bool, len(disliked))
+	for _, d := range disliked {
+		if n := normalizeIngredientName(d); n != "" {
+			keys[n] = true
+		}
+	}
+	if len(keys) == 0 {
+		out := make([]domain.RecipeSummary, len(recipes))
+		copy(out, recipes)
+		return out
+	}
+
+	out := make([]domain.RecipeSummary, 0, len(recipes))
+	for _, r := range recipes {
+		if recipeHasDislikedIngredient(ingredientsByID[r.ID], keys) {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out
+}
+
+func recipeHasDislikedIngredient(ings []domain.Ingredient, disliked map[string]bool) bool {
+	for _, ing := range ings {
+		if disliked[normalizeIngredientName(ing.Name)] {
+			return true
+		}
+	}
+	return false
+}
+
 func isVegetarian(r domain.RecipeSummary) bool {
 	for _, t := range r.Tags {
 		if normalizeTag(t) == vegetarianTag {
@@ -248,6 +294,10 @@ func isPantryStaple(name string) bool {
 // should treat that as "no recipes available", mirroring the empty-catalog case.
 func newMenuSelector(recipes []domain.RecipeSummary, prefs domain.MenuPreferences, rng *rand.Rand, ingredientsByID map[string][]domain.Ingredient) (*menuSelector, bool) {
 	candidates := filterByExcludedTags(recipes, prefs.ExcludedTags)
+	// Hard-filter out any recipe containing a disliked ingredient (#248). This
+	// runs after the tag filter and before scoring, so a disliked recipe is
+	// never placed regardless of how well it would otherwise overlap.
+	candidates = filterByDislikedIngredients(candidates, prefs.DislikedIngredients, ingredientsByID)
 	if len(candidates) == 0 {
 		return nil, false
 	}
