@@ -64,12 +64,17 @@ func (s *MenuService) UpdatePreferences(householdID string, req domain.UpdateMen
 	if tags == nil {
 		tags = []string{}
 	}
+	disliked := req.DislikedIngredients
+	if disliked == nil {
+		disliked = []string{}
+	}
 	prefs := &domain.MenuPreferences{
-		HouseholdID:     householdID,
-		ExcludedTags:    tags,
-		DefaultDays:     req.DefaultDays,
-		DefaultServings: req.DefaultServings,
-		VegetarianDays:  req.VegetarianDays,
+		HouseholdID:         householdID,
+		ExcludedTags:        tags,
+		DislikedIngredients: disliked,
+		DefaultDays:         req.DefaultDays,
+		DefaultServings:     req.DefaultServings,
+		VegetarianDays:      req.VegetarianDays,
 	}
 	if err := s.prefsStorage.Upsert(prefs); err != nil {
 		sentry.CaptureException(err)

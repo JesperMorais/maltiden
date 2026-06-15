@@ -69,6 +69,109 @@ func TestFilterByExcludedTags(t *testing.T) {
 	}
 }
 
+func TestFilterByDislikedIngredients(t *testing.T) {
+	all := []domain.RecipeSummary{
+		rec("rec_a"),
+		rec("rec_b"),
+		rec("rec_c"),
+		rec("rec_no_data"), // intentionally absent from the ingredient map
+	}
+	ings := map[string][]domain.Ingredient{
+		"rec_a": ing("Kyckling", "Ris"),
+		"rec_b": ing("Räkor", "Vitlök"),
+		"rec_c": ing("Torsk", "Potatis"),
+	}
+
+	tests := []struct {
+		name     string
+		disliked []string
+		wantIDs  []string
+	}{
+		{
+			name:     "no dislikes keeps everything",
+			disliked: nil,
+			wantIDs:  []string{"rec_a", "rec_b", "rec_c", "rec_no_data"},
+		},
+		{
+			name:     "single dislike drops matching recipe",
+			disliked: []string{"räkor"},
+			wantIDs:  []string{"rec_a", "rec_c", "rec_no_data"},
+		},
+		{
+			name:     "case-insensitive and trimmed match",
+			disliked: []string{" Räkor ", "TORSK"},
+			wantIDs:  []string{"rec_a", "rec_no_data"},
+		},
+		{
+			name:     "non-matching dislike keeps everything",
+			disliked: []string{"quinoa"},
+			wantIDs:  []string{"rec_a", "rec_b", "rec_c", "rec_no_data"},
+		},
+		{
+			name:     "blank dislikes are ignored",
+			disliked: []string{"  ", ""},
+			wantIDs:  []string{"rec_a", "rec_b", "rec_c", "rec_no_data"},
+		},
+		{
+			name:     "recipe with no ingredient data is never dropped",
+			disliked: []string{"kyckling", "räkor", "torsk"},
+			wantIDs:  []string{"rec_no_data"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := filterByDislikedIngredients(all, tt.disliked, ings)
+			gotIDs := make([]string, len(got))
+			for i, r := range got {
+				gotIDs[i] = r.ID
+			}
+			if !sameSet(gotIDs, tt.wantIDs) {
+				t.Errorf("filterByDislikedIngredients() = %v, want %v", gotIDs, tt.wantIDs)
+			}
+		})
+	}
+}
+
+func TestNewMenuSelector_DislikedIngredientsFilteredOut(t *testing.T) {
+	recipes := []domain.RecipeSummary{rec("rec_a"), rec("rec_b")}
+	ings := map[string][]domain.Ingredient{
+		"rec_a": ing("kyckling", "ris"),
+		"rec_b": ing("räkor", "lök"),
+	}
+	prefs := domain.DefaultMenuPreferences("hh_1")
+	prefs.DislikedIngredients = []string{"räkor"}
+
+	sel, ok := newMenuSelector(recipes, prefs, rand.New(rand.NewPCG(1, 2)), ings)
+	if !ok {
+		t.Fatalf("expected selector to build (rec_a survives)")
+	}
+	// rec_b must never be placed; a full week of picks should only ever yield rec_a.
+	for i := 0; i < 7; i++ {
+		if got := sel.Next(); got != "rec_a" {
+			t.Fatalf("pick %d = %q, want rec_a (rec_b is disliked)", i, got)
+		}
+	}
+}
+
+func TestNewMenuSelector_AllDislikedReturnsNoSelector(t *testing.T) {
+	recipes := []domain.RecipeSummary{rec("rec_a"), rec("rec_b")}
+	ings := map[string][]domain.Ingredient{
+		"rec_a": ing("räkor"),
+		"rec_b": ing("Räkor", "ris"),
+	}
+	prefs := domain.DefaultMenuPreferences("hh_1")
+	prefs.DislikedIngredients = []string{"räkor"}
+
+	sel, ok := newMenuSelector(recipes, prefs, rand.New(rand.NewPCG(3, 4)), ings)
+	if ok {
+		t.Fatalf("expected ok=false when every recipe is disliked")
+	}
+	if sel != nil {
+		t.Errorf("expected nil selector, got %+v", sel)
+	}
+}
+
 func TestIsVegetarian(t *testing.T) {
 	tests := []struct {
 		name string

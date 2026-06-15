@@ -96,6 +96,55 @@ func TestMenuPreferencesStorage_UpsertReplaces(t *testing.T) {
 	}
 }
 
+func TestMenuPreferencesStorage_DislikedIngredientsRoundTrip(t *testing.T) {
+	s, hh := setupPrefsTestStorage(t)
+
+	in := &domain.MenuPreferences{
+		HouseholdID:         hh,
+		ExcludedTags:        []string{"fisk"},
+		DislikedIngredients: []string{"räkor", "koriander"},
+		DefaultDays:         7,
+		DefaultServings:     4,
+	}
+	if err := s.Upsert(in); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+
+	got, err := s.Get(hh)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got == nil {
+		t.Fatal("expected stored preferences, got nil")
+	}
+	if len(got.DislikedIngredients) != 2 || got.DislikedIngredients[0] != "räkor" || got.DislikedIngredients[1] != "koriander" {
+		t.Errorf("disliked ingredients mismatch: %v", got.DislikedIngredients)
+	}
+}
+
+func TestMenuPreferencesStorage_NilDislikedStoredAsEmpty(t *testing.T) {
+	s, hh := setupPrefsTestStorage(t)
+
+	if err := s.Upsert(&domain.MenuPreferences{
+		HouseholdID:         hh,
+		DislikedIngredients: nil,
+		DefaultDays:         7,
+		DefaultServings:     4,
+	}); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+	got, err := s.Get(hh)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.DislikedIngredients == nil {
+		t.Errorf("expected non-nil empty slice, got nil")
+	}
+	if len(got.DislikedIngredients) != 0 {
+		t.Errorf("expected empty disliked ingredients, got %v", got.DislikedIngredients)
+	}
+}
+
 func TestMenuPreferencesStorage_NilTagsStoredAsEmpty(t *testing.T) {
 	s, hh := setupPrefsTestStorage(t)
 
