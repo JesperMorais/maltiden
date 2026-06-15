@@ -657,6 +657,136 @@ func TestSelectorNext_PenaltiesDeterministic(t *testing.T) {
 	}
 }
 
+func TestIsBatchable(t *testing.T) {
+	tests := []struct {
+		name string
+		r    domain.RecipeSummary
+		want bool
+	}{
+		{"tagged batchcook", rec("a", "batchcook"), true},
+		{"mixed case tag", rec("b", "BatchCook"), true},
+		{"trimmed tag", rec("c", " batchcook "), true},
+		{"not batchable", rec("d", "fisk"), false},
+		{"no tags", rec("e"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isBatchable(tt.r); got != tt.want {
+				t.Errorf("isBatchable() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestApplyBatchCooking(t *testing.T) {
+	// day is a small builder: a non-skip cook-able day.
+	day := func(date, recipeID string, servings int) domain.MenuDay {
+		return domain.MenuDay{Date: date, RecipeID: recipeID, Servings: servings}
+	}
+	skipDay := func(date string) domain.MenuDay {
+		return domain.MenuDay{Date: date, Servings: 4, Skip: true}
+	}
+
+	tests := []struct {
+		name       string
+		days       []domain.MenuDay
+		batchable  map[string]bool
+		wantPrep   map[string]string // date -> prepMode
+		wantServ   map[string]int    // date -> servings
+		wantLeftOf map[string]string // date -> leftoverOf
+		wantRecipe map[string]string // date -> recipeID (post-pass)
+	}{
+		{
+			name:       "no batchable recipes is a no-op",
+			days:       []domain.MenuDay{day("d1", "r_a", 4), day("d2", "r_b", 4)},
+			batchable:  map[string]bool{},
+			wantPrep:   map[string]string{"d1": "", "d2": ""},
+			wantServ:   map[string]int{"d1": 4, "d2": 4},
+			wantLeftOf: map[string]string{"d1": "", "d2": ""},
+			wantRecipe: map[string]string{"d1": "r_a", "d2": "r_b"},
+		},
+		{
+			name:       "batchable cook-day pairs with next day as leftovers",
+			days:       []domain.MenuDay{day("d1", "r_a", 4), day("d2", "r_b", 4), day("d3", "r_c", 4)},
+			batchable:  map[string]bool{"r_a": true},
+			wantPrep:   map[string]string{"d1": domain.PrepModeBatch, "d2": "", "d3": ""},
+			wantServ:   map[string]int{"d1": 8, "d2": 4, "d3": 4},
+			wantLeftOf: map[string]string{"d1": "", "d2": "d1", "d3": ""},
+			wantRecipe: map[string]string{"d1": "r_a", "d2": "r_a", "d3": "r_c"},
+		},
+		{
+			name:       "leftovers slot skips over a skipped day",
+			days:       []domain.MenuDay{day("d1", "r_a", 4), skipDay("d2"), day("d3", "r_c", 4)},
+			batchable:  map[string]bool{"r_a": true},
+			wantPrep:   map[string]string{"d1": domain.PrepModeBatch, "d2": "", "d3": ""},
+			wantServ:   map[string]int{"d1": 8, "d2": 4, "d3": 4},
+			wantLeftOf: map[string]string{"d1": "", "d2": "", "d3": "d1"},
+			wantRecipe: map[string]string{"d1": "r_a", "d2": "", "d3": "r_a"},
+		},
+		{
+			name:       "batchable on last day has no room for leftovers (no-op)",
+			days:       []domain.MenuDay{day("d1", "r_b", 4), day("d2", "r_a", 4)},
+			batchable:  map[string]bool{"r_a": true},
+			wantPrep:   map[string]string{"d1": "", "d2": ""},
+			wantServ:   map[string]int{"d1": 4, "d2": 4},
+			wantLeftOf: map[string]string{"d1": "", "d2": ""},
+			wantRecipe: map[string]string{"d1": "r_b", "d2": "r_a"},
+		},
+		{
+			name:      "each recipe batched at most once; no chaining",
+			days:      []domain.MenuDay{day("d1", "r_a", 4), day("d2", "r_a", 4), day("d3", "r_a", 4), day("d4", "r_a", 4)},
+			batchable: map[string]bool{"r_a": true},
+			// d1 cooks (batch, 8), d2 is its leftovers (consumed). d3 is a fresh
+			// cook of r_a but r_a is already batched, so it stays ordinary; d4 too.
+			wantPrep:   map[string]string{"d1": domain.PrepModeBatch, "d2": "", "d3": "", "d4": ""},
+			wantServ:   map[string]int{"d1": 8, "d2": 4, "d3": 4, "d4": 4},
+			wantLeftOf: map[string]string{"d1": "", "d2": "d1", "d3": "", "d4": ""},
+			wantRecipe: map[string]string{"d1": "r_a", "d2": "r_a", "d3": "r_a", "d4": "r_a"},
+		},
+		{
+			name:      "two distinct batchable recipes each get a pair",
+			days:      []domain.MenuDay{day("d1", "r_a", 4), day("d2", "r_b", 4), day("d3", "r_x", 4), day("d4", "r_y", 4)},
+			batchable: map[string]bool{"r_a": true, "r_b": true},
+			// d1(r_a) cooks -> d2 becomes its leftovers. d2 is now consumed, so
+			// r_b never cooks (its only slot got eaten by r_a's leftovers).
+			wantPrep:   map[string]string{"d1": domain.PrepModeBatch, "d2": "", "d3": "", "d4": ""},
+			wantServ:   map[string]int{"d1": 8, "d2": 4, "d3": 4, "d4": 4},
+			wantLeftOf: map[string]string{"d1": "", "d2": "d1", "d3": "", "d4": ""},
+			wantRecipe: map[string]string{"d1": "r_a", "d2": "r_a", "d3": "r_x", "d4": "r_y"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := applyBatchCooking(tt.days, tt.batchable)
+			byDate := make(map[string]domain.MenuDay, len(got))
+			for _, d := range got {
+				byDate[d.Date] = d
+			}
+			for date, want := range tt.wantPrep {
+				if byDate[date].PrepMode != want {
+					t.Errorf("%s prepMode = %q, want %q", date, byDate[date].PrepMode, want)
+				}
+			}
+			for date, want := range tt.wantServ {
+				if byDate[date].Servings != want {
+					t.Errorf("%s servings = %d, want %d", date, byDate[date].Servings, want)
+				}
+			}
+			for date, want := range tt.wantLeftOf {
+				if byDate[date].LeftoverOf != want {
+					t.Errorf("%s leftoverOf = %q, want %q", date, byDate[date].LeftoverOf, want)
+				}
+			}
+			for date, want := range tt.wantRecipe {
+				if byDate[date].RecipeID != want {
+					t.Errorf("%s recipeID = %q, want %q", date, byDate[date].RecipeID, want)
+				}
+			}
+		})
+	}
+}
+
 func sameSet(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

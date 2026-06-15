@@ -49,9 +49,9 @@ func (s *MenuStorage) Create(menu *domain.Menu) error {
 		}
 
 		_, err = tx.ExecContext(ctx,
-			`INSERT INTO menu_days (id, menu_id, date, recipe_id, servings, skip)
-			 VALUES (?, ?, ?, ?, ?, ?)`,
-			"md_"+uuid.New().String(), menu.ID, day.Date, recipeID, day.Servings, skip,
+			`INSERT INTO menu_days (id, menu_id, date, recipe_id, servings, skip, prep_mode, leftover_of)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			"md_"+uuid.New().String(), menu.ID, day.Date, recipeID, day.Servings, skip, day.PrepMode, day.LeftoverOf,
 		)
 		if err != nil {
 			return err
@@ -90,9 +90,9 @@ func (s *MenuStorage) Update(menu *domain.Menu) error {
 		}
 
 		_, err = tx.ExecContext(ctx,
-			`INSERT INTO menu_days (id, menu_id, date, recipe_id, servings, skip)
-			 VALUES (?, ?, ?, ?, ?, ?)`,
-			"md_"+uuid.New().String(), menu.ID, day.Date, recipeID, day.Servings, skip,
+			`INSERT INTO menu_days (id, menu_id, date, recipe_id, servings, skip, prep_mode, leftover_of)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			"md_"+uuid.New().String(), menu.ID, day.Date, recipeID, day.Servings, skip, day.PrepMode, day.LeftoverOf,
 		)
 		if err != nil {
 			return err
@@ -123,7 +123,7 @@ func (s *MenuStorage) GetCurrentByHousehold(householdID string) (*domain.Menu, e
 
 	// Get menu days
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT date, recipe_id, servings, skip FROM menu_days
+		`SELECT date, recipe_id, servings, skip, prep_mode, leftover_of FROM menu_days
 		 WHERE menu_id = ? ORDER BY date`,
 		menu.ID,
 	)
@@ -137,7 +137,7 @@ func (s *MenuStorage) GetCurrentByHousehold(householdID string) (*domain.Menu, e
 		var recipeID sql.NullString
 		var skip int
 
-		err := rows.Scan(&day.Date, &recipeID, &day.Servings, &skip)
+		err := rows.Scan(&day.Date, &recipeID, &day.Servings, &skip, &day.PrepMode, &day.LeftoverOf)
 		if err != nil {
 			return nil, err
 		}
@@ -176,7 +176,7 @@ func (s *MenuStorage) GetByID(id string) (*domain.Menu, error) {
 
 	// Get menu days
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT date, recipe_id, servings, skip FROM menu_days
+		`SELECT date, recipe_id, servings, skip, prep_mode, leftover_of FROM menu_days
 		 WHERE menu_id = ? ORDER BY date`,
 		menu.ID,
 	)
@@ -190,7 +190,7 @@ func (s *MenuStorage) GetByID(id string) (*domain.Menu, error) {
 		var recipeID sql.NullString
 		var skip int
 
-		err := rows.Scan(&day.Date, &recipeID, &day.Servings, &skip)
+		err := rows.Scan(&day.Date, &recipeID, &day.Servings, &skip, &day.PrepMode, &day.LeftoverOf)
 		if err != nil {
 			return nil, err
 		}
