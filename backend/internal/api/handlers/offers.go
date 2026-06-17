@@ -36,17 +36,26 @@ func parseLocationParams(r *http.Request) (lat float64, lng float64, radius int,
 		if err != nil {
 			return 0, 0, 0, fmt.Errorf("invalid lat: %w", err)
 		}
+		if lat < -90 || lat > 90 {
+			return 0, 0, 0, fmt.Errorf("invalid lat: out of range")
+		}
 	}
 	if lngStr := r.URL.Query().Get("lng"); lngStr != "" {
 		lng, err = strconv.ParseFloat(lngStr, 64)
 		if err != nil {
 			return 0, 0, 0, fmt.Errorf("invalid lng: %w", err)
 		}
+		if lng < -180 || lng > 180 {
+			return 0, 0, 0, fmt.Errorf("invalid lng: out of range")
+		}
 	}
 	if radiusStr := r.URL.Query().Get("radius"); radiusStr != "" {
 		radius, err = strconv.Atoi(radiusStr)
 		if err != nil {
 			return 0, 0, 0, fmt.Errorf("invalid radius: %w", err)
+		}
+		if radius <= 0 || radius > 100000 {
+			return 0, 0, 0, fmt.Errorf("invalid radius: out of range")
 		}
 	}
 	return lat, lng, radius, nil

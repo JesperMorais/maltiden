@@ -67,6 +67,38 @@ func TestParseLocationParams_InvalidRadius(t *testing.T) {
 	}
 }
 
+func TestParseLocationParams_LatOutOfRange(t *testing.T) {
+	req := httptest.NewRequest("GET", "/offers/search?lat=999", nil)
+	_, _, _, err := parseLocationParams(req)
+	if err == nil {
+		t.Fatal("expected error for lat=999, got nil")
+	}
+}
+
+func TestParseLocationParams_LngOutOfRange(t *testing.T) {
+	req := httptest.NewRequest("GET", "/offers/search?lng=500", nil)
+	_, _, _, err := parseLocationParams(req)
+	if err == nil {
+		t.Fatal("expected error for lng=500, got nil")
+	}
+}
+
+func TestParseLocationParams_RadiusZero(t *testing.T) {
+	req := httptest.NewRequest("GET", "/offers/search?radius=0", nil)
+	_, _, _, err := parseLocationParams(req)
+	if err == nil {
+		t.Fatal("expected error for radius=0, got nil")
+	}
+}
+
+func TestParseLocationParams_RadiusNegative(t *testing.T) {
+	req := httptest.NewRequest("GET", "/offers/search?radius=-5", nil)
+	_, _, _, err := parseLocationParams(req)
+	if err == nil {
+		t.Fatal("expected error for radius=-5, got nil")
+	}
+}
+
 // --- parseExcludeStores ---
 
 func TestParseExcludeStores_Empty(t *testing.T) {
