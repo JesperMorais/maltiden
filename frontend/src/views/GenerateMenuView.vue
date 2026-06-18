@@ -283,7 +283,7 @@ onBeforeRouteLeave((to, from, next) => {
 
     <!-- Unsaved changes warning modal -->
     <Teleport to="body">
-      <div v-if="showUnsavedWarning" class="modal-overlay" @click="cancelLeave">
+      <div v-if="showUnsavedWarning" class="modal-overlay" role="presentation" @click="cancelLeave">
         <div ref="unsavedModalRef" class="modal-card" role="dialog" aria-modal="true" aria-labelledby="unsaved-modal-title" @click.stop>
           <div class="modal-header">
             <h3 id="unsaved-modal-title" class="modal-title">Osparade ändringar</h3>
