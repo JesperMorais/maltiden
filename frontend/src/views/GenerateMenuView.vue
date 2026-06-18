@@ -6,9 +6,11 @@ import { usePlanningPreferencesStore } from '@/stores/planningPreferences'
 import { useSlotMachine, type DisplayRecipe } from '@/composables/useSlotMachine'
 import { useToast } from '@/composables/useToast'
 import { useFocusTrap } from '@/composables/useFocusTrap'
+import { Sparkles, Info } from 'lucide-vue-next'
 import MenuDayCard from '@/components/menu/MenuDayCard.vue'
 import GenerateMenuEmptyState from '@/components/menu/GenerateMenuEmptyState.vue'
 import MenuGeneratorActions from '@/components/menu/MenuGeneratorActions.vue'
+import MenuRationale from '@/components/menu/MenuRationale.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import GenerateMenuSkeleton from '@/components/skeleton/layouts/GenerateMenuSkeleton.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
@@ -33,6 +35,20 @@ const hasNavigatedFromSave = ref(false)
 const days = computed(() => store.orderedDays)
 const hasMenu = computed(() => store.hasMenu)
 const isLoading = computed(() => store.isLoading)
+
+// Free-text weekly wishes (Swedish), parsed server-side into constraints.
+const wishes = computed({
+  get: () => store.wishes,
+  set: (value: string) => {
+    store.wishes = value
+  },
+})
+
+// AI-arrangemang opt-in toggle (persisted across reloads).
+const arrange = computed({
+  get: () => store.arrange,
+  set: (value: boolean) => store.setArrange(value),
+})
 const { showSkeleton } = useSkeleton(
   computed(() => store.isGenerating && !slotMachine.isAnimating.value),
   { minDuration: 400 }
@@ -215,8 +231,43 @@ onBeforeRouteLeave((to, from, next) => {
         <!-- Skeleton loading state -->
         <GenerateMenuSkeleton v-if="showSkeleton" :day-count="prefsStore.activeDayCount" />
 
-        <!-- Empty state -->
-        <GenerateMenuEmptyState v-else-if="!showGrid" @generate="handleInitialGenerate" />
+        <!-- Pre-generation: AI experience controls (#248 Phase 4) + empty
+             state. Set weekly wishes and opt into AI arrangement before
+             generating; shown only before a menu exists. -->
+        <div v-else-if="!showGrid" class="pre-generate">
+          <div class="ai-controls">
+            <div class="wishes-pref">
+              <label for="wishes-input" class="wishes-label">Veckans önskemål</label>
+              <textarea
+                id="wishes-input"
+                v-model="wishes"
+                class="wishes-input"
+                rows="2"
+                maxlength="500"
+                placeholder="T.ex. två vegetariska dagar och snabb vardagsmat"
+              ></textarea>
+            </div>
+
+            <label class="ai-toggle" :class="{ active: arrange }">
+              <span class="ai-toggle-icon">
+                <Sparkles :size="20" :stroke-width="2.25" />
+              </span>
+              <span class="ai-toggle-text">
+                <span class="ai-toggle-label">AI-arrangemang</span>
+                <span class="ai-toggle-desc">Låt AI placera rätterna på veckodagar och förklara veckan</span>
+              </span>
+              <input
+                v-model="arrange"
+                type="checkbox"
+                class="ai-toggle-input"
+                aria-label="AI-arrangemang: låt AI placera rätterna och förklara veckan"
+              />
+              <span class="ai-toggle-slider"></span>
+            </label>
+          </div>
+
+          <GenerateMenuEmptyState @generate="handleInitialGenerate" />
+        </div>
 
         <!-- Menu grid -->
         <div v-else class="menu-grid">
@@ -264,6 +315,15 @@ onBeforeRouteLeave((to, from, next) => {
             </li>
           </ul>
         </section>
+
+        <!-- AI rationale: short Swedish explanation of the arranged week -->
+        <MenuRationale v-if="hasMenu" :rationale="store.rationale" />
+
+        <!-- Wishes-ignored note: wishes were sent but AI was unavailable -->
+        <p v-if="store.wishesIgnored" class="wishes-ignored">
+          <Info :size="16" :stroke-width="2" />
+          AI-önskemål kräver konfiguration och hoppades över.
+        </p>
 
         <!-- Error state -->
         <ErrorState v-if="store.error" :description="store.error" @retry="handleInitialGenerate" />
@@ -587,5 +647,157 @@ onBeforeRouteLeave((to, from, next) => {
   .description {
     font-size: 0.95rem;
   }
+}
+
+/* ============================================
+   AI experience controls (#248 Phase 4)
+   ============================================ */
+
+.pre-generate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.ai-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.wishes-pref {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.wishes-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.wishes-input {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+  resize: vertical;
+  transition: border-color var(--duration-fast) var(--ease-default);
+}
+
+.wishes-input::placeholder {
+  color: var(--text-muted);
+}
+
+.wishes-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.ai-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  position: relative;
+  padding: var(--space-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-default),
+    background var(--duration-fast) var(--ease-default);
+}
+
+.ai-toggle.active {
+  border-color: var(--accent);
+  background: var(--bg-card-hover, var(--bg-card));
+}
+
+.ai-toggle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.ai-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.ai-toggle-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.ai-toggle-desc {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+/* Visually-hidden native checkbox; the slider is the visible control. */
+.ai-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ai-toggle-slider {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--border-color);
+  transition: background var(--duration-fast) var(--ease-default);
+}
+
+.ai-toggle-slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: #fff;
+  transition: transform var(--duration-fast) var(--ease-default);
+}
+
+.ai-toggle.active .ai-toggle-slider {
+  background: var(--accent);
+}
+
+.ai-toggle.active .ai-toggle-slider::after {
+  transform: translateX(20px);
+}
+
+.ai-toggle-input:focus-visible + .ai-toggle-slider {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.wishes-ignored {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
 }
 </style>

@@ -2,7 +2,7 @@
  * Menu API Mock Data
  */
 
-import type { Menu, GenerateMenuRequest, SaveMenuDay } from '@/api/menu.api'
+import type { Menu, GenerateMenuRequest, GenerateMenuResponse, SaveMenuDay } from '@/api/menu.api'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -29,7 +29,9 @@ function getDateString(daysFromNow: number): string {
   return date.toISOString().split('T')[0]!
 }
 
-export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Menu> {
+export async function mockGenerateMenu(
+  request: GenerateMenuRequest,
+): Promise<GenerateMenuResponse> {
   await delay(1000) // Menu generation takes time
 
   const days = []
@@ -53,7 +55,13 @@ export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Me
     }
   }
 
-  const menu: Menu = {
+  // AI arrangement (mock): surface a sample Swedish rationale so the feature is
+  // visible in dev:mock. Wishes are never ignored in mock mode (AI "available").
+  const rationale = request.arrange
+    ? 'Veckan börjar lugnt med snabb vardagsmat och bygger upp mot helgens stora middag. Vi har samlat rätter som delar lök och pasta för en smidigare inköpslista.'
+    : undefined
+
+  const menu: GenerateMenuResponse = {
     id: 'menu_mock_' + Date.now(),
     days,
     // Illustrative shared-ingredient economy so the UX is exercisable in mock mode.
@@ -62,6 +70,8 @@ export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Me
       { name: 'Vitlök', recipeCount: 3 },
       { name: 'Grädde', recipeCount: 2 },
     ],
+    rationale,
+    wishesIgnored: false,
   }
   currentMockMenu = menu
   return menu

@@ -544,7 +544,10 @@ Parse recipe text and immediately save it to the database. **Auth required.**
   "days": 5,
   "skipDays": ["2025-01-22"],
   "servings": 4,
-  "extraPortions": { "2025-01-23": 2 }
+  "extraPortions": { "2025-01-23": 2 },
+  "prepMode": false,
+  "wishes": "två vegetariska dagar och snabb vardagsmat",
+  "arrange": true
 }
 
 // Response 201
@@ -555,9 +558,18 @@ Parse recipe text and immediately save it to the database. **Auth required.**
     { "date": "2025-01-21", "recipeId": "rec_002", "recipeName": "Laxpasta", "emoji": "🐟", "servings": 4 },
     { "date": "2025-01-22", "skip": true, "servings": 0 },
     { "date": "2025-01-23", "recipeId": "rec_003", "recipeName": "Kycklinggryta", "emoji": "🍗", "servings": 6 }
-  ]
+  ],
+  "sharedIngredients": [ { "name": "Lök", "recipeCount": 3 } ],
+  "rationale": "Veckan varvar snabb vardagsmat med en helgmiddag.",
+  "wishesIgnored": false
 }
 // Note: recipeName and emoji are optional — omitted for skip days and when not set on the recipe.
+// Phase 4 (AI experience layer, #248) — all optional and degrade gracefully without an API key:
+//   Request: `wishes` (free-text Swedish, parsed into per-run constraints), `arrange` (let AI place
+//     recipes across weekdays + write a rationale). `prepMode` enables batch cooking (#248 Phase 2).
+//   Response: `rationale` (short Swedish explanation; empty when arrange is off or AI unavailable),
+//     `wishesIgnored` (true when wishes were sent but the AI layer was unavailable),
+//     `sharedIngredients` (ingredients reused across the week, most-shared first).
 
 // Error 400
 { "error": "invalid_days" }

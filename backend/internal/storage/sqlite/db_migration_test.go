@@ -130,9 +130,9 @@ func TestRunMigrations_RecordsAllVersions(t *testing.T) {
 		t.Fatalf("rows.Err: %v", err)
 	}
 
-	// Migrations 1..19 are defined in runMigrations.
-	want := make([]int, 0, 19)
-	for v := 1; v <= 19; v++ {
+	// Migrations 1..20 are defined in runMigrations.
+	want := make([]int, 0, 20)
+	for v := 1; v <= 20; v++ {
 		want = append(want, v)
 	}
 	if !sort.IntsAreSorted(versions) {
@@ -163,6 +163,7 @@ func TestRunMigrations_ExpectedColumns(t *testing.T) {
 		{"menu_days", []string{"id", "menu_id", "date", "recipe_id", "servings", "skip", "prep_mode", "leftover_of"}},
 		{"recipes", []string{"id", "household_id", "calories", "protein_g", "carbs_g", "fat_g"}},
 		{"menu_preferences", []string{"household_id", "excluded_tags", "disliked_ingredients", "default_days", "default_servings", "vegetarian_days"}},
+		{"menus", []string{"id", "household_id", "created_at", "rationale"}},
 		{"schema_migrations", []string{"version", "applied_at"}},
 	}
 	for _, c := range cases {
