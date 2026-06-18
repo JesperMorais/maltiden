@@ -138,6 +138,44 @@ func TestMenuPreferencesStorage_DietFieldsRoundTrip(t *testing.T) {
 	}
 }
 
+func TestMenuPreferencesStorage_NutritionFieldsRoundTrip(t *testing.T) {
+	s, hh := setupPrefsTestStorage(t)
+
+	in := &domain.MenuPreferences{
+		HouseholdID:         hh,
+		ExcludedTags:        []string{},
+		DefaultDays:         7,
+		DefaultServings:     4,
+		NutritionProfile:    "high protein",
+		ProteinTargetPerDay: 120,
+	}
+	if err := s.Upsert(in); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+
+	got, err := s.Get(hh)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.NutritionProfile != "high protein" || got.ProteinTargetPerDay != 120 {
+		t.Errorf("nutrition fields mismatch: profile=%q target=%v", got.NutritionProfile, got.ProteinTargetPerDay)
+	}
+
+	// Upsert again clearing the nutrition fields.
+	in.NutritionProfile = ""
+	in.ProteinTargetPerDay = 0
+	if err := s.Upsert(in); err != nil {
+		t.Fatalf("second Upsert: %v", err)
+	}
+	got, err = s.Get(hh)
+	if err != nil {
+		t.Fatalf("Get after replace: %v", err)
+	}
+	if got.NutritionProfile != "" || got.ProteinTargetPerDay != 0 {
+		t.Errorf("expected nutrition fields cleared, got profile=%q target=%v", got.NutritionProfile, got.ProteinTargetPerDay)
+	}
+}
+
 func TestMenuPreferencesStorage_NilDislikedStoredAsEmpty(t *testing.T) {
 	s, hh := setupPrefsTestStorage(t)
 

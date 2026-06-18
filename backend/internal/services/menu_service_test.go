@@ -32,7 +32,7 @@ func newMenuTestEnv(t *testing.T) *menuTestEnv {
 
 	return &menuTestEnv{
 		menuService:   NewMenuService(menuStorage, recipeStorage, menuPrefsStorage),
-		recipeService: NewRecipeService(recipeStorage),
+		recipeService: NewRecipeService(recipeStorage, nil),
 		authService:   authService,
 		householdID:   user.User.HouseholdID,
 	}

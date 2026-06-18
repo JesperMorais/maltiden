@@ -6,7 +6,7 @@ import { getCurrentMenu, saveMenu } from '@/api/menu.api'
 import type { Menu, MenuDay as ApiMenuDay } from '@/api/menu.api'
 import RecipeEditForm from '@/components/recipe-parser/RecipeEditForm.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
-import { AlertTriangle } from 'lucide-vue-next'
+import { AlertTriangle, Flame, Beef, Wheat, Droplet } from 'lucide-vue-next'
 import SkeletonBlock from '@/components/skeleton/SkeletonBlock.vue'
 import SkeletonCircle from '@/components/skeleton/SkeletonCircle.vue'
 import { useToast } from '@/composables/useToast'
@@ -203,6 +203,11 @@ async function addToMenuDay(dayIndex: number) {
   }
 }
 
+/** Round grams to at most one decimal (drops a trailing ".0"). */
+function formatGrams(value: number): string {
+  return (Math.round(value * 10) / 10).toString()
+}
+
 function handleClose() {
   mode.value = 'detail'
   showDayPicker.value = false
@@ -311,6 +316,29 @@ function handleClose() {
                   {{ step }}
                 </li>
               </ol>
+            </section>
+
+            <!-- Per-serving nutrition, only when the recipe is enriched -->
+            <section v-if="recipe.macros" class="recipe-section nutrition-section">
+              <h3 class="section-title">Näringsvärde per portion</h3>
+              <ul class="nutrition-grid">
+                <li class="nutrition-stat">
+                  <Flame :size="18" :stroke-width="2.25" class="nutrition-icon" />
+                  <span class="nutrition-value">ca {{ Math.round(recipe.macros.kcal) }} kcal</span>
+                </li>
+                <li class="nutrition-stat">
+                  <Beef :size="18" :stroke-width="2.25" class="nutrition-icon" />
+                  <span class="nutrition-value">{{ formatGrams(recipe.macros.protein) }} g protein</span>
+                </li>
+                <li class="nutrition-stat">
+                  <Wheat :size="18" :stroke-width="2.25" class="nutrition-icon" />
+                  <span class="nutrition-value">{{ formatGrams(recipe.macros.carbs) }} g kolhydrater</span>
+                </li>
+                <li class="nutrition-stat">
+                  <Droplet :size="18" :stroke-width="2.25" class="nutrition-icon" />
+                  <span class="nutrition-value">{{ formatGrams(recipe.macros.fat) }} g fett</span>
+                </li>
+              </ul>
             </section>
           </div>
 
@@ -502,6 +530,45 @@ function handleClose() {
   font-size: 0.95rem;
   color: var(--text-primary);
   line-height: 1.6;
+}
+
+/* Per-serving nutrition */
+.nutrition-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.nutrition-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--accent-bg);
+  border: 1px solid var(--border-color-hover);
+}
+
+.nutrition-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.nutrition-value {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--accent-text);
+  line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+  .nutrition-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .modal-footer {

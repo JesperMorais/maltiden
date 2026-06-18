@@ -6,6 +6,7 @@
 import apiClient from './client'
 import { USE_MOCKS } from '@/mocks'
 import { mockGenerateMenu, mockGetCurrentMenu, mockSaveMenu } from '@/mocks/menu.mock'
+import type { Macros } from './recipes.api'
 
 export interface MenuDay {
   date: string
@@ -18,6 +19,8 @@ export interface MenuDay {
   leftover?: boolean
   /** The date ("YYYY-MM-DD") of the cook day a leftovers day draws from. */
   cookDate?: string
+  /** Per-serving nutrition for the day's recipe, present only when enriched. */
+  macros?: Macros
 }
 
 export interface SharedIngredient {
@@ -47,6 +50,10 @@ export interface GenerateMenuRequest {
   lockedDays?: Record<string, string>
   /** Batch-cook mode: pair cook days (2× servings) with leftovers days. */
   prepMode?: boolean
+  /** Diet/nutrition profile to bias recipe selection, e.g. 'high-protein'. */
+  nutritionProfile?: string
+  /** Desired protein per serving per day (grams). 0 = no target. */
+  proteinTargetPerDay?: number
 }
 
 /**
@@ -55,6 +62,17 @@ export interface GenerateMenuRequest {
 export interface MenuPreferences {
   /** Default prep-mode (batch cooking) state for new menus. */
   prepModeDefault?: boolean
+  /** Diet/nutrition profile applied during generation, e.g. 'high-protein' or ''. */
+  nutritionProfile?: string
+  /** Desired protein per serving per day (grams). 0 = no target. */
+  proteinTargetPerDay?: number
+}
+
+/** Payload accepted by the update-preferences endpoint. */
+export interface UpdateMenuPreferencesRequest {
+  prepModeDefault?: boolean
+  nutritionProfile?: string
+  proteinTargetPerDay?: number
 }
 
 /**

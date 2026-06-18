@@ -59,6 +59,9 @@ type menuSelector struct {
 
 	vegRemaining int // vegetarian slots still owed by the preference
 	recency      map[string]bool
+
+	recipeProtein       map[string]float64 // recipe id → per-serving protein grams (0 = unknown)
+	proteinTargetPerDay float64            // household per-day protein target (0 = no target)
 }
 
 // filterByExcludedTags returns the subset of recipes that carry none of the
@@ -213,13 +216,15 @@ func newMenuSelector(recipes []domain.Recipe, prefs domain.MenuPreferences, rece
 	}
 
 	sel := &menuSelector{
-		rng:          rng,
-		vegRemaining: prefs.VegetarianDays,
-		recency:      recency,
-		byID:         make(map[string]domain.Recipe, len(filtered)),
-		canonInts:    make(map[string][]int, len(filtered)),
-		canonID:      make(map[string]int),
-		protInts:     make(map[string]int, len(filtered)),
+		rng:                 rng,
+		vegRemaining:        prefs.VegetarianDays,
+		recency:             recency,
+		byID:                make(map[string]domain.Recipe, len(filtered)),
+		canonInts:           make(map[string][]int, len(filtered)),
+		canonID:             make(map[string]int),
+		protInts:            make(map[string]int, len(filtered)),
+		recipeProtein:       make(map[string]float64, len(filtered)),
+		proteinTargetPerDay: prefs.ProteinTargetPerDay,
 	}
 
 	protID := make(map[string]int)
@@ -245,6 +250,14 @@ func newMenuSelector(recipes []domain.Recipe, prefs domain.MenuPreferences, rece
 		}
 		sort.Ints(ints)
 		sel.canonInts[r.ID] = ints
+
+		// Capture per-serving protein for the nutrition-target reward (0 when the
+		// recipe has no matched macros).
+		protein := 0.0
+		if r.Macros != nil {
+			protein = r.Macros.Protein
+		}
+		sel.recipeProtein[r.ID] = protein
 
 		p := normalizeTag(r.MainProtein)
 		if p == "" {
@@ -622,6 +635,19 @@ func (w *weekState) marginalDelta(id string) float64 {
 	// Recency.
 	if len(sel.recency) > 0 && sel.recency[id] {
 		delta -= domain.RecencyPenalty
+	}
+
+	// Nutrition target: a soft, ORDER-INDEPENDENT per-recipe reward proportional
+	// to how much the recipe's per-serving protein contributes toward the
+	// household's per-day target (capped at the target so an extreme outlier can't
+	// dominate). Being a pure per-recipe function (no cross-item state) keeps the
+	// scorer deterministic and the oracle a clean per-recipe sum.
+	if sel.proteinTargetPerDay > 0 {
+		p := sel.recipeProtein[id]
+		if p > sel.proteinTargetPerDay {
+			p = sel.proteinTargetPerDay
+		}
+		delta += domain.NutritionTargetReward * (p / sel.proteinTargetPerDay)
 	}
 
 	return delta

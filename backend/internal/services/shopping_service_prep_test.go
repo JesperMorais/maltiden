@@ -35,7 +35,7 @@ func TestGetShoppingList_LeftoverDaysExcluded(t *testing.T) {
 	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 
 	user := createTestUser(t, authService, "shop-prep@test.com", "ShopPrep")
-	recipeService := NewRecipeService(recipeStorage)
+	recipeService := NewRecipeService(recipeStorage, nil)
 	shoppingService := NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 
 	// Recipe base = 4 servings, 500 g köttfärs.

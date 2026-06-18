@@ -3,6 +3,7 @@
  */
 
 import type { Menu, MenuDay, GenerateMenuRequest, SaveMenuDay, MenuEconomy } from '@/api/menu.api'
+import type { Macros } from '@/api/recipes.api'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -11,6 +12,8 @@ interface MockRecipe {
   name: string
   emoji: string
   ingredients: { canonicalName: string; name: string }[]
+  /** Per-serving nutrition; absent on some recipes to exercise graceful degradation. */
+  macros?: Macros
 }
 
 const mockRecipes: MockRecipe[] = [
@@ -18,6 +21,7 @@ const mockRecipes: MockRecipe[] = [
     id: 'rec_1',
     name: 'Pasta Carbonara',
     emoji: '🍝',
+    macros: { kcal: 620, protein: 28, carbs: 72, fat: 24 },
     ingredients: [
       { canonicalName: 'pasta', name: 'Pasta' },
       { canonicalName: 'agg', name: 'Ägg' },
@@ -29,6 +33,7 @@ const mockRecipes: MockRecipe[] = [
     id: 'rec_2',
     name: 'Kycklingwok',
     emoji: '🥘',
+    macros: { kcal: 540, protein: 42, carbs: 58, fat: 12 },
     ingredients: [
       { canonicalName: 'kyckling', name: 'Kycklingfilé' },
       { canonicalName: 'ris', name: 'Ris' },
@@ -51,6 +56,7 @@ const mockRecipes: MockRecipe[] = [
     id: 'rec_4',
     name: 'Laxfilé med potatis',
     emoji: '🐟',
+    macros: { kcal: 480, protein: 38, carbs: 34, fat: 20 },
     ingredients: [
       { canonicalName: 'lax', name: 'Laxfilé' },
       { canonicalName: 'potatis', name: 'Potatis' },
@@ -61,6 +67,7 @@ const mockRecipes: MockRecipe[] = [
     id: 'rec_5',
     name: 'Köttfärssås',
     emoji: '🍖',
+    macros: { kcal: 560, protein: 34, carbs: 62, fat: 18 },
     ingredients: [
       { canonicalName: 'kottfars', name: 'Nötfärs' },
       { canonicalName: 'pasta', name: 'Pasta' },
@@ -178,7 +185,8 @@ export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Me
       recipeId: recipe.id,
       recipeName: recipe.name,
       emoji: recipe.emoji,
-      servings: request.servings + extraPortions
+      servings: request.servings + extraPortions,
+      macros: recipe.macros
     })
   }
 
@@ -198,6 +206,7 @@ export async function mockGenerateMenu(request: GenerateMenuRequest): Promise<Me
         rest.servings = request.servings
         rest.leftover = true
         rest.cookDate = cook.date
+        rest.macros = cook.macros
         break
       }
     }
@@ -236,6 +245,7 @@ export async function mockSaveMenu(days: SaveMenuDay[]): Promise<Menu> {
         skip: day.skip,
         leftover: day.leftover,
         cookDate: day.cookDate,
+        macros: recipe?.macros,
       }
     }),
   }
@@ -251,12 +261,12 @@ export async function mockGetCurrentMenu(): Promise<Menu | null> {
     currentMockMenu = {
       id: 'menu_current',
       days: [
-        { date: getDateString(0), recipeId: 'rec_1', recipeName: 'Pasta Carbonara', emoji: '🍝', servings: 4 },
+        { date: getDateString(0), recipeId: 'rec_1', recipeName: 'Pasta Carbonara', emoji: '🍝', servings: 4, macros: { kcal: 620, protein: 28, carbs: 72, fat: 24 } },
         // Batch pair: a cook day (2× servings) followed by a leftovers day.
-        { date: getDateString(1), recipeId: 'rec_2', recipeName: 'Kycklingwok', emoji: '🥘', servings: 8 },
-        { date: getDateString(2), recipeId: 'rec_2', recipeName: 'Kycklingwok', emoji: '🥘', servings: 4, leftover: true, cookDate: getDateString(1) },
-        { date: getDateString(3), recipeId: 'rec_4', recipeName: 'Laxfilé med potatis', emoji: '🐟', servings: 4 },
-        { date: getDateString(4), recipeId: 'rec_5', recipeName: 'Köttfärssås', emoji: '🍖', servings: 4 },
+        { date: getDateString(1), recipeId: 'rec_2', recipeName: 'Kycklingwok', emoji: '🥘', servings: 8, macros: { kcal: 540, protein: 42, carbs: 58, fat: 12 } },
+        { date: getDateString(2), recipeId: 'rec_2', recipeName: 'Kycklingwok', emoji: '🥘', servings: 4, leftover: true, cookDate: getDateString(1), macros: { kcal: 540, protein: 42, carbs: 58, fat: 12 } },
+        { date: getDateString(3), recipeId: 'rec_4', recipeName: 'Laxfilé med potatis', emoji: '🐟', servings: 4, macros: { kcal: 480, protein: 38, carbs: 34, fat: 20 } },
+        { date: getDateString(4), recipeId: 'rec_5', recipeName: 'Köttfärssås', emoji: '🍖', servings: 4, macros: { kcal: 560, protein: 34, carbs: 62, fat: 18 } },
         { date: getDateString(5), skip: true, servings: 0 },
         { date: getDateString(6), recipeId: 'rec_6', recipeName: 'Vegetarisk curry', emoji: '🥗', servings: 4 }
       ]

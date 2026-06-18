@@ -72,3 +72,35 @@ describe('MenuDayCard — prep mode', () => {
     expect(wrapper.find('.prep-badge-cook').exists()).toBe(false)
   })
 })
+
+describe('MenuDayCard — per-serving macros', () => {
+  it('renders the macro line when the day has macros', () => {
+    const wrapper = mount(MenuDayCard, {
+      props: {
+        day: makeDay({ macros: { kcal: 520, protein: 32, carbs: 48, fat: 16 } }),
+        isLocked: false,
+      },
+    })
+
+    const line = wrapper.find('.recipe-macros')
+    expect(line.exists()).toBe(true)
+    expect(line.text()).toBe('ca 520 kcal · 32 g protein')
+  })
+
+  it('rounds kcal and protein to whole numbers', () => {
+    const wrapper = mount(MenuDayCard, {
+      props: {
+        day: makeDay({ macros: { kcal: 519.6, protein: 31.4, carbs: 48, fat: 16 } }),
+        isLocked: false,
+      },
+    })
+    expect(wrapper.find('.recipe-macros').text()).toBe('ca 520 kcal · 31 g protein')
+  })
+
+  it('renders nothing when the day has no macros', () => {
+    const wrapper = mount(MenuDayCard, {
+      props: { day: makeDay(), isLocked: false },
+    })
+    expect(wrapper.find('.recipe-macros').exists()).toBe(false)
+  })
+})

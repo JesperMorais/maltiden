@@ -20,6 +20,11 @@ type Ingredient struct {
 	GramsEquiv     float64 `json:"gramsEquiv,omitempty"`
 	IsPantryStaple bool    `json:"isPantryStaple,omitempty"`
 	IsPerishable   bool    `json:"isPerishable,omitempty"`
+
+	// Livsmedelsnummer links this ingredient to a Livsmedelsverket food-composition
+	// row, set by the offline match-livsmedel tool. 0 = unmatched (the same
+	// "zero = unknown" convention as the fields above) and contributes no macros.
+	Livsmedelsnummer int `json:"livsmedelsnummer,omitempty"`
 }
 
 type Recipe struct {
@@ -39,6 +44,10 @@ type Recipe struct {
 	DietClass   string `json:"dietClass,omitempty"`
 	Batchable   bool   `json:"batchable,omitempty"`
 	CookMinutes int    `json:"cookMinutes,omitempty"`
+
+	// Macros are per-serving, computed from matched livsmedel and persisted on
+	// the recipes table. Nil when the recipe has no matched ingredients.
+	Macros *Macros `json:"macros,omitempty"`
 }
 
 type RecipeSummary struct {
@@ -52,6 +61,9 @@ type RecipeSummary struct {
 	DietClass   string `json:"dietClass,omitempty"`
 	Batchable   bool   `json:"batchable,omitempty"`
 	CookMinutes int    `json:"cookMinutes,omitempty"`
+
+	// Macros are per-serving; nil when the recipe has no matched ingredients.
+	Macros *Macros `json:"macros,omitempty"`
 }
 
 type CreateRecipeRequest struct {
@@ -179,6 +191,9 @@ func (r CreateRecipeRequest) Validate() error {
 		}
 		if hasControlChar(ing.CanonicalName) {
 			return fmt.Errorf("ingredient canonical name: %w", ErrContainsControlChar)
+		}
+		if ing.Livsmedelsnummer < 0 {
+			return ErrInvalidLivsmedelsnummer
 		}
 		if ing.Amount < 0 {
 			return ErrInvalidAmount

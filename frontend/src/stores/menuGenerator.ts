@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { generateMenu, saveMenu } from '@/api/menu.api'
 import type { SaveMenuDay, MenuEconomy } from '@/api/menu.api'
+import type { Macros } from '@/api/recipes.api'
 import { useDashboardStore } from './dashboard'
 import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'
@@ -45,6 +46,8 @@ export interface DraftMenuDay {
   cookDate?: string
   /** True when this day is a cook day (some other day's cookDate === its date). */
   isCookDay?: boolean
+  /** Per-serving nutrition for the day's recipe, present only when enriched. */
+  macros?: Macros
 }
 
 export interface DraftMenu {
@@ -52,6 +55,7 @@ export interface DraftMenu {
 }
 
 const PREP_MODE_STORAGE_KEY = 'maltiden_prep_mode'
+const PROTEIN_TARGET_STORAGE_KEY = 'maltiden_protein_target'
 
 function loadPrepMode(): boolean {
   try {
@@ -67,6 +71,37 @@ function persistPrepMode(value: boolean): void {
   } catch {
     // ignore storage failures (e.g. private mode)
   }
+}
+
+function loadProteinTarget(): number {
+  try {
+    const raw = localStorage.getItem(PROTEIN_TARGET_STORAGE_KEY)
+    const parsed = raw === null ? 0 : Number(raw)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+  } catch {
+    return 0
+  }
+}
+
+function persistProteinTarget(value: number): void {
+  try {
+    localStorage.setItem(PROTEIN_TARGET_STORAGE_KEY, String(value))
+  } catch {
+    // ignore storage failures (e.g. private mode)
+  }
+}
+
+/**
+ * Weekly per-serving nutrition roll-up over the menu's cooked days.
+ *
+ * `daysWithMacros` is the number of cooked days carrying nutrition data;
+ * averages are taken across those days only (leftovers reuse a cook day and are
+ * excluded to avoid double-counting).
+ */
+export interface WeeklyNutrition {
+  daysWithMacros: number
+  avgKcal: number
+  avgProtein: number
 }
 
 // ============================================
@@ -186,6 +221,22 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     persistPrepMode(value)
   }
 
+  // Per-day protein target (grams per serving). 0 = no target. Persisted like
+  // prepMode so it survives reloads and feeds the weekly nutrition summary.
+  const proteinTargetPerDay = ref(loadProteinTarget())
+
+  /** Derived nutrition profile sent to the backend on generation/save. */
+  const nutritionProfile = computed(() =>
+    proteinTargetPerDay.value > 0 ? 'high-protein' : '',
+  )
+
+  /** Set the protein target (grams/day) and persist it. */
+  function setProteinTarget(value: number): void {
+    const sanitized = Number.isFinite(value) && value > 0 ? Math.round(value) : 0
+    proteinTargetPerDay.value = sanitized
+    persistProteinTarget(sanitized)
+  }
+
   // ============================================
   // GETTERS
   // ============================================
@@ -253,6 +304,29 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   })
 
   /**
+   * Weekly per-serving nutrition roll-up across cooked days.
+   *
+   * Returns null when no cooked day carries macros (graceful degradation — the
+   * summary renders nothing). Leftovers days are excluded so a batch-cooked
+   * recipe isn't counted twice.
+   */
+  const weeklyNutrition = computed<WeeklyNutrition | null>(() => {
+    const cooked = (draftMenu.value?.days ?? []).filter(
+      (day) => day.recipeId && !day.leftover && day.macros,
+    )
+    if (cooked.length === 0) return null
+
+    const totalKcal = cooked.reduce((sum, day) => sum + (day.macros?.kcal ?? 0), 0)
+    const totalProtein = cooked.reduce((sum, day) => sum + (day.macros?.protein ?? 0), 0)
+
+    return {
+      daysWithMacros: cooked.length,
+      avgKcal: totalKcal / cooked.length,
+      avgProtein: totalProtein / cooked.length,
+    }
+  })
+
+  /**
    * Check if any loading state is active
    */
   const isLoading = computed(() => {
@@ -309,7 +383,9 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
         servings: servings.value,
         skipDays: [],
         lockedDays: {},
-        prepMode: prepMode.value
+        prepMode: prepMode.value,
+        nutritionProfile: nutritionProfile.value,
+        proteinTargetPerDay: proteinTargetPerDay.value
       })
 
       // Adopt the backend's dates as the single source of truth.
@@ -333,7 +409,8 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
               emoji: apiDay.emoji,
               servings: apiDay.servings,
               leftover: apiDay.leftover,
-              cookDate: apiDay.cookDate
+              cookDate: apiDay.cookDate,
+              macros: apiDay.macros
             }
           })
         }
@@ -380,7 +457,9 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
         servings: servings.value,
         skipDays: [],
         lockedDays: lockedMap,
-        prepMode: prepMode.value
+        prepMode: prepMode.value,
+        nutritionProfile: nutritionProfile.value,
+        proteinTargetPerDay: proteinTargetPerDay.value
       })
 
       // Map the response by date: locked days come back unchanged,
@@ -399,7 +478,8 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
               emoji: newDay.emoji,
               servings: newDay.servings,
               leftover: newDay.leftover,
-              cookDate: newDay.cookDate
+              cookDate: newDay.cookDate,
+              macros: newDay.macros
             }
           }
         })
@@ -542,6 +622,8 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     weekStart,
     servings,
     prepMode,
+    proteinTargetPerDay,
+    nutritionProfile,
 
     // Getters
     orderedDays,
@@ -552,9 +634,11 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     hasMenu,
     unlockedDates,
     isReadyToSave,
+    weeklyNutrition,
 
     // Actions
     setPrepMode,
+    setProteinTarget,
     initializeWeek,
     generateInitialMenu,
     regenerateUnlockedDays,

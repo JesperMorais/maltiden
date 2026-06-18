@@ -35,7 +35,7 @@ func newShoppingTestEnv(t *testing.T) *shoppingTestEnv {
 
 	user := createTestUser(t, authService, "shop-test@test.com", "Shopper")
 
-	recipeService := NewRecipeService(recipeStorage)
+	recipeService := NewRecipeService(recipeStorage, nil)
 	menuService := NewMenuService(menuStorage, recipeStorage, sqlite.NewMenuPreferencesStorage(db))
 	shoppingService := NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 
@@ -114,7 +114,7 @@ func newShoppingTestEnvWithDB(t *testing.T) *shoppingTestEnvWithDB {
 
 	user := createTestUser(t, authService, "shop-test@test.com", "Shopper")
 
-	recipeService := NewRecipeService(recipeStorage)
+	recipeService := NewRecipeService(recipeStorage, nil)
 	menuService := NewMenuService(menuStorage, recipeStorage, sqlite.NewMenuPreferencesStorage(db))
 	shoppingService := NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 
@@ -342,7 +342,7 @@ func TestGetShoppingList_OrdersCategoriesCorrectly(t *testing.T) {
 	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
 
 	user := createTestUser(t, authService, "order-test@test.com", "Orderer")
-	recipeService := NewRecipeService(recipeStorage)
+	recipeService := NewRecipeService(recipeStorage, nil)
 	shoppingService := NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 
 	// One recipe touching seven of the new categories at once.

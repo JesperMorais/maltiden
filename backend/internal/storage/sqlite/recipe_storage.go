@@ -18,11 +18,31 @@ func NewRecipeStorage(db *sql.DB) *RecipeStorage {
 	return &RecipeStorage{db: db}
 }
 
+// macrosFromColumns returns a *Macros built from the four per-serving macro
+// columns, or nil when every value is zero (so un-enriched rows carry nil
+// macros, matching ComputeRecipeMacros' graceful contract).
+func macrosFromColumns(kcal, protein, carbs, fat float64) *domain.Macros {
+	if kcal == 0 && protein == 0 && carbs == 0 && fat == 0 {
+		return nil
+	}
+	return &domain.Macros{Kcal: kcal, Protein: protein, Carbs: carbs, Fat: fat}
+}
+
+// macroColumnValues returns the four per-serving macro values to persist for a
+// recipe (0 when Macros is nil).
+func macroColumnValues(m *domain.Macros) (kcal, protein, carbs, fat float64) {
+	if m == nil {
+		return 0, 0, 0, 0
+	}
+	return m.Kcal, m.Protein, m.Carbs, m.Fat
+}
+
 func (s *RecipeStorage) GetAll(filter *domain.RecipeFilter, householdID string) ([]domain.RecipeSummary, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	query := `SELECT id, name, servings, emoji, tags, main_protein, diet_class, batchable, cook_minutes FROM recipes WHERE 1=1`
+	query := `SELECT id, name, servings, emoji, tags, main_protein, diet_class, batchable, cook_minutes,
+	          kcal_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving FROM recipes WHERE 1=1`
 	args := []interface{}{}
 
 	// Scope by household: own recipes + seed recipes (NULL household_id)
@@ -58,9 +78,11 @@ func (s *RecipeStorage) GetAll(filter *domain.RecipeFilter, householdID string) 
 		var r domain.RecipeSummary
 		var emoji sql.NullString
 		var tagsJSON string
+		var kcal, protein, carbs, fat float64
 
 		err := rows.Scan(&r.ID, &r.Name, &r.Servings, &emoji, &tagsJSON,
-			&r.MainProtein, &r.DietClass, &r.Batchable, &r.CookMinutes)
+			&r.MainProtein, &r.DietClass, &r.Batchable, &r.CookMinutes,
+			&kcal, &protein, &carbs, &fat)
 		if err != nil {
 			return nil, err
 		}
@@ -72,6 +94,8 @@ func (s *RecipeStorage) GetAll(filter *domain.RecipeFilter, householdID string) 
 		if err := json.Unmarshal([]byte(tagsJSON), &r.Tags); err != nil {
 			r.Tags = []string{}
 		}
+
+		r.Macros = macrosFromColumns(kcal, protein, carbs, fat)
 
 		recipes = append(recipes, r)
 	}
@@ -88,17 +112,20 @@ func (s *RecipeStorage) GetByID(id string) (*domain.Recipe, error) {
 	defer cancel()
 
 	query := `SELECT id, name, servings, emoji, tags, ingredients, instructions, household_id, created_at,
-			  main_protein, diet_class, batchable, cook_minutes
+			  main_protein, diet_class, batchable, cook_minutes,
+			  kcal_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving
 			  FROM recipes WHERE id = ?`
 
 	var r domain.Recipe
 	var emoji, householdID sql.NullString
 	var tagsJSON, ingredientsJSON, instructionsJSON string
+	var kcal, protein, carbs, fat float64
 
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&r.ID, &r.Name, &r.Servings, &emoji,
 		&tagsJSON, &ingredientsJSON, &instructionsJSON, &householdID, &r.CreatedAt,
 		&r.MainProtein, &r.DietClass, &r.Batchable, &r.CookMinutes,
+		&kcal, &protein, &carbs, &fat,
 	)
 
 	if err == sql.ErrNoRows {
@@ -114,6 +141,8 @@ func (s *RecipeStorage) GetByID(id string) (*domain.Recipe, error) {
 	if householdID.Valid {
 		r.HouseholdID = householdID.String
 	}
+
+	r.Macros = macrosFromColumns(kcal, protein, carbs, fat)
 
 	if err := json.Unmarshal([]byte(tagsJSON), &r.Tags); err != nil {
 		r.Tags = []string{}
@@ -146,7 +175,8 @@ func (s *RecipeStorage) GetByIDs(ids []string) (map[string]*domain.Recipe, error
 
 	query := fmt.Sprintf(`
 		SELECT id, name, servings, emoji, tags, ingredients, instructions, created_at,
-		       main_protein, diet_class, batchable, cook_minutes
+		       main_protein, diet_class, batchable, cook_minutes,
+		       kcal_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving
 		FROM recipes WHERE id IN (%s)
 	`, strings.Join(placeholders, ","))
 
@@ -161,11 +191,13 @@ func (s *RecipeStorage) GetByIDs(ids []string) (map[string]*domain.Recipe, error
 		var r domain.Recipe
 		var emoji sql.NullString
 		var tagsJSON, ingredientsJSON, instructionsJSON string
+		var kcal, protein, carbs, fat float64
 
 		err := rows.Scan(
 			&r.ID, &r.Name, &r.Servings, &emoji,
 			&tagsJSON, &ingredientsJSON, &instructionsJSON, &r.CreatedAt,
 			&r.MainProtein, &r.DietClass, &r.Batchable, &r.CookMinutes,
+			&kcal, &protein, &carbs, &fat,
 		)
 		if err != nil {
 			return nil, err
@@ -184,6 +216,8 @@ func (s *RecipeStorage) GetByIDs(ids []string) (map[string]*domain.Recipe, error
 		if err := json.Unmarshal([]byte(instructionsJSON), &r.Instructions); err != nil {
 			r.Instructions = []string{}
 		}
+
+		r.Macros = macrosFromColumns(kcal, protein, carbs, fat)
 
 		result[r.ID] = &r
 	}
@@ -236,7 +270,8 @@ func (s *RecipeStorage) GetAllPaginated(filter *domain.RecipeFilter, householdID
 
 	// Get paginated results
 	query := fmt.Sprintf(`
-		SELECT id, name, servings, emoji, tags, main_protein, diet_class, batchable, cook_minutes
+		SELECT id, name, servings, emoji, tags, main_protein, diet_class, batchable, cook_minutes,
+		       kcal_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving
 		FROM recipes %s
 		ORDER BY name
 		LIMIT ? OFFSET ?
@@ -254,9 +289,11 @@ func (s *RecipeStorage) GetAllPaginated(filter *domain.RecipeFilter, householdID
 		var r domain.RecipeSummary
 		var emoji sql.NullString
 		var tagsJSON string
+		var kcal, protein, carbs, fat float64
 
 		err := rows.Scan(&r.ID, &r.Name, &r.Servings, &emoji, &tagsJSON,
-			&r.MainProtein, &r.DietClass, &r.Batchable, &r.CookMinutes)
+			&r.MainProtein, &r.DietClass, &r.Batchable, &r.CookMinutes,
+			&kcal, &protein, &carbs, &fat)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -268,6 +305,8 @@ func (s *RecipeStorage) GetAllPaginated(filter *domain.RecipeFilter, householdID
 		if err := json.Unmarshal([]byte(tagsJSON), &r.Tags); err != nil {
 			r.Tags = []string{}
 		}
+
+		r.Macros = macrosFromColumns(kcal, protein, carbs, fat)
 
 		recipes = append(recipes, r)
 	}
@@ -298,9 +337,12 @@ func (s *RecipeStorage) Update(recipe *domain.Recipe) error {
 		return err
 	}
 
+	kcal, protein, carbs, fat := macroColumnValues(recipe.Macros)
+
 	query := `
 		UPDATE recipes SET name = ?, servings = ?, emoji = ?, tags = ?, ingredients = ?, instructions = ?,
-			main_protein = ?, diet_class = ?, batchable = ?, cook_minutes = ?
+			main_protein = ?, diet_class = ?, batchable = ?, cook_minutes = ?,
+			kcal_per_serving = ?, protein_per_serving = ?, carbs_per_serving = ?, fat_per_serving = ?
 		WHERE id = ?
 	`
 
@@ -308,6 +350,7 @@ func (s *RecipeStorage) Update(recipe *domain.Recipe) error {
 		recipe.Name, recipe.Servings, recipe.Emoji,
 		string(tagsJSON), string(ingredientsJSON), string(instructionsJSON),
 		recipe.MainProtein, recipe.DietClass, recipe.Batchable, recipe.CookMinutes,
+		kcal, protein, carbs, fat,
 		recipe.ID,
 	)
 	if err != nil {
@@ -370,10 +413,13 @@ func (s *RecipeStorage) Create(recipe *domain.Recipe) error {
 		householdID = recipe.HouseholdID
 	}
 
+	kcal, protein, carbs, fat := macroColumnValues(recipe.Macros)
+
 	query := `
 		INSERT INTO recipes (id, name, servings, emoji, tags, ingredients, instructions, household_id, created_at,
-			main_protein, diet_class, batchable, cook_minutes)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			main_protein, diet_class, batchable, cook_minutes,
+			kcal_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = s.db.ExecContext(ctx, query,
@@ -381,6 +427,7 @@ func (s *RecipeStorage) Create(recipe *domain.Recipe) error {
 		string(tagsJSON), string(ingredientsJSON), string(instructionsJSON),
 		householdID, recipe.CreatedAt,
 		recipe.MainProtein, recipe.DietClass, recipe.Batchable, recipe.CookMinutes,
+		kcal, protein, carbs, fat,
 	)
 
 	return err

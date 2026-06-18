@@ -6,11 +6,12 @@ import { usePlanningPreferencesStore } from '@/stores/planningPreferences'
 import { useSlotMachine, type DisplayRecipe } from '@/composables/useSlotMachine'
 import { useToast } from '@/composables/useToast'
 import { useFocusTrap } from '@/composables/useFocusTrap'
-import { ChefHat } from 'lucide-vue-next'
+import { ChefHat, Beef } from 'lucide-vue-next'
 import MenuDayCard from '@/components/menu/MenuDayCard.vue'
 import GenerateMenuEmptyState from '@/components/menu/GenerateMenuEmptyState.vue'
 import MenuGeneratorActions from '@/components/menu/MenuGeneratorActions.vue'
 import MenuEconomyBar from '@/components/menu/MenuEconomyBar.vue'
+import NutritionSummary from '@/components/menu/NutritionSummary.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
 import GenerateMenuSkeleton from '@/components/skeleton/layouts/GenerateMenuSkeleton.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
@@ -40,6 +41,16 @@ const prepMode = computed({
   get: () => store.prepMode,
   set: (value: boolean) => store.setPrepMode(value),
 })
+
+// Protein target: "Ingen" (0 g/dag) vs "Hög proteinhalt" (default 110 g/dag).
+// Mirrors the prepMode binding — persisted via the store's setProteinTarget.
+const HIGH_PROTEIN_DEFAULT = 110
+const proteinTarget = computed(() => store.proteinTargetPerDay)
+const isHighProtein = computed(() => store.proteinTargetPerDay > 0)
+
+function setProteinMode(high: boolean) {
+  store.setProteinTarget(high ? HIGH_PROTEIN_DEFAULT : 0)
+}
 const isLoading = computed(() => store.isLoading)
 const { showSkeleton } = useSkeleton(
   computed(() => store.isGenerating && !slotMachine.isAnimating.value),
@@ -232,6 +243,42 @@ onBeforeRouteLeave((to, from, next) => {
           />
           <span class="prep-toggle-slider"></span>
         </label>
+
+        <!-- Proteinmål per dag -->
+        <div class="protein-pref">
+          <div class="protein-pref-head">
+            <Beef :size="18" :stroke-width="2.25" class="protein-pref-icon" />
+            <span class="protein-pref-label">Proteinmål per dag</span>
+          </div>
+          <div class="protein-segment" role="group" aria-label="Proteinmål per dag">
+            <button
+              type="button"
+              class="protein-segment-btn"
+              :class="{ active: !isHighProtein }"
+              :aria-pressed="!isHighProtein"
+              @click="setProteinMode(false)"
+            >
+              Ingen
+            </button>
+            <button
+              type="button"
+              class="protein-segment-btn"
+              :class="{ active: isHighProtein }"
+              :aria-pressed="isHighProtein"
+              @click="setProteinMode(true)"
+            >
+              Hög proteinhalt
+            </button>
+          </div>
+          <p class="protein-pref-help">
+            <template v-if="isHighProtein">
+              Föredrar proteinrika recept den här veckan · mål {{ proteinTarget }} g/dag.
+            </template>
+            <template v-else>
+              Föredrar proteinrika recept den här veckan.
+            </template>
+          </p>
+        </div>
       </div>
     </header>
 
@@ -261,6 +308,13 @@ onBeforeRouteLeave((to, from, next) => {
 
         <!-- Ingredient economy: shared ingredients across the week -->
         <MenuEconomyBar v-if="hasMenu" :economy="store.economy" />
+
+        <!-- Weekly nutrition roll-up: average per-day protein + target progress -->
+        <NutritionSummary
+          v-if="hasMenu"
+          :nutrition="store.weeklyNutrition"
+          :protein-target="store.proteinTargetPerDay"
+        />
 
         <!-- Error state -->
         <ErrorState v-if="store.error" :description="store.error" @retry="handleInitialGenerate" />
@@ -462,6 +516,86 @@ onBeforeRouteLeave((to, from, next) => {
   .prep-toggle-icon,
   .prep-toggle-slider,
   .prep-toggle-slider::after {
+    transition: none;
+  }
+}
+
+/* Proteinmål per dag */
+.protein-pref {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.25rem auto 0;
+  max-width: 420px;
+}
+
+.protein-pref-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+}
+
+.protein-pref-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.protein-pref-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.protein-segment {
+  display: inline-flex;
+  padding: 0.25rem;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-full);
+}
+
+.protein-segment-btn {
+  padding: 0.5rem 1.25rem;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-full);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-default);
+}
+
+.protein-segment-btn:hover {
+  color: var(--text-primary);
+}
+
+.protein-segment-btn.active {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.protein-segment-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.protein-pref-help {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .protein-segment-btn {
     transition: none;
   }
 }

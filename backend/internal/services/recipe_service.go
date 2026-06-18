@@ -99,11 +99,59 @@ func normalizeTags(tags []string) []string {
 }
 
 type RecipeService struct {
-	recipeStorage domain.RecipeRepository
+	recipeStorage    domain.RecipeRepository
+	livsmedelStorage domain.LivsmedelRepository // nullable: nil disables macro recompute (graceful)
 }
 
-func NewRecipeService(recipeStorage domain.RecipeRepository) *RecipeService {
-	return &RecipeService{recipeStorage: recipeStorage}
+func NewRecipeService(recipeStorage domain.RecipeRepository, livsmedelStorage domain.LivsmedelRepository) *RecipeService {
+	return &RecipeService{recipeStorage: recipeStorage, livsmedelStorage: livsmedelStorage}
+}
+
+// recomputeMacros recomputes and sets r.Macros from the recipe's matched
+// livsmedel. It is a graceful no-op when the livsmedel repo is unavailable, no
+// ingredient is matched, or the lookup fails — macros are an optimization, not a
+// correctness requirement, so they never block a write.
+func (s *RecipeService) recomputeMacros(r *domain.Recipe) {
+	if s.livsmedelStorage == nil {
+		return
+	}
+	seen := make(map[int]struct{})
+	numbers := make([]int, 0, len(r.Ingredients))
+	for _, ing := range r.Ingredients {
+		if ing.Livsmedelsnummer == 0 {
+			continue
+		}
+		if _, ok := seen[ing.Livsmedelsnummer]; ok {
+			continue
+		}
+		seen[ing.Livsmedelsnummer] = struct{}{}
+		numbers = append(numbers, ing.Livsmedelsnummer)
+	}
+	if len(numbers) == 0 {
+		r.Macros = nil
+		return
+	}
+	table, err := s.livsmedelStorage.GetByNumbers(numbers)
+	if err != nil {
+		sentry.CaptureException(err)
+		return
+	}
+	r.Macros = domain.ComputeRecipeMacros(*r, table)
+}
+
+// recipeHasComputableMacros reports whether any ingredient can actually
+// contribute to a macro computation — i.e. it carries both a livsmedelsnummer
+// and a positive grams-equivalent, matching ComputeRecipeMacros's contribution
+// rule. Gating the read-time recompute on this (rather than on the number
+// alone) avoids re-running a lookup every read for a matched-but-zero-grams
+// recipe whose macros are legitimately nil.
+func recipeHasComputableMacros(r *domain.Recipe) bool {
+	for _, ing := range r.Ingredients {
+		if ing.Livsmedelsnummer != 0 && ing.GramsEquiv > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *RecipeService) GetAll(filter *domain.RecipeFilter, householdID string) ([]domain.RecipeSummary, error) {
@@ -111,7 +159,18 @@ func (s *RecipeService) GetAll(filter *domain.RecipeFilter, householdID string) 
 }
 
 func (s *RecipeService) GetByID(id string) (*domain.Recipe, error) {
-	return s.recipeStorage.GetByID(id)
+	r, err := s.recipeStorage.GetByID(id)
+	if err != nil || r == nil {
+		return r, err
+	}
+	// Read-time fallback: if macros are absent but the recipe carries matched
+	// ingredients (e.g. hand-edited after a match), recompute them so the response
+	// stays correct. Persisted macros are preferred on the hot path; this only
+	// fills the gap.
+	if r.Macros == nil && recipeHasComputableMacros(r) {
+		s.recomputeMacros(r)
+	}
+	return r, nil
 }
 
 // checkOwnership verifies the requesting household can modify this recipe.
@@ -198,6 +257,9 @@ func (s *RecipeService) Update(id string, householdID string, req domain.UpdateR
 	}
 
 	stripRecipeEmoji(existing)
+
+	// Recompute persisted macros from the (possibly changed) matched ingredients.
+	s.recomputeMacros(existing)
 
 	if err := s.recipeStorage.Update(existing); err != nil {
 		sentry.CaptureException(err)
@@ -292,6 +354,10 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 	}
 
 	stripRecipeEmoji(recipe)
+
+	// Compute persisted macros from any matched ingredients (graceful no-op when
+	// none are matched or the livsmedel repo is unavailable).
+	s.recomputeMacros(recipe)
 
 	if err := s.recipeStorage.Create(recipe); err != nil {
 		sentry.CaptureException(err)

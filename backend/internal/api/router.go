@@ -33,6 +33,7 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	userStorage := sqlite.NewUserStorage(db)
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	recipeStorage := sqlite.NewRecipeStorage(db)
+	livsmedelStorage := sqlite.NewLivsmedelStorage(db)
 	menuStorage := sqlite.NewMenuStorage(db)
 	menuPrefsStorage := sqlite.NewMenuPreferencesStorage(db)
 	shoppingStorage := sqlite.NewShoppingStorage(db)
@@ -41,7 +42,7 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	// Service layer
 	authService := services.NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := services.NewHouseholdService(householdStorage, userStorage)
-	recipeService := services.NewRecipeService(recipeStorage)
+	recipeService := services.NewRecipeService(recipeStorage, livsmedelStorage)
 	menuService := services.NewMenuService(menuStorage, recipeStorage, menuPrefsStorage)
 	shoppingService := services.NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 	tjekService := services.NewTjekService()
@@ -107,7 +108,8 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 		log.Printf("Warning: Recipe parser disabled: %v", err)
 	} else {
 		recipeStorage := sqlite.NewRecipeStorage(db)
-		recipeService := services.NewRecipeService(recipeStorage)
+		livsmedelStorage := sqlite.NewLivsmedelStorage(db)
+		recipeService := services.NewRecipeService(recipeStorage, livsmedelStorage)
 		parserService := services.NewRecipeParserService(claudeClient)
 		parserHandler = handlers.NewRecipeParserHandler(parserService, recipeService)
 	}

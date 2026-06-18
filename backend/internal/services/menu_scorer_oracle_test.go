@@ -84,10 +84,24 @@ func oracleScoreWeek(s *menuSelector, week []string) float64 {
 		}
 	}
 
+	// Nutrition-target reward: a pure per-recipe term added for each chosen
+	// recipe (no cross-item state), mirroring weekState.marginalDelta.
+	nutrition := 0.0
+	if s.proteinTargetPerDay > 0 {
+		for _, id := range chosen {
+			p := s.recipeProtein[id]
+			if p > s.proteinTargetPerDay {
+				p = s.proteinTargetPerDay
+			}
+			nutrition += domain.NutritionTargetReward * (p / s.proteinTargetPerDay)
+		}
+	}
+
 	return domain.OverlapReward*overlap -
 		domain.ProteinVarietyPenalty*proteinRepeats -
 		domain.DuplicateRecipePenalty*dupPairs -
-		domain.RecencyPenalty*recencyHits
+		domain.RecencyPenalty*recencyHits +
+		nutrition
 }
 
 // incrementalScore replays a week through weekState (the production scorer) and
@@ -147,6 +161,41 @@ func TestScorer_IncrementalMatchesOracle(t *testing.T) {
 		want := oracleScoreWeek(sel, week)
 		if got != want {
 			t.Errorf("incremental %v = %v, oracle = %v (week %v)", week, got, want, week)
+		}
+	}
+}
+
+func TestScorer_IncrementalMatchesOracle_NutritionTarget(t *testing.T) {
+	// With a positive protein target and recipes carrying per-serving protein,
+	// the incremental scorer and the oracle must still agree (the nutrition term
+	// is a pure per-recipe addition).
+	recipes := []domain.Recipe{
+		recWithProtein("a", "nöt", 30, ing("Lök", "lök", false), ing("Köttfärs", "köttfärs", false)),
+		recWithProtein("b", "fågel", 60, ing("Lök", "lök", false), ing("Kyckling", "kyckling", false)),
+		recWithProtein("c", "fisk", 200, ing("Lax", "lax", false)), // above target → capped
+		recWithProtein("d", "fläsk", 0, ing("Fläsk", "fläsk", false)),
+	}
+	prefs := defaultPrefs()
+	prefs.ProteinTargetPerDay = 100
+	sel, ok := newMenuSelector(recipes, prefs, map[string]bool{"d": true}, testRNG())
+	if !ok {
+		t.Fatalf("expected selector to build")
+	}
+	weeks := [][]string{
+		{"a", "b", "c", "d"},
+		{"c", "c"},
+		{"a", "", "b"},
+		{"b", "b", "a"},
+	}
+	for _, week := range weeks {
+		got := incrementalScore(sel, week)
+		want := oracleScoreWeek(sel, week)
+		// The nutrition reward introduces fractional terms; incremental
+		// accumulation and the oracle's per-recipe sum differ only by float
+		// summation order, so compare within a tiny epsilon (the per-recipe term
+		// is identical by construction).
+		if diff := got - want; diff > 1e-9 || diff < -1e-9 {
+			t.Errorf("nutrition: incremental %v = %v, oracle = %v", week, got, want)
 		}
 	}
 }

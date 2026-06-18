@@ -13,8 +13,9 @@ export const mockRecipes: Recipe[] = [
     servings: 4,
     emoji: '🍝',
     tags: ['pasta', 'vardag', 'snabb'],
+    macros: { kcal: 620, protein: 28, carbs: 72, fat: 24 },
     ingredients: [
-      { name: 'Spaghetti', amount: 400, unit: 'g' },
+      { name: 'Spaghetti', amount: 400, unit: 'g', livsmedelsnummer: 599 },
       { name: 'Bacon', amount: 200, unit: 'g' },
       { name: 'Ägg', amount: 4, unit: 'st' },
       { name: 'Parmesan', amount: 100, unit: 'g' },
@@ -35,6 +36,7 @@ export const mockRecipes: Recipe[] = [
     servings: 4,
     emoji: '🥘',
     tags: ['kyckling', 'asiatiskt', 'vardag'],
+    macros: { kcal: 540, protein: 42, carbs: 58, fat: 12 },
     ingredients: [
       { name: 'Kycklingfilé', amount: 500, unit: 'g' },
       { name: 'Wokgrönsaker', amount: 400, unit: 'g' },
@@ -77,6 +79,7 @@ export const mockRecipes: Recipe[] = [
     servings: 4,
     emoji: '🐟',
     tags: ['fisk', 'nyttigt', 'vardag'],
+    macros: { kcal: 480, protein: 38, carbs: 34, fat: 20 },
     ingredients: [
       { name: 'Laxfilé', amount: 600, unit: 'g' },
       { name: 'Potatis', amount: 800, unit: 'g' },

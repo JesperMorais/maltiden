@@ -27,7 +27,7 @@ func (s *MenuPreferencesStorage) Get(householdID string) (*domain.MenuPreference
 	)
 	err := s.db.QueryRowContext(ctx,
 		`SELECT household_id, excluded_tags, default_days, default_servings, vegetarian_days, updated_at,
-		        diet_profile, disliked_ingredients, prep_mode_default
+		        diet_profile, disliked_ingredients, prep_mode_default, nutrition_profile, protein_target_per_day
 		 FROM menu_preferences WHERE household_id = ?`,
 		householdID,
 	).Scan(
@@ -40,6 +40,8 @@ func (s *MenuPreferencesStorage) Get(householdID string) (*domain.MenuPreference
 		&prefs.DietProfile,
 		&dislikedJSON,
 		&prefs.PrepModeDefault,
+		&prefs.NutritionProfile,
+		&prefs.ProteinTargetPerDay,
 	)
 
 	if err == sql.ErrNoRows {
@@ -91,19 +93,21 @@ func (s *MenuPreferencesStorage) Upsert(prefs *domain.MenuPreferences) error {
 	_, err = s.db.ExecContext(ctx,
 		`INSERT INTO menu_preferences
 		     (household_id, excluded_tags, default_days, default_servings, vegetarian_days, updated_at,
-		      diet_profile, disliked_ingredients, prep_mode_default)
-		 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)
+		      diet_profile, disliked_ingredients, prep_mode_default, nutrition_profile, protein_target_per_day)
+		 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?)
 		 ON CONFLICT(household_id) DO UPDATE SET
-		     excluded_tags        = excluded.excluded_tags,
-		     default_days         = excluded.default_days,
-		     default_servings     = excluded.default_servings,
-		     vegetarian_days      = excluded.vegetarian_days,
-		     diet_profile         = excluded.diet_profile,
-		     disliked_ingredients = excluded.disliked_ingredients,
-		     prep_mode_default    = excluded.prep_mode_default,
-		     updated_at           = CURRENT_TIMESTAMP`,
+		     excluded_tags          = excluded.excluded_tags,
+		     default_days           = excluded.default_days,
+		     default_servings       = excluded.default_servings,
+		     vegetarian_days        = excluded.vegetarian_days,
+		     diet_profile           = excluded.diet_profile,
+		     disliked_ingredients   = excluded.disliked_ingredients,
+		     prep_mode_default      = excluded.prep_mode_default,
+		     nutrition_profile      = excluded.nutrition_profile,
+		     protein_target_per_day = excluded.protein_target_per_day,
+		     updated_at             = CURRENT_TIMESTAMP`,
 		prefs.HouseholdID, string(excludedJSON), prefs.DefaultDays, prefs.DefaultServings, prefs.VegetarianDays,
-		prefs.DietProfile, string(dislikedJSON), prefs.PrepModeDefault,
+		prefs.DietProfile, string(dislikedJSON), prefs.PrepModeDefault, prefs.NutritionProfile, prefs.ProteinTargetPerDay,
 	)
 	return err
 }

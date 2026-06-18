@@ -19,6 +19,16 @@ export interface Ingredient {
   name: string
   amount: number
   unit: string
+  /** Swedish food database ("Livsmedelsdatabasen") item number, used for nutrition lookup. */
+  livsmedelsnummer?: number
+}
+
+/** Per-serving nutrition values. Grams except `kcal`. */
+export interface Macros {
+  kcal: number
+  protein: number
+  carbs: number
+  fat: number
 }
 
 export interface RecipeSummary {
@@ -27,6 +37,8 @@ export interface RecipeSummary {
   servings: number
   tags: string[]
   emoji?: string
+  /** Per-serving nutrition, present only for enriched recipes. */
+  macros?: Macros
 }
 
 export interface Recipe extends RecipeSummary {

@@ -42,6 +42,13 @@ type GenerateMenuRequest struct {
 	// PrepModeDefault preference; an explicit false forces classic Phase-1
 	// generation regardless of the default.
 	PrepMode *bool `json:"prepMode,omitempty"`
+
+	// ProteinTargetPerDay overrides the household's saved per-day protein target
+	// (grams) for this generation only, mirroring PrepMode's override semantics.
+	// A nil pointer falls back to the saved ProteinTargetPerDay preference; a
+	// value of 0 explicitly disables the nutrition bias for this week. Validated
+	// with IsValidProteinTarget like the saved preference.
+	ProteinTargetPerDay *float64 `json:"proteinTargetPerDay,omitempty"`
 }
 
 type UpdateMenuRequest struct {
@@ -60,6 +67,9 @@ type MenuResponseDay struct {
 	// reuses the recipe cooked on CookDate and buys no new groceries.
 	Leftover bool   `json:"leftover,omitempty"`
 	CookDate string `json:"cookDate,omitempty"`
+
+	// Macros are per-serving for the day's recipe; nil when unmatched.
+	Macros *Macros `json:"macros,omitempty"`
 }
 
 type MenuResponse struct {
@@ -111,6 +121,10 @@ const (
 	// PrepPairsPerWeek is the maximum number of cook→leftovers batch pairs the
 	// prep-aware selector places in a single generated week.
 	PrepPairsPerWeek = 1
+	// NutritionTargetReward rewards recipes that move the week toward the
+	// household's per-day protein target. Soft term, kept well below
+	// DuplicateRecipePenalty.
+	NutritionTargetReward = 1.5
 )
 
 // DietCompatible reports whether a recipe's diet class is acceptable for a
@@ -159,6 +173,12 @@ type MenuPreferences struct {
 	// PrepModeDefault is the household's default for meal-prep (batch cooking).
 	// When true, a generate request that omits prepMode opts into prep placement.
 	PrepModeDefault bool `json:"prepModeDefault"`
+
+	// NutritionProfile is an optional free-text note about the household's diet
+	// goal. ProteinTargetPerDay is the soft per-day protein target in grams (0 =
+	// no target) the selector uses as a gentle reward.
+	NutritionProfile    string  `json:"nutritionProfile,omitempty"`
+	ProteinTargetPerDay float64 `json:"proteinTargetPerDay,omitempty"`
 }
 
 // UpdateMenuPreferencesRequest is the payload for upserting a household's
@@ -173,6 +193,9 @@ type UpdateMenuPreferencesRequest struct {
 	DislikedIngredients []string `json:"dislikedIngredients"`
 
 	PrepModeDefault bool `json:"prepModeDefault"`
+
+	NutritionProfile    string  `json:"nutritionProfile,omitempty"`
+	ProteinTargetPerDay float64 `json:"proteinTargetPerDay,omitempty"`
 }
 
 // DefaultMenuPreferences returns the preferences applied to a household that
@@ -187,6 +210,8 @@ func DefaultMenuPreferences(householdID string) MenuPreferences {
 		DietProfile:         "",
 		DislikedIngredients: []string{},
 		PrepModeDefault:     false,
+		NutritionProfile:    "",
+		ProteinTargetPerDay: 0,
 	}
 }
 
@@ -211,6 +236,14 @@ func (r UpdateMenuPreferencesRequest) Validate() error {
 	}
 	if err := validateStringList(r.DislikedIngredients, ErrTooManyDislikedIngredients, ErrInvalidDislikedIngredient); err != nil {
 		return err
+	}
+	// Nutrition profile is free-ish text — empty allowed, length-capped like
+	// other strings.
+	if len(r.NutritionProfile) > 50 {
+		return ErrInvalidNutritionTarget
+	}
+	if !IsValidProteinTarget(r.ProteinTargetPerDay) {
+		return ErrInvalidNutritionTarget
 	}
 	return nil
 }

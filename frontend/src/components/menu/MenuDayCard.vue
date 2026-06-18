@@ -21,6 +21,14 @@ const props = defineProps<Props>()
 const isCookDay = computed(() => props.day.isCookDay === true && !props.day.leftover)
 const isLeftover = computed(() => props.day.leftover === true)
 
+// Compact per-serving macro line, e.g. "ca 520 kcal · 32 g protein".
+// Shown only when the day's recipe carries enriched nutrition data.
+const macroLine = computed(() => {
+  const m = props.day.macros
+  if (!m) return null
+  return `ca ${Math.round(m.kcal)} kcal · ${Math.round(m.protein)} g protein`
+})
+
 const emit = defineEmits<{
   'toggle-lock': []
 }>()
@@ -106,6 +114,9 @@ const emit = defineEmits<{
 
         <!-- Servings -->
         <p class="recipe-servings">{{ day.servings }} portioner</p>
+
+        <!-- Per-serving macros (only when enriched) -->
+        <p v-if="macroLine" class="recipe-macros">{{ macroLine }}</p>
       </template>
 
       <!-- EMPTY STATE -->
@@ -412,6 +423,15 @@ const emit = defineEmits<{
   font-size: 0.875rem;
   color: var(--text-secondary);
   margin: 0;
+}
+
+.recipe-macros {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.3;
 }
 
 /* Empty recipe state */

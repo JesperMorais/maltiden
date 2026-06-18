@@ -89,7 +89,7 @@ func (m *mockRecipeStorage) Delete(id string) error {
 }
 
 func newTestRecipeHandler(store *mockRecipeStorage) *RecipeHandler {
-	svc := services.NewRecipeService(store)
+	svc := services.NewRecipeService(store, nil)
 	return NewRecipeHandler(svc)
 }
 

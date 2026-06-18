@@ -615,6 +615,61 @@ func TestNewMenuSelector_DislikedIngredientsFilter(t *testing.T) {
 	}
 }
 
+// recWithProtein builds a recipe carrying per-serving macros (protein only set),
+// for nutrition-target tests.
+func recWithProtein(id, protein string, gramsProtein float64, ingredients ...domain.Ingredient) domain.Recipe {
+	r := recWith(id, protein, "", nil, ingredients...)
+	r.Macros = &domain.Macros{Protein: gramsProtein}
+	return r
+}
+
+func TestSelectWeek_NutritionTargetPrefersHigherProtein(t *testing.T) {
+	// Two single-protein recipes with no overlap; only protein differs. With a
+	// positive per-day target the high-protein one wins a single open slot.
+	recipes := []domain.Recipe{
+		recWithProtein("low", "nöt", 5, ing("Sallad", "sallad", false)),
+		recWithProtein("high", "fisk", 60, ing("Lax", "lax", false)),
+	}
+	prefs := defaultPrefs()
+	prefs.ProteinTargetPerDay = 100
+	sel, ok := newMenuSelector(recipes, prefs, nil, testRNG())
+	if !ok {
+		t.Fatalf("expected selector to build")
+	}
+	week := sel.SelectWeek(1, []bool{false}, []string{""})
+	if week[0] != "high" {
+		t.Errorf("expected high-protein recipe with a protein target, got %v", week)
+	}
+}
+
+func TestSelectWeek_NutritionTargetZeroIsRegression(t *testing.T) {
+	// With target 0 the nutrition term is inert: the selected week must be
+	// byte-identical to one built from a selector whose recipes carry NO macros.
+	withMacros := []domain.Recipe{
+		recWithProtein("a", "nöt", 30, ing("Lök", "lök", false), ing("Köttfärs", "köttfärs", false)),
+		recWithProtein("b", "fågel", 40, ing("Lök", "lök", false), ing("Kyckling", "kyckling", false)),
+		recWithProtein("c", "fisk", 25, ing("Lax", "lax", false)),
+		recWithProtein("d", "fläsk", 35, ing("Fläsk", "fläsk", false)),
+	}
+	noMacros := []domain.Recipe{
+		recWith("a", "nöt", "", nil, ing("Lök", "lök", false), ing("Köttfärs", "köttfärs", false)),
+		recWith("b", "fågel", "", nil, ing("Lök", "lök", false), ing("Kyckling", "kyckling", false)),
+		recWith("c", "fisk", "", nil, ing("Lax", "lax", false)),
+		recWith("d", "fläsk", "", nil, ing("Fläsk", "fläsk", false)),
+	}
+	build := func(recipes []domain.Recipe) []string {
+		sel, _ := newMenuSelector(recipes, defaultPrefs(), nil, rand.New(rand.NewPCG(123, 456)))
+		return selectWeek(t, sel, 4)
+	}
+	a := build(withMacros) // target 0 (default prefs)
+	b := build(noMacros)
+	for i := range a {
+		if a[i] != b[i] {
+			t.Fatalf("target=0 changed selection: with-macros %v vs no-macros %v", a, b)
+		}
+	}
+}
+
 func sameSet(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

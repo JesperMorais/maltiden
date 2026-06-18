@@ -95,6 +95,8 @@ func (s *MenuService) UpdatePreferences(householdID string, req domain.UpdateMen
 		DietProfile:         req.DietProfile,
 		DislikedIngredients: disliked,
 		PrepModeDefault:     req.PrepModeDefault,
+		NutritionProfile:    req.NutritionProfile,
+		ProteinTargetPerDay: req.ProteinTargetPerDay,
 	}
 	if err := s.prefsStorage.Upsert(prefs); err != nil {
 		sentry.CaptureException(err)
@@ -137,6 +139,9 @@ func (s *MenuService) enrichMenuDays(days []domain.MenuDay) ([]domain.MenuRespon
 		if r, ok := recipeMap[d.RecipeID]; ok {
 			rd.RecipeName = r.Name
 			rd.Emoji = r.Emoji
+			// Macros are per-serving, so they apply unchanged regardless of the
+			// day's serving count (incl. batch cook days).
+			rd.Macros = r.Macros
 		}
 		result[i] = rd
 	}
@@ -148,6 +153,16 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 	// fallback day/serving counts and the excluded-tag / vegetarian-day rules
 	// the selector core enforces.
 	prefs := s.effectivePreferences(householdID)
+
+	// A request-supplied protein target overrides the saved preference for this
+	// week only (mirrors PrepMode). prefs is a local copy, so mutating it here is
+	// safe and feeds straight into the selector below.
+	if req.ProteinTargetPerDay != nil {
+		if !domain.IsValidProteinTarget(*req.ProteinTargetPerDay) {
+			return nil, domain.ErrInvalidNutritionTarget
+		}
+		prefs.ProteinTargetPerDay = *req.ProteinTargetPerDay
+	}
 
 	// Validate and default days (VALID-13). An omitted value falls back to the
 	// household preference rather than a hardcoded week.

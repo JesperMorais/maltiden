@@ -37,6 +37,7 @@ var (
 	ErrInvalidDietProfile         = errors.New("invalid_diet_profile")
 	ErrTooManyDislikedIngredients = errors.New("too_many_disliked_ingredients")
 	ErrInvalidDislikedIngredient  = errors.New("invalid_disliked_ingredient")
+	ErrInvalidNutritionTarget     = errors.New("invalid_nutrition_target")
 
 	// Recipe validation
 	ErrNameRequired         = errors.New("name_required")
@@ -60,6 +61,7 @@ var (
 	ErrInvalidDietClass     = errors.New("invalid_diet_class")
 	ErrInvalidCookMinutes   = errors.New("invalid_cook_minutes")
 	ErrInvalidGramsEquiv    = errors.New("invalid_grams_equiv")
+	ErrInvalidLivsmedelsnummer = errors.New("invalid_livsmedelsnummer")
 
 	// Auth validation
 	ErrInvalidEmail = errors.New("invalid_email")

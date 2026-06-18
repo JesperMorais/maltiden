@@ -11,7 +11,7 @@ func newTestRecipeService(t *testing.T) *RecipeService {
 	t.Helper()
 	db := setupTestDB(t)
 	recipeStorage := sqlite.NewRecipeStorage(db)
-	return NewRecipeService(recipeStorage)
+	return NewRecipeService(recipeStorage, nil)
 }
 
 func validCreateRecipeReq() domain.CreateRecipeRequest {

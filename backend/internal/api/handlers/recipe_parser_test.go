@@ -12,7 +12,7 @@ import (
 
 func newTestRecipeParserHandler() *RecipeParserHandler {
 	parserSvc := services.NewRecipeParserService(nil)
-	recipeSvc := services.NewRecipeService(newMockRecipeStorage())
+	recipeSvc := services.NewRecipeService(newMockRecipeStorage(), nil)
 	return NewRecipeParserHandler(parserSvc, recipeSvc)
 }
 

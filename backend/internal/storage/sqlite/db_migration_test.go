@@ -130,9 +130,9 @@ func TestRunMigrations_RecordsAllVersions(t *testing.T) {
 		t.Fatalf("rows.Err: %v", err)
 	}
 
-	// Migrations 1..19 are defined in runMigrations.
-	want := make([]int, 0, 19)
-	for v := 1; v <= 19; v++ {
+	// Migrations 1..22 are defined in runMigrations.
+	want := make([]int, 0, 22)
+	for v := 1; v <= 22; v++ {
 		want = append(want, v)
 	}
 	if !sort.IntsAreSorted(versions) {
@@ -215,8 +215,8 @@ func TestRunMigrations_Phase0Columns(t *testing.T) {
 			mainProtein, dietClass, batchable, cookMinutes)
 	}
 
-	if reached := schemaVersion(t, db); reached != 19 {
-		t.Errorf("expected schema to reach version 19, got %d", reached)
+	if reached := schemaVersion(t, db); reached != 22 {
+		t.Errorf("expected schema to reach version 22, got %d", reached)
 	}
 }
 

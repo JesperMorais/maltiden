@@ -76,6 +76,15 @@ type MenuPreferencesRepository interface {
 	Upsert(prefs *MenuPreferences) error
 }
 
+// LivsmedelRepository defines storage operations for Livsmedelsverket's
+// food-composition table, used by the offline matcher and read-time macro
+// computation.
+type LivsmedelRepository interface {
+	GetByNumbers(numbers []int) (map[int]Livsmedel, error)
+	GetAll() ([]Livsmedel, error)
+	Search(query string, limit int) ([]Livsmedel, error)
+}
+
 // ShoppingRepository defines the interface for shopping storage operations.
 type ShoppingRepository interface {
 	GetCheckedItems(menuID string) (map[string]bool, error)
