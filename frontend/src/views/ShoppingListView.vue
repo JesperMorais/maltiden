@@ -151,6 +151,7 @@ onMounted(async () => {
               v-model="searchQuery"
               type="text"
               placeholder="Sök vara..."
+              aria-label="Sök vara"
               class="search-input"
             />
             <button
@@ -175,6 +176,7 @@ onMounted(async () => {
             v-model="newItemName"
             type="text"
             placeholder="T.ex. Hushållspapper"
+            aria-label="Lägg till vara"
             class="add-item-input"
             @keydown.enter="submitNewItem"
           />
