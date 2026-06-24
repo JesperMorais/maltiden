@@ -4,5 +4,7 @@
     "@playwright/test": "^1.61.0",
     "@types/node": "^26.0.0"
   },
-  "scripts": {}
+  "scripts": {
+    "type-check": "npm run type-check --prefix frontend"
+  }
 }
