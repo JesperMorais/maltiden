@@ -26,6 +26,9 @@ type Menu struct {
 	HouseholdID string    `json:"householdId"`
 	Days        []MenuDay `json:"days"`
 	CreatedAt   time.Time `json:"createdAt"`
+	// Rationale is a short Swedish explanation of the week, written by the
+	// optional Phase-4 AI experience layer. Empty when the layer is disabled.
+	Rationale string `json:"rationale,omitempty"`
 }
 
 type GenerateMenuRequest struct {
@@ -37,6 +40,14 @@ type GenerateMenuRequest struct {
 	// a batchable recipe is placed on a cook-day at double servings and reused
 	// as leftovers on the next eligible day. Defaults to off.
 	PrepMode bool `json:"prepMode,omitempty"`
+	// Wishes is optional free-text Swedish input ("två vegetariska dagar, ingen
+	// fisk"). When the Phase-4 experience layer is enabled it is parsed into
+	// per-run constraints; otherwise it is ignored (WishesIgnored in response).
+	Wishes string `json:"wishes,omitempty"`
+	// Arrange, when true, asks the Phase-4 experience layer to place the chosen
+	// recipes across weekdays and write a Swedish rationale. No-op without the
+	// layer; the deterministic order is kept.
+	Arrange bool `json:"arrange,omitempty"`
 }
 
 type UpdateMenuRequest struct {
@@ -72,6 +83,12 @@ type MenuResponse struct {
 	// SharedIngredients lists ingredients reused across the week's recipes,
 	// most-shared first. Empty when nothing is shared (or no ingredient data).
 	SharedIngredients []SharedIngredient `json:"sharedIngredients,omitempty"`
+	// Rationale is the optional Phase-4 Swedish explanation of the week. Empty
+	// when the experience layer is disabled or arrangement was not requested.
+	Rationale string `json:"rationale,omitempty"`
+	// WishesIgnored is true when the request carried free-text wishes but the
+	// experience layer was unavailable (or failed), so they had no effect.
+	WishesIgnored bool `json:"wishesIgnored,omitempty"`
 }
 
 // MenuPreferences holds a household's persisted menu-generation preferences.
@@ -144,4 +161,71 @@ func (r UpdateMenuPreferencesRequest) Validate() error {
 		}
 	}
 	return nil
+}
+
+// MaxRationaleLen is the maximum number of runes kept from an AI arranger
+// rationale; longer text is truncated before persisting / returning.
+const MaxRationaleLen = 600
+
+// ParsedWishConstraints is the structured result of parsing a household's
+// free-text weekly wishes (Phase 4). Pointer fields distinguish "the model said
+// nothing about this" (nil) from an explicit zero value. Non-nil fields are
+// merged into the effective MenuPreferences (or the request) for one generation
+// only; explicit typed request fields still win over wishes.
+type ParsedWishConstraints struct {
+	VegetarianDays           *int     `json:"vegetarianDays"`
+	PrepMode                 *bool    `json:"prepMode"`
+	Days                     *int     `json:"days"`
+	Servings                 *int     `json:"servings"`
+	ExtraExcludedTags        []string `json:"extraExcludedTags"`
+	ExtraDislikedIngredients []string `json:"extraDislikedIngredients"`
+}
+
+// Clamp bounds every parsed wish field to the same ranges the generator and
+// preferences validation enforce, so an out-of-range model output can never
+// produce an invalid generation. A nil receiver is a no-op.
+func (c *ParsedWishConstraints) Clamp() {
+	if c == nil {
+		return
+	}
+	if c.Days != nil {
+		*c.Days = clampInt(*c.Days, 1, 31)
+	}
+	if c.Servings != nil {
+		*c.Servings = clampInt(*c.Servings, 1, 100)
+	}
+	if c.VegetarianDays != nil {
+		*c.VegetarianDays = clampInt(*c.VegetarianDays, 0, 31)
+	}
+	c.ExtraExcludedTags = clampStringList(c.ExtraExcludedTags)
+	c.ExtraDislikedIngredients = clampStringList(c.ExtraDislikedIngredients)
+}
+
+// clampStringList drops empty and oversized (>50-char) entries and caps the
+// list at 50 items, matching the preference-validation bounds.
+func clampStringList(items []string) []string {
+	if items == nil {
+		return nil
+	}
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		if len(item) == 0 || len(item) > 50 {
+			continue
+		}
+		out = append(out, item)
+		if len(out) >= 50 {
+			break
+		}
+	}
+	return out
+}
+
+func clampInt(v, lo, hi int) int {
+	if v < lo {
+		return lo
+	}
+	if v > hi {
+		return hi
+	}
+	return v
 }

@@ -29,8 +29,8 @@ func (s *MenuStorage) Create(menu *domain.Menu) error {
 
 	// Insert menu
 	_, err = tx.ExecContext(ctx,
-		`INSERT INTO menus (id, household_id, created_at) VALUES (?, ?, ?)`,
-		menu.ID, menu.HouseholdID, menu.CreatedAt,
+		`INSERT INTO menus (id, household_id, created_at, rationale) VALUES (?, ?, ?, ?)`,
+		menu.ID, menu.HouseholdID, menu.CreatedAt, menu.Rationale,
 	)
 	if err != nil {
 		return err
@@ -109,10 +109,10 @@ func (s *MenuStorage) GetCurrentByHousehold(householdID string) (*domain.Menu, e
 	// Get the most recent menu for the household
 	var menu domain.Menu
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, household_id, created_at FROM menus
+		`SELECT id, household_id, created_at, rationale FROM menus
 		 WHERE household_id = ? ORDER BY created_at DESC LIMIT 1`,
 		householdID,
-	).Scan(&menu.ID, &menu.HouseholdID, &menu.CreatedAt)
+	).Scan(&menu.ID, &menu.HouseholdID, &menu.CreatedAt, &menu.Rationale)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -163,9 +163,9 @@ func (s *MenuStorage) GetByID(id string) (*domain.Menu, error) {
 
 	var menu domain.Menu
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, household_id, created_at FROM menus WHERE id = ?`,
+		`SELECT id, household_id, created_at, rationale FROM menus WHERE id = ?`,
 		id,
-	).Scan(&menu.ID, &menu.HouseholdID, &menu.CreatedAt)
+	).Scan(&menu.ID, &menu.HouseholdID, &menu.CreatedAt, &menu.Rationale)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
