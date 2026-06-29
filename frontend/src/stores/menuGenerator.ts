@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { generateMenu, saveMenu } from '@/api/menu.api'
-import type { SaveMenuDay, SharedIngredient } from '@/api/menu.api'
+import type { SaveMenuDay, SharedIngredient, MenuNutrition, Nutrition } from '@/api/menu.api'
 import { useDashboardStore } from './dashboard'
 import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'
@@ -39,6 +39,12 @@ export interface DraftMenuDay {
   recipeName?: string
   emoji?: string
   servings: number
+  /** "batch" marks a cook-once-eat-twice cook-day (batch cooking, #248 Phase 2). */
+  prepMode?: string
+  /** The cook-day date this day reuses as leftovers, when set (#248 Phase 2). */
+  leftoverOf?: string
+  /** The recipe's per-serving nutrition for this day, when known (#248 Phase 3). */
+  nutrition?: Nutrition
 }
 
 export interface DraftMenu {
@@ -146,6 +152,11 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   const weekStart = ref<string>('') // Monday ISO date
   const servings = ref(4) // Default servings
 
+  // Batch-cooking ("prep-läge") toggle for the week (#248 Phase 2): when on, the
+  // generator pairs a batchable recipe's cook-day with a later leftovers day.
+  // Per-week and transient — not a saved household preference.
+  const prepMode = ref(false)
+
   // Ingredients reused across the week's recipes (from the overlap-aware
   // generator). Surfaced in the UI so the shopping-economy benefit is visible.
   const sharedIngredients = ref<SharedIngredient[]>([])
@@ -169,6 +180,10 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
 
   // True when wishes were sent but the server had no AI key and ignored them.
   const wishesIgnored = ref(false)
+
+  // Aggregated weekly macros for the generated week (#248 Phase 3). Null when no
+  // recipe in the week carries nutrition data.
+  const weeklyNutrition = ref<MenuNutrition | null>(null)
 
   // ============================================
   // GETTERS
@@ -242,6 +257,19 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   const sharedIngredientsCount = computed(() => sharedIngredients.value.length)
 
   /**
+   * Whether the week has an aggregated nutrition total to show.
+   */
+  const hasNutrition = computed(() => weeklyNutrition.value !== null)
+
+  /**
+   * Number of batch cook-days in the current draft (#248 Phase 2).
+   */
+  const batchDaysCount = computed(() => {
+    if (!draftMenu.value) return 0
+    return draftMenu.value.days.filter((d) => d.prepMode === 'batch').length
+  })
+
+  /**
    * Check if any loading state is active
    */
   const isLoading = computed(() => {
@@ -274,8 +302,9 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     // Clear locked days
     lockedDays.value.clear()
 
-    // Reset shared-ingredient info for the new week.
+    // Reset shared-ingredient + nutrition info for the new week.
     sharedIngredients.value = []
+    weeklyNutrition.value = null
   }
 
   /**
@@ -300,12 +329,14 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
         days: 7,
         servings: servings.value,
         skipDays: [],
+        prepMode: prepMode.value,
         wishes: wishes.value,
         arrange: arrange.value
       })
 
       // Surface which ingredients are reused across the week's recipes.
       sharedIngredients.value = menu.sharedIngredients ?? []
+      weeklyNutrition.value = menu.nutrition ?? null
 
       // Surface AI metadata: the week rationale and whether wishes were ignored
       // (server had no AI key).
@@ -321,7 +352,10 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
               recipeId: apiDay.recipeId,
               recipeName: apiDay.recipeName,
               emoji: apiDay.emoji,
-              servings: apiDay.servings
+              servings: apiDay.servings,
+              prepMode: apiDay.prepMode,
+              leftoverOf: apiDay.leftoverOf,
+              nutrition: apiDay.nutrition
             }
           }
         })
@@ -356,16 +390,18 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
         days: 7,
         servings: servings.value,
         skipDays: [],
+        prepMode: prepMode.value,
         wishes: wishes.value,
         arrange: arrange.value
       })
 
-      // Refresh shared-ingredient info from the freshly generated week. When
-      // days are locked the merged draft differs from this week, so only trust
-      // the count for a fully-unlocked regenerate; otherwise clear it to avoid
-      // showing a figure that doesn't match what's on screen.
-      sharedIngredients.value =
-        lockedDays.value.size === 0 ? (newMenu.sharedIngredients ?? []) : []
+      // Refresh shared-ingredient + nutrition info from the freshly generated
+      // week. When days are locked the merged draft differs from this week, so
+      // only trust the figures for a fully-unlocked regenerate; otherwise clear
+      // them to avoid showing numbers that don't match what's on screen.
+      const fullyUnlocked = lockedDays.value.size === 0
+      sharedIngredients.value = fullyUnlocked ? (newMenu.sharedIngredients ?? []) : []
+      weeklyNutrition.value = fullyUnlocked ? (newMenu.nutrition ?? null) : null
 
       // Refresh AI metadata from the regenerated week.
       rationale.value = newMenu.rationale ?? ''
@@ -385,7 +421,13 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
                 recipeId: newDay.recipeId,
                 recipeName: newDay.recipeName,
                 emoji: newDay.emoji,
-                servings: newDay.servings
+                servings: newDay.servings,
+                // Batch pairing only coheres across a full week. With locked
+                // days, a regenerated leftoverOf could reference a slot that
+                // kept a different recipe, so drop the markers in that case.
+                prepMode: fullyUnlocked ? newDay.prepMode : undefined,
+                leftoverOf: fullyUnlocked ? newDay.leftoverOf : undefined,
+                nutrition: newDay.nutrition
               }
             }
             newDayIndex++
@@ -430,6 +472,10 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
         recipeId: day.recipeId,
         servings: day.servings,
         skip: !day.recipeId,
+        // Persist batch-cooking markers so the saved menu keeps cook/leftover
+        // days (#248 Phase 2).
+        prepMode: day.prepMode,
+        leftoverOf: day.leftoverOf,
       }))
 
       await saveMenu(days)
@@ -470,6 +516,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     // clearDraft so it defaults the next generation. wishes is per-week intent
     // and is cleared so it doesn't carry over.
     wishes.value = ''
+    weeklyNutrition.value = null
   }
 
   /**
@@ -516,11 +563,13 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     error,
     weekStart,
     servings,
+    prepMode,
     sharedIngredients,
     wishes,
     arrange,
     rationale,
     wishesIgnored,
+    weeklyNutrition,
 
     // Getters
     orderedDays,
@@ -532,6 +581,8 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     unlockedDates,
     isReadyToSave,
     sharedIngredientsCount,
+    hasNutrition,
+    batchDaysCount,
 
     // Actions
     initializeWeek,

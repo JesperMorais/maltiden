@@ -217,10 +217,52 @@ func (s *MenuService) enrichMenuDays(days []domain.MenuDay) ([]domain.MenuRespon
 		if r, ok := recipeMap[d.RecipeID]; ok {
 			rd.RecipeName = r.Name
 			rd.Emoji = r.Emoji
+			// Carry the recipe's per-serving nutrition onto the day so the UX can
+			// show macros per meal (#248 Phase 3). Nil when the recipe has none.
+			rd.Nutrition = r.Nutrition
 		}
 		result[i] = rd
 	}
 	return result, nil
+}
+
+// weeklyNutrition sums each cooked day's per-serving macros times its servings
+// into a menu-level total (#248 Phase 3). Skipped days and leftover days are
+// excluded: a leftover day's food was already counted on its batch cook-day
+// (whose servings are doubled), so counting it again would double the week's
+// macros. Returns nil when no cooked day carries nutrition data, so the field
+// is omitted and the UI shows nothing rather than a misleading zero. Partial is
+// set when some cooked day's recipe lacked nutrition, flagging an incomplete total.
+func weeklyNutrition(days []domain.MenuResponseDay) *domain.MenuNutrition {
+	total := domain.MenuNutrition{}
+	counted := 0
+	for _, d := range days {
+		if d.Skip || d.RecipeID == "" || d.LeftoverOf != "" {
+			continue
+		}
+		if d.Nutrition == nil {
+			total.Partial = true
+			continue
+		}
+		servings := float64(d.Servings)
+		if d.Nutrition.Calories != nil {
+			total.Calories += *d.Nutrition.Calories * servings
+		}
+		if d.Nutrition.ProteinG != nil {
+			total.ProteinG += *d.Nutrition.ProteinG * servings
+		}
+		if d.Nutrition.CarbsG != nil {
+			total.CarbsG += *d.Nutrition.CarbsG * servings
+		}
+		if d.Nutrition.FatG != nil {
+			total.FatG += *d.Nutrition.FatG * servings
+		}
+		counted++
+	}
+	if counted == 0 {
+		return nil
+	}
+	return &total
 }
 
 func (s *MenuService) Generate(householdID string, req domain.GenerateMenuRequest) (*domain.MenuResponse, error) {
@@ -426,6 +468,7 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		SharedIngredients: computeSharedIngredients(chosenIDs, ingredientsByID),
 		Rationale:         menu.Rationale,
 		WishesIgnored:     wishesIgnored,
+		Nutrition:         weeklyNutrition(enrichedDays),
 	}, nil
 }
 
@@ -458,8 +501,9 @@ func (s *MenuService) UpdateCurrent(householdID string, req domain.UpdateMenuReq
 	}
 
 	return &domain.MenuResponse{
-		ID:   menu.ID,
-		Days: enrichedDays,
+		ID:        menu.ID,
+		Days:      enrichedDays,
+		Nutrition: weeklyNutrition(enrichedDays),
 	}, nil
 }
 
@@ -482,5 +526,6 @@ func (s *MenuService) GetCurrent(householdID string) (*domain.MenuResponse, erro
 		ID:        menu.ID,
 		Days:      enrichedDays,
 		Rationale: menu.Rationale,
+		Nutrition: weeklyNutrition(enrichedDays),
 	}, nil
 }

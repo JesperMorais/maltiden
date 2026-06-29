@@ -663,6 +663,68 @@ func abs(n int) int {
 	return n
 }
 
+func TestWeeklyNutrition(t *testing.T) {
+	f := func(v float64) *float64 { return &v }
+	macros := func(cal, prot, carb, fat float64) *domain.Nutrition {
+		return &domain.Nutrition{Calories: f(cal), ProteinG: f(prot), CarbsG: f(carb), FatG: f(fat)}
+	}
+
+	t.Run("sums per-serving macros times servings", func(t *testing.T) {
+		days := []domain.MenuResponseDay{
+			{Date: "d1", RecipeID: "r1", Servings: 4, Nutrition: macros(500, 30, 50, 20)},
+			{Date: "d2", RecipeID: "r2", Servings: 2, Nutrition: macros(600, 40, 60, 25)},
+		}
+		got := weeklyNutrition(days)
+		if got == nil {
+			t.Fatal("expected non-nil total")
+		}
+		// 500*4 + 600*2 = 3200 kcal; 30*4 + 40*2 = 200 g protein.
+		if got.Calories != 3200 || got.ProteinG != 200 {
+			t.Errorf("unexpected totals: %+v", got)
+		}
+		if got.Partial {
+			t.Error("Partial should be false when every cooked day has data")
+		}
+	})
+
+	t.Run("excludes skipped and leftover days", func(t *testing.T) {
+		days := []domain.MenuResponseDay{
+			{Date: "d1", RecipeID: "r1", Servings: 8, Nutrition: macros(500, 0, 0, 0), PrepMode: domain.PrepModeBatch},
+			{Date: "d2", RecipeID: "r1", Servings: 4, Nutrition: macros(500, 0, 0, 0), LeftoverOf: "d1"},
+			{Date: "d3", Skip: true, Servings: 0, Nutrition: macros(999, 0, 0, 0)},
+		}
+		got := weeklyNutrition(days)
+		if got == nil {
+			t.Fatal("expected non-nil total")
+		}
+		// Only the doubled cook-day counts (500*8); leftover and skipped excluded.
+		if got.Calories != 4000 {
+			t.Errorf("expected 4000 kcal (cook-day only), got %v", got.Calories)
+		}
+	})
+
+	t.Run("flags partial when a cooked day lacks data", func(t *testing.T) {
+		days := []domain.MenuResponseDay{
+			{Date: "d1", RecipeID: "r1", Servings: 4, Nutrition: macros(500, 30, 50, 20)},
+			{Date: "d2", RecipeID: "r2", Servings: 4}, // no nutrition
+		}
+		got := weeklyNutrition(days)
+		if got == nil || !got.Partial {
+			t.Fatalf("expected non-nil partial total, got %+v", got)
+		}
+	})
+
+	t.Run("nil when no day carries data", func(t *testing.T) {
+		days := []domain.MenuResponseDay{
+			{Date: "d1", RecipeID: "r1", Servings: 4},
+			{Date: "d2", Skip: true},
+		}
+		if got := weeklyNutrition(days); got != nil {
+			t.Errorf("expected nil total when no nutrition data, got %+v", got)
+		}
+	})
+}
+
 func TestMenuGetCurrent_NoMenu(t *testing.T) {
 	env := newMenuTestEnv(t)
 

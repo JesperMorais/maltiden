@@ -4,8 +4,9 @@ Status tracker for [issue #248](https://github.com/davdd1/maltiden/issues/248)
 ("Smart menu generation: ingredient economy, meal prep & dietary goals").
 
 The issue's full phased plan is the source of truth for *scope*; this doc
-records what has actually **landed on `dev`** versus what **remains**. Every
-"done" line below is grounded in a real commit and the file(s) it touched.
+records what has actually **landed on `dev`** (or is in an open PR against it)
+versus what **remains**. Every "done" line below is grounded in a real commit
+or PR and the file(s) it touched.
 
 ## Snapshot
 
@@ -13,9 +14,9 @@ records what has actually **landed on `dev`** versus what **remains**. Every
 |-------|-------|--------|
 | 0 | Data foundation (canonical names, recipe metadata, prefs table) | **Partial** — household preferences + disliked ingredients landed; canonical-ingredient normalization and recipe metadata (mainProtein/dietClass/batchable/cookMinutes columns, backfill) **not started** |
 | 1 | Smart generator MVP (pure Go) | **Done** (selector core, overlap, variety + recency, shared-ingredients UX) |
-| 2 | Meal prep / batch cooking | **Mostly done** — 2-slot batch occupancy + API/UX types landed; per-week prep-läge toggle in the generator UI still pending |
-| 3 | Nutrition & diet goals | **Foundation only** — recipe nutrition columns landed; aggregation/balancing/targets (the actual feature) **not started** |
-| 4 | Claude experience layer | **Not started** |
+| 2 | Meal prep / batch cooking | **Done** — 2-slot batch occupancy + API/UX types landed; per-week prep-läge toggle now wired in the generator UI |
+| 3 | Nutrition & diet goals | **Partial** — recipe nutrition columns + weekly macro aggregation/display landed; soft weekly targets and the Livsmedelsverket import remain |
+| 4 | Claude experience layer | **Implemented (PR #267, pending merge)** — wishes → constraints, AI weekday arrange + Swedish rationale, key-optional guardrail |
 
 ## Done
 
@@ -78,7 +79,7 @@ records what has actually **landed on `dev`** versus what **remains**. Every
     `frontend/src/stores/menuGenerator.ts`,
     `frontend/src/api/menu.api.ts`.
 
-### Phase 2 (mostly done) — batch cooking
+### Phase 2 (done) — batch cooking
 
 - **2-slot batch occupancy ("laga en gång, ät två gånger").** A batchable
   cook-day is doubled in servings (`PrepModeBatch`) and the next eligible
@@ -93,17 +94,59 @@ records what has actually **landed on `dev`** versus what **remains**. Every
     `backend/migrations/019_add_menu_day_batch_cooking.sql`
     (`prep_mode`, `leftover_of` on `menu_days`); `prepMode` request flag +
     `prepMode`/`leftoverOf` day fields in `frontend/src/api/menu.api.ts`.
+- **Per-week prep-läge toggle (generator UI).** A switch on the generate view
+  drives the `prepMode` request flag; batch/leftover markers map into the draft
+  days, render as "Dubbel sats" / "Rester" badges on the day cards, and persist
+  through save (`SaveMenuDay` now carries `prepMode`/`leftoverOf`). Markers are
+  cleared on a partial (locked-day) regenerate, where week-level batch pairing
+  would not cohere.
+  - `prepMode` state + mapping in `frontend/src/stores/menuGenerator.ts`,
+    toggle + styling in `frontend/src/views/GenerateMenuView.vue`,
+    badges in `frontend/src/components/menu/MenuDayCard.vue`,
+    `SaveMenuDay` fields in `frontend/src/api/menu.api.ts`,
+    mock simulation in `frontend/src/mocks/menu.mock.ts`.
 
-### Phase 3 (foundation only) — nutrition data layer
+### Phase 3 (partial) — nutrition data layer + weekly aggregation
 
 - **Per-serving recipe nutrition columns.** Four nullable REAL columns
   (`calories`, `protein_g`, `carbs_g`, `fat_g`) and a `Nutrition` domain
-  struct with optional-pointer fields. **Data layer only** — no aggregation
-  or balancing logic.
+  struct with optional-pointer fields.
   - Commit `a87ef4f` feat(recipe): nutrition fields foundation (#263)
   - `backend/migrations/018_add_recipe_nutrition.sql`,
     `domain.Nutrition` in `backend/internal/domain/recipe.go`,
     read/write in `backend/internal/storage/sqlite/recipe_storage.go`.
+- **Weekly macro aggregation + display.** Each menu day now carries the
+  recipe's per-serving `Nutrition`; the menu response carries a weekly
+  `MenuNutrition` total (`weeklyNutrition`) summing per-serving macros × that
+  day's servings over cooked days. Leftover days are excluded so a batch dish
+  is counted once (its full amount lives on the doubled cook-day); a `Partial`
+  flag marks weeks where some recipe lacked data. Degrades gracefully — the
+  total is omitted entirely when no recipe carries nutrition. Surfaced as a
+  per-portion macro line on each day card and a "Näring för veckan" panel.
+  - `weeklyNutrition` + per-day `Nutrition` in
+    `backend/internal/services/menu_service.go`, `domain.MenuNutrition` /
+    `MenuResponseDay.Nutrition` in `backend/internal/domain/menu.go`
+    (covered by `TestWeeklyNutrition`); frontend types in
+    `frontend/src/api/menu.api.ts`, panel in `GenerateMenuView.vue`,
+    macro line in `MenuDayCard.vue`, store state in `menuGenerator.ts`.
+
+> Note: the seed/existing recipes carry no nutrition data yet (no backfill),
+> so the weekly total and per-day macros only appear once recipes are
+> populated — the plumbing and UI are complete and exercisable in mock mode.
+
+### Phase 4 (implemented, PR #267 pending merge) — Claude/Gemini experience layer
+
+- **Free-text wishes → constraints** and **AI weekday arrangement + Swedish
+  rationale**, on top of the deterministic Phase 0–3 generator. The algorithm
+  still picks the week in pure Go; the AI layer only parses wishes into
+  per-run constraints and permutes the chosen recipes across weekdays with a
+  short rationale. Strict guardrail: the arranger output must be a permutation
+  of exactly the offered slots; it never does quantity math. **Degrades
+  gracefully without `GEMINI_API_KEY`** — the menu still generates, wishes are
+  reported as ignored, no prose. Adapted to dev's preference model: a
+  prep-mode wish routes to the request `PrepMode` flag; the protein-target
+  wish is dropped (dev stores nutrition per-recipe, not as a preference target).
+  - PR #267 (`feat/issue-248-smart-menu-experience`), commit `7399b4e`.
 
 ## Remaining
 
@@ -123,29 +166,24 @@ records what has actually **landed on `dev`** versus what **remains**. Every
 - **Claude parse-pipeline enrichment + one-off backfill** of existing
   recipes — not started.
 
-### Phase 3 — nutrition feature (the data foundation landed; the feature did not)
+### Phase 3 — nutrition feature (aggregation/display landed; goals + data did not)
 
-- **Macro aggregation/balancing** — sum per-serving macros across the week,
-  expose menu-level kcal/protein/carbs/fat. Nothing in
-  `menu_selector.go` / `menu_service.go` reads the nutrition fields yet.
 - **Soft weekly targets as penalty terms** in the greedy score (e.g.
-  high-protein profile) — not implemented.
+  high-protein profile) — not implemented. Needs a household nutrition-target
+  preference, which dev does not yet store.
 - **Livsmedelsverket import + ingredient → `livsmedelsnummer` matching** —
-  not started (no local food-composition table, no matcher).
-- **Per-serving macros on recipe + menu views (frontend)** — the frontend
-  reads no nutrition fields today.
+  not started (no local food-composition table, no matcher). This is the
+  source that would actually populate recipe nutrition at scale; until then
+  the macro display only shows for hand-entered values.
+- **Per-serving macros on recipe-detail / dashboard menu views** — the
+  generate view now shows them, but the recipe-detail and dashboard menu
+  surfaces still do not read the nutrition fields.
 
-### Phase 2 — remaining slice
+### Phase 4 — merge
 
-- **Per-week "prep-läge" toggle in the generator UI.** The backend accepts a
-  `prepMode` request flag and the API types carry it, but the user-facing
-  toggle control in `GenerateMenuView.vue` is not yet wired.
-
-### Phase 4 — Claude experience layer
-
-- Not started: algorithmic week → Claude weekday placement + Swedish
-  rationale, free-text wishes → constraints, with the API-key-optional
-  guardrail.
+- Land **PR #267** onto `dev` (CI green, mergeable). Update this doc's snapshot
+  from "pending merge" to "Done" once merged, and delete the redundant local
+  `phase4-onto-dev` branch (same single commit as the PR head).
 
 ## Migrations landed for #248
 
