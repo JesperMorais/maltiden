@@ -7,6 +7,24 @@ import apiClient from './client'
 import { USE_MOCKS } from '@/mocks'
 import { mockGenerateMenu, mockGetCurrentMenu, mockSaveMenu } from '@/mocks/menu.mock'
 
+/** Per-serving nutrition for a recipe (#248 Phase 3); fields absent when unknown. */
+export interface Nutrition {
+  calories?: number
+  proteinG?: number
+  carbsG?: number
+  fatG?: number
+}
+
+/** Weekly aggregated macro total for a menu (#248 Phase 3). */
+export interface MenuNutrition {
+  calories: number
+  proteinG: number
+  carbsG: number
+  fatG: number
+  /** True when some cooked day lacked nutrition data, so the total is incomplete. */
+  partial: boolean
+}
+
 export interface MenuDay {
   date: string
   recipeId?: string
@@ -18,6 +36,8 @@ export interface MenuDay {
   prepMode?: string
   /** The cook-day date this day reuses as leftovers, when set. */
   leftoverOf?: string
+  /** The recipe's per-serving nutrition for this day, when known (#248 Phase 3). */
+  nutrition?: Nutrition
 }
 
 /** An ingredient reused across two or more of the week's recipes. */
@@ -33,6 +53,8 @@ export interface Menu {
   sharedIngredients?: SharedIngredient[]
   /** Short Swedish explanation of the week from the AI experience layer (#248 Phase 4). */
   rationale?: string
+  /** Aggregated weekly nutrition total, when any day carries macro data (#248). */
+  nutrition?: MenuNutrition
 }
 
 export interface GenerateMenuRequest {
@@ -70,6 +92,9 @@ export interface SaveMenuDay {
   recipeId?: string
   servings: number
   skip?: boolean
+  /** Preserve batch-cooking markers on save so they persist to the menu (#248). */
+  prepMode?: string
+  leftoverOf?: string
 }
 
 /**

@@ -66,6 +66,24 @@ type MenuResponseDay struct {
 	// cook-day date a leftovers day reuses. Both omitempty for ordinary days.
 	PrepMode   string `json:"prepMode,omitempty"`
 	LeftoverOf string `json:"leftoverOf,omitempty"`
+	// Nutrition is the recipe's per-serving nutrition for this day (#248 Phase
+	// 3), when known. Nil when the recipe carries no nutrition data, so the UI
+	// shows macros only where they exist rather than misleading zeros.
+	Nutrition *Nutrition `json:"nutrition,omitempty"`
+}
+
+// MenuNutrition is the weekly nutrition total for a generated or current menu
+// (#248 Phase 3): the sum of each cooked day's per-serving macros times that
+// day's servings. Leftover days are excluded so a batch-cooked dish is counted
+// once — its full amount already lives on the doubled cook-day. Partial is true
+// when at least one cooked day's recipe had no nutrition data, letting the UI
+// flag the total as incomplete rather than presenting it as exhaustive.
+type MenuNutrition struct {
+	Calories float64 `json:"calories"`
+	ProteinG float64 `json:"proteinG"`
+	CarbsG   float64 `json:"carbsG"`
+	FatG     float64 `json:"fatG"`
+	Partial  bool    `json:"partial"`
 }
 
 // SharedIngredient is one ingredient reused across two or more recipes in a
@@ -89,6 +107,9 @@ type MenuResponse struct {
 	// WishesIgnored is true when the request carried free-text wishes but the
 	// experience layer was unavailable (or failed), so they had no effect.
 	WishesIgnored bool `json:"wishesIgnored,omitempty"`
+	// Nutrition is the week's aggregated macro total (#248 Phase 3). Nil — and
+	// omitted — when no day in the menu carries nutrition data.
+	Nutrition *MenuNutrition `json:"nutrition,omitempty"`
 }
 
 // MenuPreferences holds a household's persisted menu-generation preferences.
