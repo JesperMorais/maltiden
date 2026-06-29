@@ -385,6 +385,12 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     wishesIgnored.value = false
 
     try {
+      // Recipes already kept on locked days — exclude them so a regenerate
+      // doesn't reuse the same dish on the freshly-generated days (#248).
+      const lockedRecipeIds = draftMenu.value.days
+        .filter((day) => lockedDays.value.has(day.date) && day.recipeId)
+        .map((day) => day.recipeId as string)
+
       // Generate new menu across the full week
       const newMenu = await generateMenu({
         days: 7,
@@ -392,7 +398,8 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
         skipDays: [],
         prepMode: prepMode.value,
         wishes: wishes.value,
-        arrange: arrange.value
+        arrange: arrange.value,
+        excludeRecipeIds: lockedRecipeIds
       })
 
       // Refresh shared-ingredient + nutrition info from the freshly generated

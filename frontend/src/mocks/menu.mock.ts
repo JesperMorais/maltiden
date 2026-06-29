@@ -13,14 +13,22 @@ import type {
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-const mockRecipes: { id: string; name: string; emoji: string; nutrition: Nutrition }[] = [
-  { id: 'rec_1', name: 'Pasta Carbonara', emoji: '🍝', nutrition: { calories: 650, proteinG: 28, carbsG: 70, fatG: 28 } },
-  { id: 'rec_2', name: 'Kycklingwok', emoji: '🥘', nutrition: { calories: 520, proteinG: 38, carbsG: 45, fatG: 18 } },
-  { id: 'rec_3', name: 'Tacos', emoji: '🌮', nutrition: { calories: 580, proteinG: 30, carbsG: 50, fatG: 26 } },
-  { id: 'rec_4', name: 'Laxfilé med potatis', emoji: '🐟', nutrition: { calories: 610, proteinG: 42, carbsG: 40, fatG: 30 } },
-  { id: 'rec_5', name: 'Köttfärssås', emoji: '🍖', nutrition: { calories: 700, proteinG: 35, carbsG: 55, fatG: 35 } },
-  { id: 'rec_6', name: 'Vegetarisk curry', emoji: '🥗', nutrition: { calories: 480, proteinG: 18, carbsG: 60, fatG: 16 } },
-  { id: 'rec_7', name: 'Pizza', emoji: '🍕', nutrition: { calories: 760, proteinG: 30, carbsG: 80, fatG: 32 } }
+interface MockRecipe {
+  id: string
+  name: string
+  emoji: string
+  nutrition: Nutrition
+  ingredients: string[]
+}
+
+const mockRecipes: MockRecipe[] = [
+  { id: 'rec_1', name: 'Pasta Carbonara', emoji: '🍝', nutrition: { calories: 650, proteinG: 28, carbsG: 70, fatG: 28 }, ingredients: ['pasta', 'ägg', 'bacon', 'parmesan', 'grädde', 'vitlök'] },
+  { id: 'rec_2', name: 'Kycklingwok', emoji: '🥘', nutrition: { calories: 520, proteinG: 38, carbsG: 45, fatG: 18 }, ingredients: ['kyckling', 'paprika', 'lök', 'vitlök', 'sojasås', 'ris', 'ingefära'] },
+  { id: 'rec_3', name: 'Tacos', emoji: '🌮', nutrition: { calories: 580, proteinG: 30, carbsG: 50, fatG: 26 }, ingredients: ['nötfärs', 'tortilla', 'paprika', 'lök', 'vitlök', 'majs', 'ost'] },
+  { id: 'rec_4', name: 'Laxfilé med potatis', emoji: '🐟', nutrition: { calories: 610, proteinG: 42, carbsG: 40, fatG: 30 }, ingredients: ['lax', 'potatis', 'citron', 'dill', 'grädde'] },
+  { id: 'rec_5', name: 'Köttfärssås', emoji: '🍖', nutrition: { calories: 700, proteinG: 35, carbsG: 55, fatG: 35 }, ingredients: ['nötfärs', 'pasta', 'lök', 'vitlök', 'krossade tomater', 'morot'] },
+  { id: 'rec_6', name: 'Vegetarisk curry', emoji: '🥗', nutrition: { calories: 480, proteinG: 18, carbsG: 60, fatG: 16 }, ingredients: ['kikärtor', 'kokosmjölk', 'lök', 'vitlök', 'curry', 'ris', 'paprika'] },
+  { id: 'rec_7', name: 'Pizza', emoji: '🍕', nutrition: { calories: 760, proteinG: 30, carbsG: 80, fatG: 32 }, ingredients: ['pizzadeg', 'krossade tomater', 'ost', 'lök', 'basilika', 'paprika'] }
 ]
 
 /** Module-level state so shopping mock can read current servings */
@@ -44,13 +52,23 @@ export async function mockGenerateMenu(
   const days: MenuDay[] = []
   const skipDays = new Set(request.skipDays || [])
 
+  // Don't reuse recipes the caller asked to exclude (e.g. locked days on a
+  // regenerate), so the same dish doesn't pile up across the week (#248).
+  const excluded = new Set(request.excludeRecipeIds ?? [])
+  const candidates = mockRecipes.filter((r) => !excluded.has(r.id))
+  const pool = candidates.length > 0 ? candidates : mockRecipes
+
+  let pick = 0
   for (let i = 0; i < request.days; i++) {
     const date = getDateString(i)
-    const recipe = mockRecipes[i % mockRecipes.length]!
 
     if (skipDays.has(date)) {
       days.push({ date, skip: true, servings: 0 })
     } else {
+      // Cycle through the candidate pool so each distinct recipe is used once
+      // before any repeats — never the same dish twice while others are unused.
+      const recipe = pool[pick % pool.length]!
+      pick++
       const extraPortions = request.extraPortions?.[date] || 0
       days.push({
         date,
@@ -90,42 +108,73 @@ export async function mockGenerateMenu(
   const menu: GenerateMenuResponse = {
     id: 'menu_mock_' + Date.now(),
     days,
-    // Illustrative shared-ingredient economy so the UX is exercisable in mock mode.
-    sharedIngredients: [
-      { name: 'Lök', recipeCount: 3 },
-      { name: 'Vitlök', recipeCount: 3 },
-      { name: 'Grädde', recipeCount: 2 },
-    ],
+    sharedIngredients: computeMockShared(days),
     rationale,
     wishesIgnored: false,
-    nutrition: weeklyMockNutrition(days),
+    nutrition: averageMealMockNutrition(days),
   }
   currentMockMenu = menu
   return menu
 }
 
-/** Sum cooked days' per-serving macros × servings, excluding leftover days. */
-function weeklyMockNutrition(days: MenuDay[]): Menu['nutrition'] {
+/** Pantry staples excluded from shared-ingredient economy (mirrors backend). */
+const MOCK_STAPLES = new Set(['salt', 'peppar', 'svartpeppar', 'olja', 'olivolja', 'smör'])
+
+/**
+ * Ingredients used by two or more distinct recipes in the week, most-shared
+ * first — computed from the recipes' real ingredient lists (mirrors the
+ * backend's computeSharedIngredients), so the count reflects actual overlap.
+ */
+function computeMockShared(days: MenuDay[]): Menu['sharedIngredients'] {
+  const byId = new Map(mockRecipes.map((r) => [r.id, r]))
+  const counts = new Map<string, number>()
+  const seenRecipe = new Set<string>()
+  for (const d of days) {
+    if (d.skip || !d.recipeId || seenRecipe.has(d.recipeId)) continue
+    seenRecipe.add(d.recipeId)
+    const recipe = byId.get(d.recipeId)
+    if (!recipe) continue
+    for (const name of new Set(recipe.ingredients)) {
+      if (MOCK_STAPLES.has(name.toLowerCase())) continue
+      counts.set(name, (counts.get(name) ?? 0) + 1)
+    }
+  }
+  return [...counts.entries()]
+    .filter(([, n]) => n >= 2)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'sv'))
+    .map(([name, recipeCount]) => ({ name, recipeCount }))
+}
+
+/**
+ * Average per-meal (per-serving) macros across the week's meals — what a
+ * typical plate looks like, not a whole-week total. Each non-skipped day with a
+ * recipe counts as one meal (leftover days included); macros are per serving.
+ */
+function averageMealMockNutrition(days: MenuDay[]): Menu['nutrition'] {
   let calories = 0
   let proteinG = 0
   let carbsG = 0
   let fatG = 0
-  let partial = false
-  let counted = 0
+  let meals = 0
+  let withData = 0
   for (const d of days) {
-    if (d.skip || !d.recipeId || d.leftoverOf) continue
-    if (!d.nutrition) {
-      partial = true
-      continue
-    }
-    calories += (d.nutrition.calories ?? 0) * d.servings
-    proteinG += (d.nutrition.proteinG ?? 0) * d.servings
-    carbsG += (d.nutrition.carbsG ?? 0) * d.servings
-    fatG += (d.nutrition.fatG ?? 0) * d.servings
-    counted++
+    if (d.skip || !d.recipeId) continue
+    meals++
+    if (!d.nutrition) continue
+    calories += d.nutrition.calories ?? 0
+    proteinG += d.nutrition.proteinG ?? 0
+    carbsG += d.nutrition.carbsG ?? 0
+    fatG += d.nutrition.fatG ?? 0
+    withData++
   }
-  if (counted === 0) return undefined
-  return { calories, proteinG, carbsG, fatG, partial }
+  if (withData === 0) return undefined
+  return {
+    calories: calories / withData,
+    proteinG: proteinG / withData,
+    carbsG: carbsG / withData,
+    fatG: fatG / withData,
+    partial: withData < meals,
+  }
 }
 
 export async function mockSaveMenu(days: SaveMenuDay[]): Promise<Menu> {

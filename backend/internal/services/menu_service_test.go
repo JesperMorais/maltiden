@@ -663,66 +663,107 @@ func abs(n int) int {
 	return n
 }
 
-func TestWeeklyNutrition(t *testing.T) {
+func TestAverageMealNutrition(t *testing.T) {
 	f := func(v float64) *float64 { return &v }
 	macros := func(cal, prot, carb, fat float64) *domain.Nutrition {
 		return &domain.Nutrition{Calories: f(cal), ProteinG: f(prot), CarbsG: f(carb), FatG: f(fat)}
 	}
 
-	t.Run("sums per-serving macros times servings", func(t *testing.T) {
+	t.Run("averages per-serving macros across meals", func(t *testing.T) {
 		days := []domain.MenuResponseDay{
 			{Date: "d1", RecipeID: "r1", Servings: 4, Nutrition: macros(500, 30, 50, 20)},
 			{Date: "d2", RecipeID: "r2", Servings: 2, Nutrition: macros(600, 40, 60, 25)},
 		}
-		got := weeklyNutrition(days)
+		got := averageMealNutrition(days)
 		if got == nil {
-			t.Fatal("expected non-nil total")
+			t.Fatal("expected non-nil average")
 		}
-		// 500*4 + 600*2 = 3200 kcal; 30*4 + 40*2 = 200 g protein.
-		if got.Calories != 3200 || got.ProteinG != 200 {
-			t.Errorf("unexpected totals: %+v", got)
+		// Per serving, not scaled by servings: (500+600)/2 = 550 kcal; (30+40)/2 = 35 g protein.
+		if got.Calories != 550 || got.ProteinG != 35 {
+			t.Errorf("unexpected averages: %+v", got)
 		}
 		if got.Partial {
-			t.Error("Partial should be false when every cooked day has data")
+			t.Error("Partial should be false when every meal has data")
 		}
 	})
 
-	t.Run("excludes skipped and leftover days", func(t *testing.T) {
+	t.Run("counts leftover days as meals, ignores skipped", func(t *testing.T) {
 		days := []domain.MenuResponseDay{
-			{Date: "d1", RecipeID: "r1", Servings: 8, Nutrition: macros(500, 0, 0, 0), PrepMode: domain.PrepModeBatch},
-			{Date: "d2", RecipeID: "r1", Servings: 4, Nutrition: macros(500, 0, 0, 0), LeftoverOf: "d1"},
+			{Date: "d1", RecipeID: "r1", Servings: 8, Nutrition: macros(400, 0, 0, 0), PrepMode: domain.PrepModeBatch},
+			{Date: "d2", RecipeID: "r1", Servings: 4, Nutrition: macros(400, 0, 0, 0), LeftoverOf: "d1"},
 			{Date: "d3", Skip: true, Servings: 0, Nutrition: macros(999, 0, 0, 0)},
 		}
-		got := weeklyNutrition(days)
+		got := averageMealNutrition(days)
 		if got == nil {
-			t.Fatal("expected non-nil total")
+			t.Fatal("expected non-nil average")
 		}
-		// Only the doubled cook-day counts (500*8); leftover and skipped excluded.
-		if got.Calories != 4000 {
-			t.Errorf("expected 4000 kcal (cook-day only), got %v", got.Calories)
+		// Two meals (cook + leftover) at 400 per serving each; skipped day excluded.
+		if got.Calories != 400 {
+			t.Errorf("expected 400 kcal average per meal, got %v", got.Calories)
+		}
+		if got.Partial {
+			t.Error("Partial should be false when both meals have data")
 		}
 	})
 
-	t.Run("flags partial when a cooked day lacks data", func(t *testing.T) {
+	t.Run("flags partial when a meal lacks data and averages the rest", func(t *testing.T) {
 		days := []domain.MenuResponseDay{
 			{Date: "d1", RecipeID: "r1", Servings: 4, Nutrition: macros(500, 30, 50, 20)},
 			{Date: "d2", RecipeID: "r2", Servings: 4}, // no nutrition
 		}
-		got := weeklyNutrition(days)
+		got := averageMealNutrition(days)
 		if got == nil || !got.Partial {
-			t.Fatalf("expected non-nil partial total, got %+v", got)
+			t.Fatalf("expected non-nil partial average, got %+v", got)
+		}
+		// Averaged over the one meal with data only.
+		if got.Calories != 500 {
+			t.Errorf("expected 500 kcal (over the meal with data), got %v", got.Calories)
 		}
 	})
 
-	t.Run("nil when no day carries data", func(t *testing.T) {
+	t.Run("nil when no meal carries data", func(t *testing.T) {
 		days := []domain.MenuResponseDay{
 			{Date: "d1", RecipeID: "r1", Servings: 4},
 			{Date: "d2", Skip: true},
 		}
-		if got := weeklyNutrition(days); got != nil {
-			t.Errorf("expected nil total when no nutrition data, got %+v", got)
+		if got := averageMealNutrition(days); got != nil {
+			t.Errorf("expected nil when no nutrition data, got %+v", got)
 		}
 	})
+}
+
+func TestMenuGenerate_ExcludeRecipeIDs(t *testing.T) {
+	// Two recipes; excluding one must keep it out of the whole generated week.
+	recipes := []domain.RecipeSummary{
+		{ID: "rec_keep", Name: "Behåll", Servings: 4},
+		{ID: "rec_drop", Name: "Uteslut", Servings: 4},
+	}
+	svc := NewMenuService(&captureMenuRepo{}, &batchStubRecipeRepo{summaries: recipes}, nil)
+
+	resp, err := svc.Generate("hh_1", domain.GenerateMenuRequest{
+		Days: 6, Servings: 4, ExcludeRecipeIDs: []string{"rec_drop"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for i, d := range resp.Days {
+		if d.RecipeID == "rec_drop" {
+			t.Errorf("day %d used excluded recipe rec_drop", i)
+		}
+	}
+
+	// Excluding every recipe is ignored (better a repeat than an empty week).
+	resp, err = svc.Generate("hh_1", domain.GenerateMenuRequest{
+		Days: 3, Servings: 4, ExcludeRecipeIDs: []string{"rec_keep", "rec_drop"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error (exclude-all): %v", err)
+	}
+	for i, d := range resp.Days {
+		if d.RecipeID == "" {
+			t.Errorf("day %d empty when all recipes excluded; exclusion should be ignored", i)
+		}
+	}
 }
 
 func TestMenuGetCurrent_NoMenu(t *testing.T) {

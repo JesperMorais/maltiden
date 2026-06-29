@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useLandingStore } from '@/stores/landing'
 import { useThemeStore } from '@/stores/theme'
 import HeroSection from '@/components/landing/HeroSection.vue'
@@ -7,10 +7,10 @@ import FeaturesSection from '@/components/landing/FeaturesSection.vue'
 import CtaSection from '@/components/landing/CtaSection.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { Loader2, AlertTriangle } from 'lucide-vue-next'
-
-const WavesBackground = defineAsyncComponent(
-  () => import('@/components/vue-bits/WavesBackground.vue'),
-)
+// Static import (not defineAsyncComponent): an async component inside the app's
+// <Transition mode="out-in"> can skip onUnmounted, leaving the canvas RAF loop
+// running after navigating away and back — the source of the homepage lag (#248).
+import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
 const landingStore = useLandingStore()
 const themeStore = useThemeStore()
 
