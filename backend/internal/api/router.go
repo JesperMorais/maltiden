@@ -8,6 +8,7 @@ import (
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/claude"
 	"maltiden/pkg/email"
+	"maltiden/pkg/gemini"
 	"maltiden/pkg/middleware"
 	"maltiden/pkg/utils"
 	"net/http"
@@ -43,6 +44,14 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	householdService := services.NewHouseholdService(householdStorage, userStorage)
 	recipeService := services.NewRecipeService(recipeStorage)
 	menuService := services.NewMenuService(menuStorage, recipeStorage, menuPrefsStorage)
+	// Optional Phase-4 AI experience layer (Gemini) — opt-in per request, and
+	// only constructed when an API key is present. A nil service keeps menu
+	// generation fully deterministic and offline.
+	if gc, err := gemini.NewClient(gemini.FlashLiteModel); err != nil {
+		log.Printf("Warning: AI menu arranger disabled: %v", err)
+	} else {
+		menuService = menuService.WithExperience(services.NewMenuExperienceService(gc))
+	}
 	shoppingService := services.NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 	tjekService := services.NewTjekService()
 	feedbackService := services.NewFeedbackService(feedbackStorage)
@@ -171,9 +180,14 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 			http.HandlerFunc(parserHandler.ParseAndSave),
 		))))
 	}
-	mux.Handle("POST /menus/generate", middleware.RequireAuth(jwtService, deps.userStorage)(
+	// Phase-4 AI layer (wishes/arrange) can add a few seconds of Gemini latency
+	// when opted into, which can exceed the global 10s deadline. Apply a longer
+	// per-route timeout (the global wrapper skips this route below) so an
+	// AI-arranged generate is not turned into a 503 mid-build (a "ghost menu").
+	generateTimeout := middleware.TimeoutWith(middleware.ParserTimeout)
+	mux.Handle("POST /menus/generate", generateTimeout(middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.menu.Generate),
-	))
+	)))
 	mux.Handle("PUT /menus/current", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.menu.UpdateCurrent),
 	))
@@ -217,7 +231,7 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	// in an outer 10s deadline would defeat that.
 	timeoutHandler := middleware.Timeout(mux)
 	timed := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost && (r.URL.Path == "/recipes/parse" || r.URL.Path == "/recipes/parse-and-save") {
+		if r.Method == http.MethodPost && (r.URL.Path == "/recipes/parse" || r.URL.Path == "/recipes/parse-and-save" || r.URL.Path == "/menus/generate") {
 			mux.ServeHTTP(w, r)
 			return
 		}

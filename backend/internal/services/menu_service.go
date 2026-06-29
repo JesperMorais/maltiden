@@ -1,7 +1,10 @@
 package services
 
 import (
+	"context"
+	"log"
 	"maltiden/internal/domain"
+	"strings"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -12,7 +15,20 @@ type MenuService struct {
 	menuStorage   domain.MenuRepository
 	recipeStorage domain.RecipeRepository
 	prefsStorage  domain.MenuPreferencesRepository
+
+	// experience is the optional Phase-4 AI layer (Gemini). It is nil when no
+	// API key is configured; every use is guarded so generation degrades to the
+	// deterministic Phase 1–3 result and makes zero network calls by default.
+	experience *MenuExperienceService
 }
+
+// experienceCallTimeout bounds each opt-in AI experience call. It is kept well
+// under the generate route's timeout so a slow or hung Gemini call fails fast to
+// the deterministic fallback rather than letting the HTTP route time out — which
+// would otherwise return an error to the client while the menu was still being
+// built and persisted (a "ghost menu"). The gemini client honors the context
+// deadline, so this actually cancels the in-flight request.
+const experienceCallTimeout = 20 * time.Second
 
 func NewMenuService(menuStorage domain.MenuRepository, recipeStorage domain.RecipeRepository, prefsStorage domain.MenuPreferencesRepository) *MenuService {
 	return &MenuService{
@@ -20,6 +36,62 @@ func NewMenuService(menuStorage domain.MenuRepository, recipeStorage domain.Reci
 		recipeStorage: recipeStorage,
 		prefsStorage:  prefsStorage,
 	}
+}
+
+// WithExperience injects the optional Phase-4 AI experience layer. A nil service
+// (the default) keeps generation fully deterministic. Returns the receiver for
+// fluent setup.
+func (s *MenuService) WithExperience(e *MenuExperienceService) *MenuService {
+	s.experience = e
+	return s
+}
+
+// mergeWishConstraints folds non-nil parsed wish constraints into a household's
+// effective preferences (and the prep-mode request flag) for one generation. It
+// runs BEFORE the explicit request day/serving defaulting, by writing into the
+// preference fallbacks, so a typed request value always wins over a wish. String
+// lists are appended and case-insensitively deduped onto the existing lists. A
+// prep-mode wish can only enable batch cooking, never disable an explicit one.
+func mergeWishConstraints(prefs *domain.MenuPreferences, req *domain.GenerateMenuRequest, pc *domain.ParsedWishConstraints) {
+	if pc == nil {
+		return
+	}
+	if pc.VegetarianDays != nil {
+		prefs.VegetarianDays = *pc.VegetarianDays
+	}
+	if pc.Days != nil {
+		prefs.DefaultDays = *pc.Days
+	}
+	if pc.Servings != nil {
+		prefs.DefaultServings = *pc.Servings
+	}
+	if pc.PrepMode != nil && *pc.PrepMode {
+		req.PrepMode = true
+	}
+	prefs.ExcludedTags = appendDedupeFold(prefs.ExcludedTags, pc.ExtraExcludedTags)
+	prefs.DislikedIngredients = appendDedupeFold(prefs.DislikedIngredients, pc.ExtraDislikedIngredients)
+}
+
+// appendDedupeFold appends extra items to base, skipping case-insensitive
+// duplicates of items already present (in base or earlier in extra).
+func appendDedupeFold(base, extra []string) []string {
+	if len(extra) == 0 {
+		return base
+	}
+	seen := make(map[string]bool, len(base)+len(extra))
+	for _, b := range base {
+		seen[strings.ToLower(strings.TrimSpace(b))] = true
+	}
+	out := base
+	for _, e := range extra {
+		key := strings.ToLower(strings.TrimSpace(e))
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, e)
+	}
+	return out
 }
 
 // effectivePreferences loads a household's saved menu preferences, falling back
@@ -157,6 +229,30 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 	// the selector core enforces.
 	prefs := s.effectivePreferences(householdID)
 
+	// Opt-in wish parsing (Phase 4): free-text Swedish wishes become per-run
+	// constraint overrides merged into the effective prefs BEFORE the day/serving
+	// defaulting below, so a typed request field still wins. This only runs when
+	// the request carries wishes; with no experience layer the wishes are
+	// reported as ignored and generation proceeds deterministically.
+	wishesIgnored := false
+	if strings.TrimSpace(req.Wishes) != "" {
+		if s.experience != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), experienceCallTimeout)
+			pc, err := s.experience.ParseWishes(ctx, req.Wishes)
+			cancel()
+			if err != nil {
+				sentry.CaptureException(err)
+				log.Printf("WARN [Generate] wish parse failed, ignoring wishes: %v", err)
+				wishesIgnored = true
+			} else {
+				pc.Clamp()
+				mergeWishConstraints(&prefs, &req, pc)
+			}
+		} else {
+			wishesIgnored = true
+		}
+	}
+
 	// Validate and default days (VALID-13). An omitted value falls back to the
 	// household preference rather than a hardcoded week.
 	days := req.Days
@@ -235,6 +331,51 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		menuDays = append(menuDays, day)
 	}
 
+	// Weekday arrangement + rationale (Phase 4): when requested and the
+	// experience layer is available, ask it to permute the already-chosen
+	// recipes across the week's weekdays and write a short Swedish rationale.
+	// Runs BEFORE batch cooking so leftover pairing respects the final
+	// placement. The arranger is guard-railed to a strict permutation of the
+	// offered slots/recipes; on any failure the deterministic order is kept and
+	// the rationale stays empty (graceful degradation).
+	rationale := ""
+	if req.Arrange && s.experience != nil {
+		nameByID := make(map[string]string, len(recipes))
+		for _, r := range recipes {
+			nameByID[r.ID] = r.Name
+		}
+		slots := make([]ArrangeSlot, 0, len(menuDays))
+		for i, d := range menuDays {
+			if d.Skip || d.RecipeID == "" {
+				continue
+			}
+			weekday := time.Sunday
+			if t, err := time.Parse("2006-01-02", d.Date); err == nil {
+				weekday = t.Weekday()
+			}
+			slots = append(slots, ArrangeSlot{
+				Slot:     i,
+				Weekday:  int(weekday),
+				RecipeID: d.RecipeID,
+				Name:     nameByID[d.RecipeID],
+			})
+		}
+		if len(slots) > 0 {
+			ctx, cancel := context.WithTimeout(context.Background(), experienceCallTimeout)
+			assignment, r, err := s.experience.ArrangeWeek(ctx, slots)
+			cancel()
+			if err != nil {
+				sentry.CaptureException(err)
+				log.Printf("WARN [Generate] arrange failed, keeping deterministic order: %v", err)
+			} else {
+				for slot, recipeID := range assignment {
+					menuDays[slot].RecipeID = recipeID
+				}
+				rationale = r
+			}
+		}
+	}
+
 	// Batch cooking (#248 Phase 2): when prep mode is on, pair each batchable
 	// recipe's cook-day with a later leftovers day (cook once, eat twice). This
 	// is a deterministic post-pass that never alters which recipes the selector
@@ -256,6 +397,7 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		HouseholdID: householdID,
 		Days:        menuDays,
 		CreatedAt:   time.Now(),
+		Rationale:   rationale,
 	}
 
 	if err := s.menuStorage.Create(menu); err != nil {
@@ -282,6 +424,8 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		ID:                menu.ID,
 		Days:              enrichedDays,
 		SharedIngredients: computeSharedIngredients(chosenIDs, ingredientsByID),
+		Rationale:         menu.Rationale,
+		WishesIgnored:     wishesIgnored,
 	}, nil
 }
 
@@ -335,7 +479,8 @@ func (s *MenuService) GetCurrent(householdID string) (*domain.MenuResponse, erro
 	}
 
 	return &domain.MenuResponse{
-		ID:   menu.ID,
-		Days: enrichedDays,
+		ID:        menu.ID,
+		Days:      enrichedDays,
+		Rationale: menu.Rationale,
 	}, nil
 }

@@ -101,6 +101,28 @@ function getDayShort(date: Date): string {
 }
 
 // ============================================
+// AI ARRANGEMENT PERSISTENCE (#248 Phase 4)
+// ============================================
+
+const ARRANGE_STORAGE_KEY = 'maltiden_arrange'
+
+function loadArrange(): boolean {
+  try {
+    return localStorage.getItem(ARRANGE_STORAGE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function persistArrange(value: boolean): void {
+  try {
+    localStorage.setItem(ARRANGE_STORAGE_KEY, value ? 'true' : 'false')
+  } catch {
+    // ignore storage failures (e.g. private mode)
+  }
+}
+
+// ============================================
 // STORE DEFINITION
 // ============================================
 
@@ -127,6 +149,26 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
   // Ingredients reused across the week's recipes (from the overlap-aware
   // generator). Surfaced in the UI so the shopping-economy benefit is visible.
   const sharedIngredients = ref<SharedIngredient[]>([])
+
+  // Free-text weekly wishes (Swedish). Per-week intent — NOT persisted so it
+  // doesn't silently carry over to the next week's generation.
+  const wishes = ref('')
+
+  // AI arrangement opt-in: persisted so the user's preference sticks across
+  // reloads and defaults the next generation.
+  const arrange = ref(loadArrange())
+
+  function setArrange(value: boolean): void {
+    arrange.value = value
+    persistArrange(value)
+  }
+
+  // Short Swedish explanation of the week, returned only when AI arrangement
+  // ran. Empty string = nothing to show.
+  const rationale = ref('')
+
+  // True when wishes were sent but the server had no AI key and ignored them.
+  const wishesIgnored = ref(false)
 
   // ============================================
   // GETTERS
@@ -243,6 +285,10 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     isGenerating.value = true
     error.value = null
 
+    // Fresh generate: clear any AI metadata from a prior run before the call.
+    rationale.value = ''
+    wishesIgnored.value = false
+
     try {
       // Initialize week if not already done
       if (!draftMenu.value) {
@@ -253,11 +299,18 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       const menu = await generateMenu({
         days: 7,
         servings: servings.value,
-        skipDays: []
+        skipDays: [],
+        wishes: wishes.value,
+        arrange: arrange.value
       })
 
       // Surface which ingredients are reused across the week's recipes.
       sharedIngredients.value = menu.sharedIngredients ?? []
+
+      // Surface AI metadata: the week rationale and whether wishes were ignored
+      // (server had no AI key).
+      rationale.value = menu.rationale ?? ''
+      wishesIgnored.value = menu.wishesIgnored ?? false
 
       // Map API response to draft menu days
       if (draftMenu.value && menu.days) {
@@ -293,12 +346,18 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     isRegenerating.value = true
     error.value = null
 
+    // Fresh regenerate: clear any AI metadata from a prior run before the call.
+    rationale.value = ''
+    wishesIgnored.value = false
+
     try {
       // Generate new menu across the full week
       const newMenu = await generateMenu({
         days: 7,
         servings: servings.value,
-        skipDays: []
+        skipDays: [],
+        wishes: wishes.value,
+        arrange: arrange.value
       })
 
       // Refresh shared-ingredient info from the freshly generated week. When
@@ -307,6 +366,10 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
       // showing a figure that doesn't match what's on screen.
       sharedIngredients.value =
         lockedDays.value.size === 0 ? (newMenu.sharedIngredients ?? []) : []
+
+      // Refresh AI metadata from the regenerated week.
+      rationale.value = newMenu.rationale ?? ''
+      wishesIgnored.value = newMenu.wishesIgnored ?? false
 
       // Merge: Keep locked days, replace unlocked days with new recipes
       if (draftMenu.value && newMenu.days) {
@@ -401,6 +464,12 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     weekStart.value = ''
     error.value = null
     sharedIngredients.value = []
+    rationale.value = ''
+    wishesIgnored.value = false
+    // arrange is a persisted planning preference and deliberately survives
+    // clearDraft so it defaults the next generation. wishes is per-week intent
+    // and is cleared so it doesn't carry over.
+    wishes.value = ''
   }
 
   /**
@@ -448,6 +517,10 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     weekStart,
     servings,
     sharedIngredients,
+    wishes,
+    arrange,
+    rationale,
+    wishesIgnored,
 
     // Getters
     orderedDays,
@@ -467,6 +540,7 @@ export const useMenuGeneratorStore = defineStore('menuGenerator', () => {
     toggleDayLock,
     saveDraftMenu,
     clearDraft,
+    setArrange,
     setError,
     clearError,
     startSlotAnimation,

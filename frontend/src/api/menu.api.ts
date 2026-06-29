@@ -31,6 +31,8 @@ export interface Menu {
   days: MenuDay[]
   /** Ingredients shared across the week's recipes, most-shared first. */
   sharedIngredients?: SharedIngredient[]
+  /** Short Swedish explanation of the week from the AI experience layer (#248 Phase 4). */
+  rationale?: string
 }
 
 export interface GenerateMenuRequest {
@@ -40,17 +42,26 @@ export interface GenerateMenuRequest {
   extraPortions?: Record<string, number>
   /** Enable batch cooking for the week: batchable recipes occupy 2 slots (#248). */
   prepMode?: boolean
+  /** Free-text Swedish wishes parsed into per-run constraints (#248 Phase 4). */
+  wishes?: string
+  /** Ask the AI layer to arrange recipes across weekdays + write a rationale (#248 Phase 4). */
+  arrange?: boolean
+}
+
+export interface GenerateMenuResponse extends Menu {
+  /** True when wishes were supplied but the AI layer was unavailable, so they had no effect. */
+  wishesIgnored?: boolean
 }
 
 /**
  * Generate a new weekly menu
  */
-export async function generateMenu(request: GenerateMenuRequest): Promise<Menu> {
+export async function generateMenu(request: GenerateMenuRequest): Promise<GenerateMenuResponse> {
   if (USE_MOCKS) {
     return mockGenerateMenu(request)
   }
 
-  const { data } = await apiClient.post<Menu>('/menus/generate', request)
+  const { data } = await apiClient.post<GenerateMenuResponse>('/menus/generate', request)
   return data
 }
 

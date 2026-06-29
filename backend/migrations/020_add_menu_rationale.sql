@@ -1,0 +1,1 @@
+ALTER TABLE menus ADD COLUMN rationale TEXT NOT NULL DEFAULT '';
