@@ -27,12 +27,15 @@ type TokenValidator interface {
 	ValidateToken(tokenString string) (*utils.Claims, error)
 }
 
-// TokenVersionChecker checks whether a JWT's token_version is still current.
-type TokenVersionChecker interface {
-	GetTokenVersion(userID string) (int, error)
+// AuthInfoProvider returns the user's current token_version and the household
+// they currently belong to. The household is resolved live (from the DB) rather
+// than read from the JWT claim, because a user's household can change (e.g. when
+// they join another household via an invite code) after their token was issued.
+type AuthInfoProvider interface {
+	GetAuthInfo(userID string) (tokenVersion int, householdID string, err error)
 }
 
-func RequireAuth(validator TokenValidator, versionChecker TokenVersionChecker) func(http.Handler) http.Handler {
+func RequireAuth(validator TokenValidator, authInfo AuthInfoProvider) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Get auth header
@@ -58,10 +61,12 @@ func RequireAuth(validator TokenValidator, versionChecker TokenVersionChecker) f
 			}
 
 			// Check token version against DB — rejects stale tokens after
-			// household removal or password change
-			currentVersion, err := versionChecker.GetTokenVersion(claims.UserID)
+			// household removal or password change — and resolve the user's
+			// CURRENT household (which may differ from the JWT claim if they
+			// joined another household after the token was issued).
+			currentVersion, householdID, err := authInfo.GetAuthInfo(claims.UserID)
 			if err != nil {
-				log.Printf("ERROR [RequireAuth] token version check for user %s: %v", claims.UserID, err)
+				log.Printf("ERROR [RequireAuth] auth info lookup for user %s: %v", claims.UserID, err)
 				writeError(w, http.StatusUnauthorized, "invalid_token")
 				return
 			}
@@ -70,9 +75,10 @@ func RequireAuth(validator TokenValidator, versionChecker TokenVersionChecker) f
 				return
 			}
 
-			// Add userID and householdID to context
+			// Add userID and householdID to context. householdID comes from the
+			// DB, not the token, so household-scoped resources stay consistent.
 			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
-			ctx = context.WithValue(ctx, HouseholdIDKey, claims.HouseholdID)
+			ctx = context.WithValue(ctx, HouseholdIDKey, householdID)
 
 			// Call next handler
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -84,7 +90,7 @@ func RequireAuth(validator TokenValidator, versionChecker TokenVersionChecker) f
 // but does NOT reject requests without a token. Used for public routes that
 // behave differently for authenticated users (e.g., scoped recipe listing).
 // If the token's version doesn't match the DB, the request proceeds as unauthenticated.
-func OptionalAuth(validator TokenValidator, versionChecker TokenVersionChecker) func(http.Handler) http.Handler {
+func OptionalAuth(validator TokenValidator, authInfo AuthInfoProvider) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -92,10 +98,11 @@ func OptionalAuth(validator TokenValidator, versionChecker TokenVersionChecker) 
 				parts := strings.Split(authHeader, " ")
 				if len(parts) == 2 && parts[0] == "Bearer" {
 					if claims, err := validator.ValidateToken(parts[1]); err == nil {
-						// Check token version — treat as unauthenticated if stale
-						if currentVersion, err := versionChecker.GetTokenVersion(claims.UserID); err == nil && claims.TokenVersion == currentVersion {
+						// Check token version — treat as unauthenticated if stale.
+						// Resolve the current household live (see RequireAuth).
+						if currentVersion, householdID, err := authInfo.GetAuthInfo(claims.UserID); err == nil && claims.TokenVersion == currentVersion {
 							ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
-							ctx = context.WithValue(ctx, HouseholdIDKey, claims.HouseholdID)
+							ctx = context.WithValue(ctx, HouseholdIDKey, householdID)
 							r = r.WithContext(ctx)
 						}
 					}

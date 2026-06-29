@@ -25,7 +25,7 @@ type dependencies struct {
 	feedback      *handlers.FeedbackHandler
 	health        *handlers.HealthHandler
 	passwordReset *handlers.PasswordResetHandler
-	userStorage   *sqlite.UserStorage // needed for token version checks in auth middleware
+	userStorage   *sqlite.UserStorage // auth middleware: token version + live household resolution
 }
 
 func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {

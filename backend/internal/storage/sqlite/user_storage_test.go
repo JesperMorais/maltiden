@@ -121,3 +121,62 @@ func TestUserStorage_UpdatePassword(t *testing.T) {
 		t.Errorf("password hash not updated: got %q, want %q", got.PasswordHash, newHash)
 	}
 }
+
+// TestUserStorage_GetAuthInfo_FollowsMembership is the regression guard for the
+// "joined member sees a different menu" bug. The household must be resolved from
+// household_members (the authoritative source), NOT from the stale
+// users.household_id column that lingers after a user joins another household.
+func TestUserStorage_GetAuthInfo_FollowsMembership(t *testing.T) {
+	s := setupUserTestDB(t)
+	u := newTestUser("usr_authinfo_1", "authinfo@example.com")
+	if err := s.Create(u); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// A second household the user later "joins".
+	if _, err := s.db.Exec(`INSERT INTO households (id, name) VALUES (?, ?)`, "hh_joined", "Joined Household"); err != nil {
+		t.Fatalf("seed second household: %v", err)
+	}
+
+	// No membership row yet -> household resolves empty even though
+	// users.household_id is populated.
+	_, hh, err := s.GetAuthInfo(u.ID)
+	if err != nil {
+		t.Fatalf("GetAuthInfo (no membership): %v", err)
+	}
+	if hh != "" {
+		t.Errorf("expected empty household without membership, got %q", hh)
+	}
+
+	// Member of their original household.
+	if _, err := s.db.Exec(
+		`INSERT INTO household_members (id, household_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)`,
+		"hm_authinfo_1", "hh_usr_test", u.ID, "owner", time.Now(),
+	); err != nil {
+		t.Fatalf("seed membership: %v", err)
+	}
+	if _, hh, err = s.GetAuthInfo(u.ID); err != nil {
+		t.Fatalf("GetAuthInfo (original household): %v", err)
+	}
+	if hh != "hh_usr_test" {
+		t.Errorf("expected hh_usr_test, got %q", hh)
+	}
+
+	// Simulate joining another household: membership moves, but the stale
+	// users.household_id column is intentionally left untouched.
+	if _, err := s.db.Exec(`DELETE FROM household_members WHERE user_id = ?`, u.ID); err != nil {
+		t.Fatalf("remove old membership: %v", err)
+	}
+	if _, err := s.db.Exec(
+		`INSERT INTO household_members (id, household_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)`,
+		"hm_authinfo_2", "hh_joined", u.ID, "member", time.Now(),
+	); err != nil {
+		t.Fatalf("seed new membership: %v", err)
+	}
+	if _, hh, err = s.GetAuthInfo(u.ID); err != nil {
+		t.Fatalf("GetAuthInfo (joined household): %v", err)
+	}
+	if hh != "hh_joined" {
+		t.Errorf("GetAuthInfo must follow household_members, got %q want hh_joined", hh)
+	}
+}
