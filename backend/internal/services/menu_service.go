@@ -226,43 +226,50 @@ func (s *MenuService) enrichMenuDays(days []domain.MenuDay) ([]domain.MenuRespon
 	return result, nil
 }
 
-// weeklyNutrition sums each cooked day's per-serving macros times its servings
-// into a menu-level total (#248 Phase 3). Skipped days and leftover days are
-// excluded: a leftover day's food was already counted on its batch cook-day
-// (whose servings are doubled), so counting it again would double the week's
-// macros. Returns nil when no cooked day carries nutrition data, so the field
-// is omitted and the UI shows nothing rather than a misleading zero. Partial is
-// set when some cooked day's recipe lacked nutrition, flagging an incomplete total.
-func weeklyNutrition(days []domain.MenuResponseDay) *domain.MenuNutrition {
-	total := domain.MenuNutrition{}
-	counted := 0
+// averageMealNutrition returns the mean per-serving macros across the menu's
+// meals (#248 Phase 3) — what a typical plate looks like, the figure users
+// reason about (not a whole-week sum). Each non-skipped day with a recipe is one
+// meal, including leftover days (they are still a meal eaten); macros are taken
+// per serving, so batch doubling and per-day servings don't distort the average.
+// Returns nil when no meal carries nutrition data, so the field is omitted and
+// the UI shows nothing rather than a misleading zero. Partial is set when some
+// meal's recipe lacked nutrition, so the average is over the subset that did.
+func averageMealNutrition(days []domain.MenuResponseDay) *domain.MenuNutrition {
+	avg := domain.MenuNutrition{}
+	meals := 0    // non-skipped days with a recipe
+	withData := 0 // those that also have nutrition
 	for _, d := range days {
-		if d.Skip || d.RecipeID == "" || d.LeftoverOf != "" {
+		if d.Skip || d.RecipeID == "" {
 			continue
 		}
+		meals++
 		if d.Nutrition == nil {
-			total.Partial = true
 			continue
 		}
-		servings := float64(d.Servings)
 		if d.Nutrition.Calories != nil {
-			total.Calories += *d.Nutrition.Calories * servings
+			avg.Calories += *d.Nutrition.Calories
 		}
 		if d.Nutrition.ProteinG != nil {
-			total.ProteinG += *d.Nutrition.ProteinG * servings
+			avg.ProteinG += *d.Nutrition.ProteinG
 		}
 		if d.Nutrition.CarbsG != nil {
-			total.CarbsG += *d.Nutrition.CarbsG * servings
+			avg.CarbsG += *d.Nutrition.CarbsG
 		}
 		if d.Nutrition.FatG != nil {
-			total.FatG += *d.Nutrition.FatG * servings
+			avg.FatG += *d.Nutrition.FatG
 		}
-		counted++
+		withData++
 	}
-	if counted == 0 {
+	if withData == 0 {
 		return nil
 	}
-	return &total
+	n := float64(withData)
+	avg.Calories /= n
+	avg.ProteinG /= n
+	avg.CarbsG /= n
+	avg.FatG /= n
+	avg.Partial = withData < meals
+	return &avg
 }
 
 func (s *MenuService) Generate(householdID string, req domain.GenerateMenuRequest) (*domain.MenuResponse, error) {
@@ -323,6 +330,11 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 	if len(recipes) == 0 {
 		return nil, nil
 	}
+
+	// Keep excluded recipes (e.g. recipes locked on a regenerate) out of the
+	// candidate pool so the same dish isn't reused across the week (#248). If the
+	// exclusion would empty the pool, ignore it rather than fail.
+	recipes = filterOutRecipeIDs(recipes, req.ExcludeRecipeIDs)
 
 	// Fetch full recipes so the selector can score ingredient overlap. The
 	// summaries from GetAll carry no ingredients, so we batch-load them by ID
@@ -468,7 +480,7 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		SharedIngredients: computeSharedIngredients(chosenIDs, ingredientsByID),
 		Rationale:         menu.Rationale,
 		WishesIgnored:     wishesIgnored,
-		Nutrition:         weeklyNutrition(enrichedDays),
+		Nutrition:         averageMealNutrition(enrichedDays),
 	}, nil
 }
 
@@ -503,7 +515,7 @@ func (s *MenuService) UpdateCurrent(householdID string, req domain.UpdateMenuReq
 	return &domain.MenuResponse{
 		ID:        menu.ID,
 		Days:      enrichedDays,
-		Nutrition: weeklyNutrition(enrichedDays),
+		Nutrition: averageMealNutrition(enrichedDays),
 	}, nil
 }
 
@@ -526,6 +538,6 @@ func (s *MenuService) GetCurrent(householdID string) (*domain.MenuResponse, erro
 		ID:        menu.ID,
 		Days:      enrichedDays,
 		Rationale: menu.Rationale,
-		Nutrition: weeklyNutrition(enrichedDays),
+		Nutrition: averageMealNutrition(enrichedDays),
 	}, nil
 }

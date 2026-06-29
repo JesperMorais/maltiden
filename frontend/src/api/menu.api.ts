@@ -15,13 +15,13 @@ export interface Nutrition {
   fatG?: number
 }
 
-/** Weekly aggregated macro total for a menu (#248 Phase 3). */
+/** Average per-meal (per-serving) macros across the menu's meals (#248 Phase 3). */
 export interface MenuNutrition {
   calories: number
   proteinG: number
   carbsG: number
   fatG: number
-  /** True when some cooked day lacked nutrition data, so the total is incomplete. */
+  /** True when some meal lacked nutrition data, so the average is over a subset. */
   partial: boolean
 }
 
@@ -68,6 +68,11 @@ export interface GenerateMenuRequest {
   wishes?: string
   /** Ask the AI layer to arrange recipes across weekdays + write a rationale (#248 Phase 4). */
   arrange?: boolean
+  /**
+   * Recipe IDs to keep OUT of this generation — e.g. recipes on locked days
+   * during a regenerate, so the same dish isn't reused across the week (#248).
+   */
+  excludeRecipeIds?: string[]
 }
 
 export interface GenerateMenuResponse extends Menu {

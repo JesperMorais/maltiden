@@ -253,9 +253,13 @@ const drawLines = () => {
   ctx.stroke()
 }
 
+let active = true
+
 const tick = (t: number) => {
   const container = containerRef.value
-  if (!container) return
+  // Stop dead once unmounted, even if a stray frame was already queued — this
+  // is what prevents a previous instance's loop from surviving a route change.
+  if (!active || !container) return
   mouse.sx += (mouse.x - mouse.sx) * 0.1
   mouse.sy += (mouse.y - mouse.sy) * 0.1
   const dx = mouse.x - mouse.lx, dy = mouse.y - mouse.ly
@@ -270,10 +274,24 @@ const tick = (t: number) => {
   container.style.setProperty('--y', `${mouse.sy}px`)
   movePoints(t)
   drawLines()
-  frameId = requestAnimationFrame(tick)
+  if (active) frameId = requestAnimationFrame(tick)
 }
 
 const onResize = () => { setSize(); setLines() }
+
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' &&
+  !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+// Pause the RAF loop while the tab/page is hidden so it doesn't burn frames in
+// the background, and resume when it's visible again.
+const onVisibility = () => {
+  if (document.hidden) {
+    if (frameId !== null) { cancelAnimationFrame(frameId); frameId = null }
+  } else if (active && frameId === null && !prefersReducedMotion()) {
+    frameId = requestAnimationFrame(tick)
+  }
+}
 
 const updateMouse = (x: number, y: number) => {
   mouse.x = x - bounding.left
@@ -298,17 +316,29 @@ onMounted(() => {
   ctx = canvas.getContext('2d')
   noise = new Noise(Math.random())
   setSize(); setLines()
-  frameId = requestAnimationFrame(tick)
   window.addEventListener('resize', onResize)
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('touchmove', onTouchMove, { passive: true })
+  document.addEventListener('visibilitychange', onVisibility)
+  // Honor reduced-motion: draw a single static frame, no animation loop.
+  if (prefersReducedMotion()) {
+    movePoints(0)
+    drawLines()
+    return
+  }
+  frameId = requestAnimationFrame(tick)
 })
 
 onUnmounted(() => {
+  active = false
   window.removeEventListener('resize', onResize)
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('touchmove', onTouchMove)
-  if (frameId !== null) cancelAnimationFrame(frameId)
+  document.removeEventListener('visibilitychange', onVisibility)
+  if (frameId !== null) { cancelAnimationFrame(frameId); frameId = null }
+  ctx = null
+  noise = null
+  lines = []
 })
 
 watch(
