@@ -2,18 +2,25 @@
  * Menu API Mock Data
  */
 
-import type { Menu, GenerateMenuRequest, GenerateMenuResponse, SaveMenuDay } from '@/api/menu.api'
+import type {
+  Menu,
+  GenerateMenuRequest,
+  GenerateMenuResponse,
+  MenuDay,
+  Nutrition,
+  SaveMenuDay,
+} from '@/api/menu.api'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-const mockRecipes = [
-  { id: 'rec_1', name: 'Pasta Carbonara', emoji: '🍝' },
-  { id: 'rec_2', name: 'Kycklingwok', emoji: '🥘' },
-  { id: 'rec_3', name: 'Tacos', emoji: '🌮' },
-  { id: 'rec_4', name: 'Laxfilé med potatis', emoji: '🐟' },
-  { id: 'rec_5', name: 'Köttfärssås', emoji: '🍖' },
-  { id: 'rec_6', name: 'Vegetarisk curry', emoji: '🥗' },
-  { id: 'rec_7', name: 'Pizza', emoji: '🍕' }
+const mockRecipes: { id: string; name: string; emoji: string; nutrition: Nutrition }[] = [
+  { id: 'rec_1', name: 'Pasta Carbonara', emoji: '🍝', nutrition: { calories: 650, proteinG: 28, carbsG: 70, fatG: 28 } },
+  { id: 'rec_2', name: 'Kycklingwok', emoji: '🥘', nutrition: { calories: 520, proteinG: 38, carbsG: 45, fatG: 18 } },
+  { id: 'rec_3', name: 'Tacos', emoji: '🌮', nutrition: { calories: 580, proteinG: 30, carbsG: 50, fatG: 26 } },
+  { id: 'rec_4', name: 'Laxfilé med potatis', emoji: '🐟', nutrition: { calories: 610, proteinG: 42, carbsG: 40, fatG: 30 } },
+  { id: 'rec_5', name: 'Köttfärssås', emoji: '🍖', nutrition: { calories: 700, proteinG: 35, carbsG: 55, fatG: 35 } },
+  { id: 'rec_6', name: 'Vegetarisk curry', emoji: '🥗', nutrition: { calories: 480, proteinG: 18, carbsG: 60, fatG: 16 } },
+  { id: 'rec_7', name: 'Pizza', emoji: '🍕', nutrition: { calories: 760, proteinG: 30, carbsG: 80, fatG: 32 } }
 ]
 
 /** Module-level state so shopping mock can read current servings */
@@ -34,7 +41,7 @@ export async function mockGenerateMenu(
 ): Promise<GenerateMenuResponse> {
   await delay(1000) // Menu generation takes time
 
-  const days = []
+  const days: MenuDay[] = []
   const skipDays = new Set(request.skipDays || [])
 
   for (let i = 0; i < request.days; i++) {
@@ -50,8 +57,27 @@ export async function mockGenerateMenu(
         recipeId: recipe.id,
         recipeName: recipe.name,
         emoji: recipe.emoji,
-        servings: request.servings + extraPortions
+        servings: request.servings + extraPortions,
+        nutrition: recipe.nutrition
       })
+    }
+  }
+
+  // Simulate batch cooking (#248 Phase 2): pair the first cook-day with the
+  // next eligible day, mirroring the backend's deterministic post-pass.
+  if (request.prepMode) {
+    const cook = days.find((d) => !d.skip && d.recipeId)
+    if (cook) {
+      const leftover = days.find((d) => !d.skip && d.recipeId && d.date > cook.date)
+      if (leftover) {
+        cook.prepMode = 'batch'
+        cook.servings *= 2
+        leftover.recipeId = cook.recipeId
+        leftover.recipeName = cook.recipeName
+        leftover.emoji = cook.emoji
+        leftover.nutrition = cook.nutrition
+        leftover.leftoverOf = cook.date
+      }
     }
   }
 
@@ -72,9 +98,34 @@ export async function mockGenerateMenu(
     ],
     rationale,
     wishesIgnored: false,
+    nutrition: weeklyMockNutrition(days),
   }
   currentMockMenu = menu
   return menu
+}
+
+/** Sum cooked days' per-serving macros × servings, excluding leftover days. */
+function weeklyMockNutrition(days: MenuDay[]): Menu['nutrition'] {
+  let calories = 0
+  let proteinG = 0
+  let carbsG = 0
+  let fatG = 0
+  let partial = false
+  let counted = 0
+  for (const d of days) {
+    if (d.skip || !d.recipeId || d.leftoverOf) continue
+    if (!d.nutrition) {
+      partial = true
+      continue
+    }
+    calories += (d.nutrition.calories ?? 0) * d.servings
+    proteinG += (d.nutrition.proteinG ?? 0) * d.servings
+    carbsG += (d.nutrition.carbsG ?? 0) * d.servings
+    fatG += (d.nutrition.fatG ?? 0) * d.servings
+    counted++
+  }
+  if (counted === 0) return undefined
+  return { calories, proteinG, carbsG, fatG, partial }
 }
 
 export async function mockSaveMenu(days: SaveMenuDay[]): Promise<Menu> {
@@ -93,6 +144,9 @@ export async function mockSaveMenu(days: SaveMenuDay[]): Promise<Menu> {
         emoji: recipe?.emoji,
         servings: day.servings,
         skip: day.skip,
+        prepMode: day.prepMode,
+        leftoverOf: day.leftoverOf,
+        nutrition: recipe?.nutrition,
       }
     }),
   }

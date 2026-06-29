@@ -228,6 +228,30 @@ onBeforeRouteLeave((to, from, next) => {
     <!-- Main content -->
     <main class="content">
       <div class="content-container">
+        <!-- Prep-läge (batch cooking) toggle (#248 Phase 2). Affects the next
+             generation/regeneration — batchable recipes are cooked once at
+             double servings and reused as leftovers. -->
+        <div v-if="!showSkeleton" class="prep-toggle">
+          <label
+            class="prep-toggle-control"
+            :class="{ disabled: isLoading || slotMachine.isAnimating.value }"
+          >
+            <input
+              v-model="store.prepMode"
+              type="checkbox"
+              class="prep-toggle-input"
+              :disabled="isLoading || slotMachine.isAnimating.value"
+            />
+            <span class="prep-toggle-track"><span class="prep-toggle-thumb"></span></span>
+            <span class="prep-toggle-text">
+              <span class="prep-toggle-title">Matlagningsläge</span>
+              <span class="prep-toggle-hint">
+                Laga en gång, ät två gånger — fördubblar en rätt och återanvänder den som rester.
+              </span>
+            </span>
+          </label>
+        </div>
+
         <!-- Skeleton loading state -->
         <GenerateMenuSkeleton v-if="showSkeleton" :day-count="prefsStore.activeDayCount" />
 
@@ -324,6 +348,40 @@ onBeforeRouteLeave((to, from, next) => {
           <Info :size="16" :stroke-width="2" />
           AI-önskemål kräver konfiguration och hoppades över.
         </p>
+
+        <!-- Weekly nutrition total (#248 Phase 3): aggregated macros across the
+             cooked days, shown only when recipes carry nutrition data. -->
+        <section
+          v-if="hasMenu && store.weeklyNutrition"
+          class="week-nutrition"
+          aria-labelledby="week-nutrition-title"
+        >
+          <div class="nutrition-header">
+            <span class="nutrition-icon" aria-hidden="true">🍎</span>
+            <h2 id="week-nutrition-title" class="nutrition-title">Näring för veckan</h2>
+          </div>
+          <p v-if="store.weeklyNutrition.partial" class="nutrition-note">
+            Delvis beräknat — vissa recept saknar näringsvärden.
+          </p>
+          <ul class="nutrition-stats">
+            <li class="nutrition-stat">
+              <span class="stat-value">{{ Math.round(store.weeklyNutrition.calories) }}</span>
+              <span class="stat-label">kcal</span>
+            </li>
+            <li class="nutrition-stat">
+              <span class="stat-value">{{ Math.round(store.weeklyNutrition.proteinG) }} g</span>
+              <span class="stat-label">protein</span>
+            </li>
+            <li class="nutrition-stat">
+              <span class="stat-value">{{ Math.round(store.weeklyNutrition.carbsG) }} g</span>
+              <span class="stat-label">kolhydrater</span>
+            </li>
+            <li class="nutrition-stat">
+              <span class="stat-value">{{ Math.round(store.weeklyNutrition.fatG) }} g</span>
+              <span class="stat-label">fett</span>
+            </li>
+          </ul>
+        </section>
 
         <!-- Error state -->
         <ErrorState v-if="store.error" :description="store.error" @retry="handleInitialGenerate" />
@@ -438,6 +496,172 @@ onBeforeRouteLeave((to, from, next) => {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 1.5rem;
+}
+
+/* Prep-läge (batch cooking) toggle */
+.prep-toggle {
+  margin-bottom: 1.5rem;
+}
+
+.prep-toggle-control {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: border-color var(--duration-fast, 0.2s) var(--ease-default, ease);
+}
+
+.prep-toggle-control:hover {
+  border-color: var(--accent);
+}
+
+.prep-toggle-control.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.prep-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.prep-toggle-track {
+  flex-shrink: 0;
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 100px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+.prep-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease;
+}
+
+.prep-toggle-input:checked + .prep-toggle-track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.prep-toggle-input:checked + .prep-toggle-track .prep-toggle-thumb {
+  transform: translateX(20px);
+  background: var(--text-on-accent);
+}
+
+.prep-toggle-input:focus-visible + .prep-toggle-track {
+  box-shadow: 0 0 0 3px var(--accent-focus-ring);
+}
+
+.prep-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.prep-toggle-title {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.prep-toggle-hint {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Weekly nutrition panel */
+.week-nutrition {
+  margin-top: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.nutrition-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.nutrition-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.nutrition-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 1.35rem;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.nutrition-note {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0 0;
+}
+
+.nutrition-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.nutrition-stat {
+  flex: 1 1 0;
+  min-width: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.stat-value {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: var(--accent-text);
+}
+
+.stat-label {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
 }
 
 /* Shared-ingredient economy panel */
