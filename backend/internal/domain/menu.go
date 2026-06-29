@@ -48,6 +48,10 @@ type GenerateMenuRequest struct {
 	// recipes across weekdays and write a Swedish rationale. No-op without the
 	// layer; the deterministic order is kept.
 	Arrange bool `json:"arrange,omitempty"`
+	// ExcludeRecipeIDs are recipe IDs to keep OUT of this generation — e.g.
+	// recipes on locked days during a regenerate, so the same dish isn't reused
+	// across the week (#248). Ignored if it would exclude every recipe.
+	ExcludeRecipeIDs []string `json:"excludeRecipeIds,omitempty"`
 }
 
 type UpdateMenuRequest struct {
@@ -72,12 +76,12 @@ type MenuResponseDay struct {
 	Nutrition *Nutrition `json:"nutrition,omitempty"`
 }
 
-// MenuNutrition is the weekly nutrition total for a generated or current menu
-// (#248 Phase 3): the sum of each cooked day's per-serving macros times that
-// day's servings. Leftover days are excluded so a batch-cooked dish is counted
-// once — its full amount already lives on the doubled cook-day. Partial is true
-// when at least one cooked day's recipe had no nutrition data, letting the UI
-// flag the total as incomplete rather than presenting it as exhaustive.
+// MenuNutrition is the average per-meal nutrition for a generated or current
+// menu (#248 Phase 3): the mean of each meal's per-serving macros — what a
+// typical plate looks like, which is the figure users actually reason about
+// (not a whole-week sum). Each non-skipped day with a recipe is one meal
+// (leftover days included). Partial is true when at least one meal's recipe had
+// no nutrition data, so the average is over the subset that did.
 type MenuNutrition struct {
 	Calories float64 `json:"calories"`
 	ProteinG float64 `json:"proteinG"`

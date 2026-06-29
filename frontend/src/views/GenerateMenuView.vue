@@ -349,8 +349,8 @@ onBeforeRouteLeave((to, from, next) => {
           AI-önskemål kräver konfiguration och hoppades över.
         </p>
 
-        <!-- Weekly nutrition total (#248 Phase 3): aggregated macros across the
-             cooked days, shown only when recipes carry nutrition data. -->
+        <!-- Average per-meal nutrition (#248 Phase 3): a typical plate, not a
+             whole-week total — shown only when recipes carry nutrition data. -->
         <section
           v-if="hasMenu && store.weeklyNutrition"
           class="week-nutrition"
@@ -358,7 +358,7 @@ onBeforeRouteLeave((to, from, next) => {
         >
           <div class="nutrition-header">
             <span class="nutrition-icon" aria-hidden="true">🍎</span>
-            <h2 id="week-nutrition-title" class="nutrition-title">Näring för veckan</h2>
+            <h2 id="week-nutrition-title" class="nutrition-title">Snitt per måltid</h2>
           </div>
           <p v-if="store.weeklyNutrition.partial" class="nutrition-note">
             Delvis beräknat — vissa recept saknar näringsvärden.

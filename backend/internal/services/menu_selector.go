@@ -159,6 +159,31 @@ func recipeHasExcludedTag(r domain.RecipeSummary, excluded map[string]bool) bool
 	return false
 }
 
+// filterOutRecipeIDs returns the recipes whose ID is not in excludeIDs. It is
+// used to keep recipes locked on a regenerate out of the candidate pool so the
+// same dish isn't reused across the week (#248). If excluding would remove every
+// recipe (e.g. the whole catalog is locked), the original list is returned
+// unchanged — better to risk a repeat than to generate nothing.
+func filterOutRecipeIDs(recipes []domain.RecipeSummary, excludeIDs []string) []domain.RecipeSummary {
+	if len(excludeIDs) == 0 {
+		return recipes
+	}
+	excluded := make(map[string]bool, len(excludeIDs))
+	for _, id := range excludeIDs {
+		excluded[id] = true
+	}
+	out := make([]domain.RecipeSummary, 0, len(recipes))
+	for _, r := range recipes {
+		if !excluded[r.ID] {
+			out = append(out, r)
+		}
+	}
+	if len(out) == 0 {
+		return recipes
+	}
+	return out
+}
+
 // normalizeIngredientName lower-cases and trims an ingredient or disliked-name
 // so a user's "Räkor " matches a recipe's "räkor". This mirrors the casing the
 // overlap scorer uses for ingredient keys.
