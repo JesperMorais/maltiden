@@ -67,6 +67,10 @@ func parseExcludeStores(r *http.Request) []string {
 
 func (h *OffersHandler) SearchOffers(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
+	if len(query) > 256 {
+		WriteError(w, http.StatusBadRequest, "invalid_query")
+		return
+	}
 
 	lat, lng, radius, err := parseLocationParams(r)
 	if err != nil {
