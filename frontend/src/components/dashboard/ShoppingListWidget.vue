@@ -105,7 +105,7 @@ const categoryColors = [
       </div>
 
       <!-- CTA -->
-      <button class="view-list-cta">
+      <button class="view-list-cta" aria-label="Visa hela inköpslistan">
         <span>Visa hela listan</span>
         <ArrowRight :size="16" :stroke-width="2.5" class="cta-arrow" />
       </button>
