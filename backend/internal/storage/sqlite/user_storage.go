@@ -103,6 +103,33 @@ func (s *UserStorage) GetTokenVersion(userID string) (int, error) {
 	return version, nil
 }
 
+// GetAuthInfo returns the user's current token version together with the
+// household they currently belong to. The household is resolved live from
+// household_members (the authoritative source), NOT from the JWT claim or the
+// users.household_id column — both of which go stale when a user joins a
+// different household after their token was issued. Resolving it here keeps
+// every household-scoped endpoint (menus, member statuses, invites) consistent
+// with GET /households/me, which also reads household_members.
+//
+// householdID is empty if the user belongs to no household.
+func (s *UserStorage) GetAuthInfo(userID string) (tokenVersion int, householdID string, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var hh sql.NullString
+	err = s.db.QueryRowContext(ctx,
+		`SELECT u.token_version, hm.household_id
+		 FROM users u
+		 LEFT JOIN household_members hm ON hm.user_id = u.id
+		 WHERE u.id = ?`,
+		userID,
+	).Scan(&tokenVersion, &hh)
+	if err != nil {
+		return 0, "", err
+	}
+	return tokenVersion, hh.String, nil
+}
+
 func (s *UserStorage) IncrementTokenVersion(userID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
