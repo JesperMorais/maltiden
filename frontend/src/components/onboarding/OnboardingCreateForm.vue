@@ -215,7 +215,13 @@ async function handleCreate() {
 }
 
 .form-row .form-label {
+  display: flex;
+  flex-direction: column;
   margin-bottom: 1.25rem;
+}
+
+.form-row .form-input {
+  margin-top: auto;
 }
 
 .field-hint-inline {
@@ -233,7 +239,7 @@ async function handleCreate() {
   }
 }
 
-.form-label span {
+.form-label > span {
   display: block;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
