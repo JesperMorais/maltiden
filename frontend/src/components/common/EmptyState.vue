@@ -75,8 +75,8 @@ const emit = defineEmits<{
 
 .empty-state-action {
   padding: 0.875rem 2rem;
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border: none;
   border-radius: 100px;
   font-family: 'Nunito', sans-serif;
