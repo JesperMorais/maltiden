@@ -69,6 +69,35 @@ Gör så här:
 }
 ```
 
+### Smart-menu metadata (Phase 0)
+
+The parser also emits additional fields consumed by the (future) smart-menu
+generator. These are additive and ride alongside the fields above.
+
+**Per-ingredient:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `canonicalName` | string | Base grocery-item name, Swedish, singular, no brand/prep words (e.g. `"gul lök"`) |
+| `gramsEquiv` | number | Estimated total weight in grams for the parsed amount/unit |
+| `isPantryStaple` | boolean | True for long-shelf-life basics (salt, socker, mjöl, olja, kryddor) |
+| `isPerishable` | boolean | True for items that spoil within days (färskt kött, fisk, mejeri, färska grönsaker) |
+
+**Per-recipe:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `mainProtein` | string | Dominant protein source in Swedish, or `""` if none |
+| `dietClass` | string | One of `vegan`, `vegetarisk`, `pescetarian`, `allätare` |
+| `batchable` | boolean | True if the dish keeps/reheats well for meal prep |
+| `cookMinutes` | integer | Estimated total active + passive cooking time in minutes |
+
+Ingredient fields live in the existing `ingredients` JSON column (no
+migration needed). Recipe-level fields are persisted via migration `013`
+(`main_protein`, `diet_class`, `batchable`, `cook_minutes` on `recipes`).
+Backfilling existing recipes and using these fields in menu generation are
+separate follow-up efforts — this phase only covers schema + parser output.
+
 ---
 
 ## Architecture

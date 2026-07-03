@@ -25,9 +25,13 @@ var recipeSchema = map[string]interface{}{
 			"items": map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
-					"name":   map[string]interface{}{"type": "string"},
-					"amount": map[string]interface{}{"type": "number"},
-					"unit":   map[string]interface{}{"type": "string"},
+					"name":           map[string]interface{}{"type": "string"},
+					"amount":         map[string]interface{}{"type": "number"},
+					"unit":           map[string]interface{}{"type": "string"},
+					"canonicalName":  map[string]interface{}{"type": "string"},
+					"gramsEquiv":     map[string]interface{}{"type": "number"},
+					"isPantryStaple": map[string]interface{}{"type": "boolean"},
+					"isPerishable":   map[string]interface{}{"type": "boolean"},
 				},
 				"required":             []string{"name", "amount", "unit"},
 				"additionalProperties": false,
@@ -42,6 +46,10 @@ var recipeSchema = map[string]interface{}{
 			"type":  "array",
 			"items": map[string]interface{}{"type": "string"},
 		},
+		"mainProtein": map[string]interface{}{"type": "string"},
+		"dietClass":   map[string]interface{}{"type": "string"},
+		"batchable":   map[string]interface{}{"type": "boolean"},
+		"cookMinutes": map[string]interface{}{"type": "integer"},
 	},
 	"required":             []string{"name", "servings", "ingredients", "instructions", "confidence"},
 	"additionalProperties": false,
@@ -61,12 +69,20 @@ IMPORTANT RULES:
    - Parse amount as a number (use 0 for "efter smak" / "to taste")
    - Use standard Swedish units: g, kg, dl, l, msk, tsk, st, krm
    - Keep ingredient names in Swedish
+   - For "canonicalName", give the base grocery-item name in Swedish, singular, no brand/prep words (e.g. "gul lök" not "1 stor gul lök, finhackad")
+   - For "gramsEquiv", estimate the ingredient's total weight in grams for the given amount/unit (use standard density/piece-weight assumptions; 0 if truly not estimable, e.g. "efter smak")
+   - Set "isPantryStaple" true for long-shelf-life basics (salt, socker, mjöl, olja, kryddor, buljong, etc.)
+   - Set "isPerishable" true for items that spoil within days (färskt kött, fisk, mejeri, färska grönsaker, färska örter)
 7. For "instructions":
    - Keep as an array of strings, one step per item
    - Keep in Swedish
    - Clean up numbering (remove "1.", "2." etc.)
 8. Set "confidence" (0.0-1.0) based on how well-structured the input was
 9. Add "warnings" array for any issues (missing info, ambiguous amounts, etc.)
+10. For "mainProtein", name the dominant protein source in Swedish (e.g. "kyckling", "nötkött", "fisk", "tofu", "kikärtor"), or "" if none
+11. For "dietClass", classify as one of: "vegan", "vegetarisk", "pescetarian", "allätare"
+12. Set "batchable" true if the dish keeps/reheats well for meal prep (soups, stews, casseroles)
+13. For "cookMinutes", estimate total active + passive cooking time in minutes
 
 NEVER include anything except the JSON object in your response.`
 
@@ -81,14 +97,18 @@ func NewRecipeParserService(claudeClient *claude.Client) *RecipeParserService {
 }
 
 type parsedRecipeResponse struct {
-	Name         string             `json:"name"`
-	Servings     int                `json:"servings"`
-	Emoji        string             `json:"emoji"`
-	Tags         []string           `json:"tags"`
+	Name         string              `json:"name"`
+	Servings     int                 `json:"servings"`
+	Emoji        string              `json:"emoji"`
+	Tags         []string            `json:"tags"`
 	Ingredients  []domain.Ingredient `json:"ingredients"`
-	Instructions []string           `json:"instructions"`
-	Confidence   float64            `json:"confidence"`
-	Warnings     []string           `json:"warnings"`
+	Instructions []string            `json:"instructions"`
+	Confidence   float64             `json:"confidence"`
+	Warnings     []string            `json:"warnings"`
+	MainProtein  string              `json:"mainProtein"`
+	DietClass    string              `json:"dietClass"`
+	Batchable    bool                `json:"batchable"`
+	CookMinutes  int                 `json:"cookMinutes"`
 }
 
 func (s *RecipeParserService) ParseRecipe(rawText string) (*domain.ParseRecipeResponse, error) {
@@ -145,6 +165,10 @@ func (s *RecipeParserService) ParseRecipe(rawText string) (*domain.ParseRecipeRe
 			Tags:         parsed.Tags,
 			Ingredients:  parsed.Ingredients,
 			Instructions: parsed.Instructions,
+			MainProtein:  parsed.MainProtein,
+			DietClass:    parsed.DietClass,
+			Batchable:    parsed.Batchable,
+			CookMinutes:  parsed.CookMinutes,
 		},
 		Confidence: parsed.Confidence,
 		Warnings:   parsed.Warnings,
