@@ -189,9 +189,9 @@ const emit = defineEmits<{
 
 /* Save button */
 .btn-save {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-  color: var(--text-on-accent);
-  border-color: var(--accent);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-bg);
   box-shadow: var(--shadow-accent-sm);
 }
 
@@ -223,6 +223,7 @@ const emit = defineEmits<{
 @media (max-width: 768px) {
   .menu-actions {
     padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   }
 
   .actions-container {

@@ -494,8 +494,8 @@ onBeforeRouteLeave((to, from, next) => {
 /* Menu grid */
 .menu-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1rem;
 }
 
 /* Prep-läge (batch cooking) toggle */
@@ -815,8 +815,8 @@ onBeforeRouteLeave((to, from, next) => {
 }
 
 .modal-btn-leave {
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
 }
 
 .modal-btn-leave:hover {
@@ -826,7 +826,7 @@ onBeforeRouteLeave((to, from, next) => {
 /* Responsive */
 @media (max-width: 1024px) {
   .menu-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1rem;
   }
 

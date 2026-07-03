@@ -67,6 +67,12 @@
   /* Loading overlay */
   --loading-overlay-bg: rgba(255, 252, 247, 0.9);
 
+  /* Primary CTA surface — shared by BaseButton and inline CTA pills.
+     WCAG AA: white text on #c4402e is 5.1:1 */
+  --btn-primary-bg: #c4402e;
+  --btn-primary-bg-hover: #b0392a;
+  --btn-primary-text: #ffffff;
+
   /* Focus rings */
   --accent-focus-ring: rgba(255, 107, 91, 0.15);
 
@@ -184,6 +190,12 @@
 
   /* Loading overlay */
   --loading-overlay-bg: rgba(26, 20, 16, 0.9);
+
+  /* Primary CTA surface — dark text on light coral.
+     WCAG AA: #2d1b17 on #ff8a7d is 5.8:1 */
+  --btn-primary-bg: #ff8a7d;
+  --btn-primary-bg-hover: #ffb599;
+  --btn-primary-text: #2d1b17;
 
   /* Focus rings */
   --accent-focus-ring: rgba(255, 138, 125, 0.2);

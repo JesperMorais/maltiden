@@ -57,7 +57,9 @@ const router = createRouter({
       path: '/menu/generate',
       name: 'generate-menu',
       component: GenerateMenuView,
-      meta: { transition: 'page-slide', requiresAuth: true, requiresMember: true }
+      // hideBottomNav: focused flow with its own sticky action bar — the fixed
+      // bottom nav would overlap the save/regenerate buttons on mobile
+      meta: { transition: 'page-slide', requiresAuth: true, requiresMember: true, hideBottomNav: true }
     },
     {
       path: '/about',

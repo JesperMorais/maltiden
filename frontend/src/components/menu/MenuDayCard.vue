@@ -325,6 +325,8 @@ const emit = defineEmits<{
   justify-content: center;
   text-align: center;
   gap: 0.75rem;
+  /* keep centered text clear of the absolutely-positioned lock button */
+  padding-bottom: 2.75rem;
 }
 
 .recipe-emoji {

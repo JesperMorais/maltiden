@@ -561,9 +561,9 @@ function handleLogout() {
 }
 
 .save-btn:hover:not(:disabled) {
-  background: var(--accent);
-  color: var(--text-on-accent);
-  border-color: var(--accent);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-bg);
 }
 
 .cancel-btn:hover:not(:disabled) {
@@ -702,8 +702,8 @@ function handleLogout() {
 }
 
 .feedback-btn:hover {
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   transform: translateY(-2px);
 }
 

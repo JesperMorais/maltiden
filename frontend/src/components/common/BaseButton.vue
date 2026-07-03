@@ -66,15 +66,15 @@ withDefaults(defineProps<Props>(), {
   transform: translateY(-1px) scale(0.98);
 }
 
-/* Variant: Primary */
+/* Variant: Primary — uses the AA-safe CTA tokens from theme.css */
 .variant-primary {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-  color: var(--text-on-accent);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   box-shadow: var(--shadow-accent);
 }
 
 .variant-primary::before {
-  background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 100%);
+  background: var(--btn-primary-bg-hover);
 }
 
 .variant-primary:hover:not(:disabled)::before {

@@ -356,10 +356,13 @@ function handleViewShoppingList() {
     width: 100%;
   }
 
-  /* Interleave: TodaysMeal(1) → QuickActions(2) → WeeklyMenu(3) → ShoppingList(4) */
+  /* Interleave: TodaysMeal(1) → QuickActions(2) → WeeklyMenu(3) → ShoppingList(4) → Household(5).
+     Every child of .main-area/.sidebar MUST get an explicit order here — an
+     unlisted child defaults to order: 0 and jumps to the top of the page. */
   .main-area > :first-child { order: 1; }
   .sidebar > :nth-child(1) { order: 2; }
   .main-area > :nth-child(2) { order: 3; }
   .sidebar > :nth-child(2) { order: 4; }
+  .main-area > :nth-child(3) { order: 5; }
 }
 </style>

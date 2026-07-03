@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
-import { RouterView } from 'vue-router'
+import { computed, defineAsyncComponent } from 'vue'
+import { RouterView, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
+const route = useRoute()
+
+const showBottomNav = computed(
+  () => userStore.isAuthenticated && !route.meta.hideBottomNav,
+)
 
 const ToastNotification = defineAsyncComponent(() =>
   import('@/components/common/ToastNotification.vue')
@@ -22,10 +27,10 @@ const MobileBottomNav = defineAsyncComponent(() =>
       <component :is="Component" :key="route.path" />
     </Transition>
   </RouterView>
-  <div v-if="userStore.isAuthenticated" class="bottom-nav-spacer" />
+  <div v-if="showBottomNav" class="bottom-nav-spacer" />
   <ToastNotification />
   <FeedbackWidget v-if="userStore.isAuthenticated" />
-  <MobileBottomNav v-if="userStore.isAuthenticated" />
+  <MobileBottomNav v-if="showBottomNav" />
 </template>
 
 <style>
