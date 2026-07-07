@@ -10,13 +10,13 @@ import (
 
 func TestResendSender_Send_ErrorStatusCodes(t *testing.T) {
 	codes := []int{
-		http.StatusBadRequest,           // 400
-		http.StatusUnauthorized,         // 401
-		http.StatusForbidden,            // 403
-		http.StatusUnprocessableEntity,  // 422
-		http.StatusTooManyRequests,      // 429
-		http.StatusInternalServerError,  // 500
-		http.StatusServiceUnavailable,   // 503
+		http.StatusBadRequest,          // 400
+		http.StatusUnauthorized,        // 401
+		http.StatusForbidden,           // 403
+		http.StatusUnprocessableEntity, // 422
+		http.StatusTooManyRequests,     // 429
+		http.StatusInternalServerError, // 500
+		http.StatusServiceUnavailable,  // 503
 	}
 
 	for _, code := range codes {
