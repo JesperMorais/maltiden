@@ -806,6 +806,140 @@ func sameSet(a, b []string) bool {
 	return true
 }
 
+// buildSelector constructs a menuSelector directly for scoring unit tests,
+// bypassing newMenuSelector's filtering so the fixture is fully under test control.
+func buildSelector(t *testing.T, recipes []domain.RecipeSummary, ings map[string][]domain.Ingredient) *menuSelector {
+	t.Helper()
+	prefs := domain.DefaultMenuPreferences("hh_1")
+	sel := selWithIngredients(t, recipes, prefs, ings, 42, 43)
+	return sel
+}
+
+func TestMenuScorerOverlapScore_ZeroBeforeAnyPick(t *testing.T) {
+	// Before any recipe is committed, chosenKeys is empty → overlapScore must be 0.
+	recipes := []domain.RecipeSummary{rec("rec_a"), rec("rec_b")}
+	ings := map[string][]domain.Ingredient{
+		"rec_a": ing("kyckling", "ris"),
+		"rec_b": ing("kyckling", "broccoli"),
+	}
+	sel := buildSelector(t, recipes, ings)
+	if got := sel.overlapScore("rec_a"); got != 0 {
+		t.Errorf("overlapScore before any pick = %d, want 0", got)
+	}
+}
+
+func TestMenuScorerOverlapScore_RisesAfterCommit(t *testing.T) {
+	// After committing rec_a (kyckling, ris), rec_b (kyckling, broccoli) should
+	// score 1 (kyckling is now in chosenKeys) while rec_c (torsk, potatis) scores 0.
+	recipes := []domain.RecipeSummary{rec("rec_a"), rec("rec_b"), rec("rec_c")}
+	ings := map[string][]domain.Ingredient{
+		"rec_a": ing("kyckling", "ris"),
+		"rec_b": ing("kyckling", "broccoli"),
+		"rec_c": ing("torsk", "potatis"),
+	}
+	sel := buildSelector(t, recipes, ings)
+	sel.commit("rec_a")
+
+	if got := sel.overlapScore("rec_b"); got != 1 {
+		t.Errorf("overlapScore(rec_b) after committing rec_a = %d, want 1", got)
+	}
+	if got := sel.overlapScore("rec_c"); got != 0 {
+		t.Errorf("overlapScore(rec_c) after committing rec_a = %d, want 0", got)
+	}
+}
+
+func TestMenuScorerVarietyPenalty_ZeroBeforeAnyPick(t *testing.T) {
+	// No committed picks → chosenTags empty → varietyPenalty must be 0.
+	recipes := []domain.RecipeSummary{rec("rec_a", "fisk")}
+	sel := buildSelector(t, recipes, nil)
+	if got := sel.varietyPenalty("rec_a"); got != 0 {
+		t.Errorf("varietyPenalty before any pick = %v, want 0", got)
+	}
+}
+
+func TestMenuScorerVarietyPenalty_GrowsWithRepeat(t *testing.T) {
+	// After committing one fisk dish, a second fisk dish must carry penalty > 0.
+	recipes := []domain.RecipeSummary{rec("fisk_1", "fisk"), rec("fisk_2", "fisk"), rec("other", "kyckling")}
+	sel := buildSelector(t, recipes, nil)
+	sel.commit("fisk_1")
+
+	penaltyFisk2 := sel.varietyPenalty("fisk_2")
+	penaltyOther := sel.varietyPenalty("other")
+	if penaltyFisk2 <= 0 {
+		t.Errorf("varietyPenalty(fisk_2) after fisk_1 committed = %v, want > 0", penaltyFisk2)
+	}
+	if penaltyOther != 0 {
+		t.Errorf("varietyPenalty(other/kyckling) after fisk_1 committed = %v, want 0", penaltyOther)
+	}
+}
+
+func TestMenuScorerRecencyPenalty_ZeroBeforeAnyPick(t *testing.T) {
+	// No committed picks → lastUsedTag empty → recencyPenalty must be 0.
+	recipes := []domain.RecipeSummary{rec("rec_a", "asiatiskt")}
+	sel := buildSelector(t, recipes, nil)
+	if got := sel.recencyPenalty("rec_a"); got != 0 {
+		t.Errorf("recencyPenalty before any pick = %v, want 0", got)
+	}
+}
+
+func TestMenuScorerRecencyPenalty_HighWhenAdjacentAndFadesWithDistance(t *testing.T) {
+	// Commit asiatiskt_1 at slot 0. At slot 1 the same tag is maximally recent
+	// (gap=1) → recencyPenalty > 0. After recencyDecaySl more slots the penalty
+	// fades to 0.
+	recipes := make([]domain.RecipeSummary, recencyDecaySl+3)
+	recipes[0] = rec("asi_1", "asiatiskt")
+	recipes[1] = rec("asi_2", "asiatiskt")
+	for i := 2; i < len(recipes); i++ {
+		recipes[i] = rec("filler_"+string(rune('a'+i)), "kyckling")
+	}
+	sel := buildSelector(t, recipes, nil)
+
+	sel.commit("asi_1") // pickIndex becomes 1 after commit
+	penaltyAdjacent := sel.recencyPenalty("asi_2")
+	if penaltyAdjacent <= 0 {
+		t.Errorf("recencyPenalty immediately after committing same-tag recipe = %v, want > 0", penaltyAdjacent)
+	}
+
+	// Advance pickIndex past the decay window by committing filler slots.
+	for i := 2; i <= recencyDecaySl+1 && i < len(recipes); i++ {
+		sel.commit(recipes[i].ID)
+	}
+	penaltyAfterDecay := sel.recencyPenalty("asi_2")
+	if penaltyAfterDecay != 0 {
+		t.Errorf("recencyPenalty after %d filler slots = %v, want 0", recencyDecaySl, penaltyAfterDecay)
+	}
+}
+
+func TestMenuScorerScore_OverlapCandidateBeatsNoOverlap(t *testing.T) {
+	// After committing rec_a (kyckling), rec_b (kyckling) has overlap=1, rec_c
+	// (torsk) has overlap=0. With identical variety/recency state, score(rec_b) >
+	// score(rec_c).
+	recipes := []domain.RecipeSummary{rec("rec_a"), rec("rec_b"), rec("rec_c")}
+	ings := map[string][]domain.Ingredient{
+		"rec_a": ing("kyckling", "ris"),
+		"rec_b": ing("kyckling", "broccoli"),
+		"rec_c": ing("torsk", "potatis"),
+	}
+	sel := buildSelector(t, recipes, ings)
+	sel.commit("rec_a")
+
+	scoreB := sel.score("rec_b")
+	scoreC := sel.score("rec_c")
+	if scoreB <= scoreC {
+		t.Errorf("score(rec_b with overlap) = %v, score(rec_c no overlap) = %v; expected overlap candidate to win", scoreB, scoreC)
+	}
+}
+
+func TestMenuScorerScore_ZeroStateIsNeutral(t *testing.T) {
+	// With no committed picks all scoring components are 0, so score() returns 0.
+	recipes := []domain.RecipeSummary{rec("rec_a", "fisk")}
+	ings := map[string][]domain.Ingredient{"rec_a": ing("torsk")}
+	sel := buildSelector(t, recipes, ings)
+	if got := sel.score("rec_a"); got != 0 {
+		t.Errorf("score before any pick = %v, want 0", got)
+	}
+}
+
 func TestComputeSharedIngredients(t *testing.T) {
 	ingredients := map[string][]domain.Ingredient{
 		"rec_a": ing("Kyckling", "Ris", "Salt"),         // Salt = pantry staple

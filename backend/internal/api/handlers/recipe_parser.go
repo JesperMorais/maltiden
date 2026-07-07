@@ -9,8 +9,12 @@ import (
 	"net/http"
 )
 
+type recipeParser interface {
+	ParseRecipe(rawText string) (*domain.ParseRecipeResponse, error)
+}
+
 type RecipeParserHandler struct {
-	parserService *services.RecipeParserService
+	parserService recipeParser
 	recipeService *services.RecipeService
 }
 
@@ -84,7 +88,27 @@ func (h *RecipeParserHandler) ParseAndSave(w http.ResponseWriter, r *http.Reques
 	householdID := middleware.GetHouseholdID(r)
 	created, err := h.recipeService.Create(parsed.Recipe, householdID)
 	if err != nil {
-		WriteError(w, http.StatusInternalServerError, "save_failed")
+		switch {
+		case errors.Is(err, domain.ErrNameRequired):
+			WriteError(w, http.StatusBadRequest, "name_required")
+		case errors.Is(err, domain.ErrInvalidServings):
+			WriteError(w, http.StatusBadRequest, "invalid_servings")
+		case errors.Is(err, domain.ErrIngredientsRequired):
+			WriteError(w, http.StatusBadRequest, "ingredients_required")
+		case errors.Is(err, domain.ErrInstructionsRequired):
+			WriteError(w, http.StatusBadRequest, "instructions_required")
+		case errors.Is(err, domain.ErrNameTooLong):
+			WriteError(w, http.StatusBadRequest, "name_too_long")
+		case errors.Is(err, domain.ErrTooManyIngredients):
+			WriteError(w, http.StatusBadRequest, "too_many_ingredients")
+		case errors.Is(err, domain.ErrTooManyTags):
+			WriteError(w, http.StatusBadRequest, "too_many_tags")
+		case errors.Is(err, domain.ErrTagTooLong):
+			WriteError(w, http.StatusBadRequest, "tag_too_long")
+		default:
+			slog.Error("ParseAndSave save failed", "error", err)
+			WriteError(w, http.StatusInternalServerError, "save_failed")
+		}
 		return
 	}
 
