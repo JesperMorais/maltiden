@@ -22,6 +22,7 @@ const MAX_CHARS = 10000
     <label class="form-label">
       <span>Klistra in recepttext</span>
       <textarea
+        aria-label="Klistra in recepttext"
         :value="props.modelValue"
         @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
         class="form-input textarea"
