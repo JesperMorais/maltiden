@@ -72,3 +72,11 @@ type UpdateMemberStatusRequest struct {
 type UpdateHouseholdRequest struct {
 	Name string `json:"name"`
 }
+
+// Planning preferences
+
+type HouseholdPreferences struct {
+	DietProfile           string   `json:"dietProfile"`
+	VegetarianDaysPerWeek int      `json:"vegetarianDaysPerWeek"`
+	DislikedIngredients   []string `json:"dislikedIngredients"`
+}

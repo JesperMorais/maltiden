@@ -119,6 +119,12 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.Handle("DELETE /households/members/{id}", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.household.RemoveMember),
 	))
+	mux.Handle("GET /households/preferences", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.household.GetPreferences),
+	))
+	mux.Handle("PUT /households/preferences", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.household.UpdatePreferences),
+	))
 	mux.Handle("POST /recipes", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.recipe.Create),
 	))

@@ -183,6 +183,50 @@ func (h *HouseholdHandler) UpdateMemberStatus(w http.ResponseWriter, r *http.Req
 	WriteJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
+func (h *HouseholdHandler) GetPreferences(w http.ResponseWriter, r *http.Request) {
+	householdID := middleware.GetHouseholdID(r)
+	if householdID == "" {
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	prefs, err := h.householdService.GetPreferences(householdID)
+	if err != nil {
+		log.Printf("ERROR [GetPreferences] %v", err)
+		WriteError(w, http.StatusInternalServerError, "internal_error")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, prefs)
+}
+
+func (h *HouseholdHandler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
+	householdID := middleware.GetHouseholdID(r)
+	if householdID == "" {
+		WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var req domain.HouseholdPreferences
+	if !DecodeJSON(w, r, maxBodySize, &req) {
+		return
+	}
+
+	err := h.householdService.UpdatePreferences(householdID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrInvalidVegetarianDays):
+			WriteError(w, http.StatusBadRequest, "invalid_vegetarian_days")
+		default:
+			log.Printf("ERROR [UpdatePreferences] %v", err)
+			WriteError(w, http.StatusInternalServerError, "internal_error")
+		}
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
 func (h *HouseholdHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	householdID := middleware.GetHouseholdID(r)

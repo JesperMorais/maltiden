@@ -2,6 +2,7 @@ package services
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"maltiden/internal/domain"
 	"math/big"
@@ -12,6 +13,8 @@ import (
 )
 
 const maxHouseholdNameLen = 100
+
+var ErrInvalidVegetarianDays = errors.New("invalid_vegetarian_days")
 
 type HouseholdService struct {
 	householdStorage domain.HouseholdRepository
@@ -246,6 +249,23 @@ func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUse
 	}
 
 	return tx.Commit()
+}
+
+// GetPreferences returns the household's planning preferences.
+func (s *HouseholdService) GetPreferences(householdID string) (*domain.HouseholdPreferences, error) {
+	return s.householdStorage.GetPreferences(householdID)
+}
+
+// UpdatePreferences validates and persists the household's planning preferences.
+func (s *HouseholdService) UpdatePreferences(householdID string, prefs domain.HouseholdPreferences) error {
+	if prefs.VegetarianDaysPerWeek < 0 || prefs.VegetarianDaysPerWeek > 7 {
+		return ErrInvalidVegetarianDays
+	}
+	if prefs.DislikedIngredients == nil {
+		prefs.DislikedIngredients = []string{}
+	}
+
+	return s.householdStorage.UpsertPreferences(householdID, &prefs)
 }
 
 // generateInviteCode creates a random 8-character alphanumeric code (~40 bits of entropy).

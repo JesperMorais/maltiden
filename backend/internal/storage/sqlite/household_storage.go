@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"maltiden/internal/domain"
 	"time"
 )
@@ -351,4 +352,60 @@ func (s *HouseholdStorage) GetUserHouseholdID(userID string) (string, error) {
 		return householdID.String, nil
 	}
 	return "", nil
+}
+
+// Planning preferences
+
+func (s *HouseholdStorage) GetPreferences(householdID string) (*domain.HouseholdPreferences, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var dietProfile sql.NullString
+	var vegetarianDays sql.NullInt64
+	var dislikedJSON sql.NullString
+
+	err := s.db.QueryRowContext(ctx,
+		`SELECT diet_profile, vegetarian_days_per_week, disliked_ingredients FROM household_preferences WHERE household_id = ?`,
+		householdID,
+	).Scan(&dietProfile, &vegetarianDays, &dislikedJSON)
+	if err == sql.ErrNoRows {
+		return &domain.HouseholdPreferences{DislikedIngredients: []string{}}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	prefs := &domain.HouseholdPreferences{
+		DietProfile:           dietProfile.String,
+		VegetarianDaysPerWeek: int(vegetarianDays.Int64),
+		DislikedIngredients:   []string{},
+	}
+	if dislikedJSON.Valid && dislikedJSON.String != "" {
+		if err := json.Unmarshal([]byte(dislikedJSON.String), &prefs.DislikedIngredients); err != nil {
+			return nil, err
+		}
+	}
+
+	return prefs, nil
+}
+
+func (s *HouseholdStorage) UpsertPreferences(householdID string, prefs *domain.HouseholdPreferences) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	dislikedJSON, err := json.Marshal(prefs.DislikedIngredients)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.ExecContext(ctx, `
+		INSERT INTO household_preferences (household_id, diet_profile, vegetarian_days_per_week, disliked_ingredients, updated_at)
+		VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+		ON CONFLICT(household_id) DO UPDATE SET
+			diet_profile = excluded.diet_profile,
+			vegetarian_days_per_week = excluded.vegetarian_days_per_week,
+			disliked_ingredients = excluded.disliked_ingredients,
+			updated_at = CURRENT_TIMESTAMP
+	`, householdID, prefs.DietProfile, prefs.VegetarianDaysPerWeek, string(dislikedJSON))
+	return err
 }
