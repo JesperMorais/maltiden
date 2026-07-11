@@ -3,9 +3,12 @@ package domain
 import "time"
 
 type Ingredient struct {
-	Name   string  `json:"name"`
-	Amount float64 `json:"amount"`
-	Unit   string  `json:"unit"`
+	Name           string  `json:"name"`
+	Amount         float64 `json:"amount"`
+	Unit           string  `json:"unit"`
+	CanonicalName  string  `json:"canonicalName,omitempty"`
+	IsPantryStaple bool    `json:"isPantryStaple,omitempty"`
+	IsPerishable   bool    `json:"isPerishable,omitempty"`
 }
 
 type Recipe struct {
