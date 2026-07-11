@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"maltiden/internal/domain"
 	"time"
 )
@@ -39,6 +40,48 @@ func (s *HouseholdStorage) UpdateName(householdID, name string) error {
 	_, err := s.db.ExecContext(ctx,
 		`UPDATE households SET name = ? WHERE id = ?`,
 		name, householdID,
+	)
+	return err
+}
+
+// GetPreferences returns a household's dietary preferences, defaulting to empty values
+// if the column has not yet been set (e.g. omnivore, 0 veg days, no dislikes).
+func (s *HouseholdStorage) GetPreferences(householdID string) (*domain.HouseholdPreferences, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var prefsJSON string
+	err := s.db.QueryRowContext(ctx, `SELECT preferences FROM households WHERE id = ?`, householdID).Scan(&prefsJSON)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	prefs := &domain.HouseholdPreferences{Diet: "omnivore", DislikedIngredients: []string{}}
+	if err := json.Unmarshal([]byte(prefsJSON), prefs); err != nil {
+		prefs = &domain.HouseholdPreferences{Diet: "omnivore", DislikedIngredients: []string{}}
+	}
+	if prefs.DislikedIngredients == nil {
+		prefs.DislikedIngredients = []string{}
+	}
+	return prefs, nil
+}
+
+// UpdatePreferences persists a household's dietary preferences as a JSON column.
+func (s *HouseholdStorage) UpdatePreferences(householdID string, prefs *domain.HouseholdPreferences) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	data, err := json.Marshal(prefs)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.ExecContext(ctx,
+		`UPDATE households SET preferences = ? WHERE id = ?`,
+		string(data), householdID,
 	)
 	return err
 }

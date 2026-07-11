@@ -34,6 +34,8 @@ type HouseholdRepository interface {
 	RemoveMemberTx(tx *sql.Tx, householdID, userID string) error
 	AddMemberTx(tx *sql.Tx, member *HouseholdMember) error
 	UpdateUserHouseholdTx(tx *sql.Tx, userID, householdID string) error
+	GetPreferences(householdID string) (*HouseholdPreferences, error)
+	UpdatePreferences(householdID string, prefs *HouseholdPreferences) error
 	DB() *sql.DB
 }
 
