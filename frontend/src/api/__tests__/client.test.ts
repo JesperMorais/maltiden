@@ -192,3 +192,44 @@ describe('API client 401 response interceptor', () => {
     consoleSpy.mockRestore()
   })
 })
+
+describe('API client request-id correlation', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.stubEnv('VITE_EVENTS', 'true')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('forwards X-Request-ID from a successful response to setLastRequestId', async () => {
+    const freshClient = (await import('../client')).default
+    const { useSessionEvents } = await import('@/composables/useSessionEvents')
+    const freshMock = new MockAdapter(freshClient)
+    freshMock.onGet('/health').reply(200, { ok: true }, { 'x-request-id': 'req-success-1' })
+
+    await freshClient.get('/health')
+
+    const { events, recordAction } = useSessionEvents()
+    recordAction('probe')
+    expect(events.value[events.value.length - 1]?.requestId).toBe('req-success-1')
+    freshMock.restore()
+  })
+
+  it('forwards X-Request-ID from an error response to setLastRequestId', async () => {
+    const freshClient = (await import('../client')).default
+    const { useSessionEvents } = await import('@/composables/useSessionEvents')
+    const freshMock = new MockAdapter(freshClient)
+    freshMock
+      .onGet('/households/me')
+      .reply(500, { error: 'internal_error' }, { 'x-request-id': 'req-error-1' })
+
+    await expect(freshClient.get('/households/me')).rejects.toThrow()
+
+    const { events, recordAction } = useSessionEvents()
+    recordAction('probe')
+    expect(events.value[events.value.length - 1]?.requestId).toBe('req-error-1')
+    freshMock.restore()
+  })
+})

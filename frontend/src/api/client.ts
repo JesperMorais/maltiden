@@ -6,6 +6,7 @@
 import axios from 'axios'
 import type { AxiosError } from 'axios'
 import { tokenUtils } from '@/utils/token'
+import { setLastRequestId } from '@/composables/useSessionEvents'
 
 declare module 'axios' {
   interface AxiosRequestConfig {
@@ -61,8 +62,12 @@ apiClient.interceptors.request.use(
  * Response interceptor - handles common errors
  */
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    setLastRequestId(response.headers['x-request-id'] ?? null)
+    return response
+  },
   (error: AxiosError) => {
+    setLastRequestId((error.response?.headers['x-request-id'] as string | undefined) ?? null)
     const requestUrl = error.config?.url ?? ''
     const isAuthEndpoint = requestUrl.startsWith('/auth/')
 
