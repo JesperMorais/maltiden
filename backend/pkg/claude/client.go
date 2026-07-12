@@ -21,6 +21,7 @@ type Client struct {
 	apiKey     string
 	httpClient *http.Client
 	model      string
+	baseURL    string
 }
 
 type Message struct {
@@ -62,8 +63,20 @@ func NewClient() (*Client, error) {
 		httpClient: &http.Client{
 			Timeout: DefaultTimeout,
 		},
-		model: DefaultModel,
+		model:   DefaultModel,
+		baseURL: BaseURL,
 	}, nil
+}
+
+// newTestClient builds a Client bypassing NewClient's env-var requirement,
+// for injecting a custom RoundTripper/base URL in tests.
+func newTestClient(baseURL string, rt http.RoundTripper) *Client {
+	return &Client{
+		apiKey:     "test-key",
+		httpClient: &http.Client{Transport: rt, Timeout: DefaultTimeout},
+		model:      DefaultModel,
+		baseURL:    baseURL,
+	}
 }
 
 func (c *Client) SendMessage(ctx context.Context, req Request) (*Response, error) {
@@ -76,7 +89,7 @@ func (c *Client) SendMessage(ctx context.Context, req Request) (*Response, error
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", BaseURL, bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
