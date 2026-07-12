@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useSessionEvents } from '@/composables/useSessionEvents'
 
 // Lazy load all views for code splitting
 const LandingView = () => import('@/views/LandingView.vue')
@@ -99,6 +100,12 @@ router.beforeEach((to, _from, next) => {
   } else {
     next()
   }
+})
+
+// Session event logging — route changes only, no query/params (PII risk)
+router.afterEach((to) => {
+  const { recordRouteChange } = useSessionEvents()
+  recordRouteChange(to.name ? String(to.name) : to.path)
 })
 
 export default router
