@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
+describe('useSessionEvents config', () => {
+  it('retains session events for 30 days, within the 120-day sanctioned ceiling (#269)', async () => {
+    const { RETENTION_DAYS } = await import('../useSessionEvents')
+    expect(RETENTION_DAYS).toBe(30)
+    expect(RETENTION_DAYS).toBeLessThanOrEqual(120)
+  })
+})
+
 describe('useSessionEvents', () => {
   beforeEach(() => {
     vi.resetModules()

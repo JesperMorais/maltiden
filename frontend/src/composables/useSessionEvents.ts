@@ -15,7 +15,7 @@ export const EVENTS_ENABLED = import.meta.env.VITE_EVENTS === 'true'
 
 // Consent posture + retention are config consts (one-line flip, no migration)
 export const CONSENT_MODE: 'opt-in' | 'opt-out' = 'opt-in'
-export const RETENTION_DAYS = 1
+export const RETENTION_DAYS = 30
 
 const MAX_EVENTS = 200
 let nextId = 0
