@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"maltiden/internal/domain"
 	"math/rand/v2"
 	"time"
@@ -11,6 +12,7 @@ import (
 type MenuService struct {
 	menuStorage   domain.MenuRepository
 	recipeStorage domain.RecipeRepository
+	events        *EventService
 }
 
 func NewMenuService(menuStorage domain.MenuRepository, recipeStorage domain.RecipeRepository) *MenuService {
@@ -18,6 +20,11 @@ func NewMenuService(menuStorage domain.MenuRepository, recipeStorage domain.Reci
 		menuStorage:   menuStorage,
 		recipeStorage: recipeStorage,
 	}
+}
+
+// SetEventService wires in an optional, nil-safe analytics dependency.
+func (s *MenuService) SetEventService(events *EventService) {
+	s.events = events
 }
 
 // enrichMenuDays converts MenuDay slice to MenuResponseDay slice,
@@ -145,6 +152,10 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 	enrichedDays, err := s.enrichMenuDays(menu.Days)
 	if err != nil {
 		return nil, err
+	}
+
+	if s.events != nil {
+		s.events.Track(context.Background(), domain.EventMenuGenerated, householdID, "")
 	}
 
 	return &domain.MenuResponse{

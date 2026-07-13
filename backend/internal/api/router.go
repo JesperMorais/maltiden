@@ -24,6 +24,7 @@ type dependencies struct {
 	feedback    *handlers.FeedbackHandler
 	health      *handlers.HealthHandler
 	userStorage *sqlite.UserStorage // needed for token version checks in auth middleware
+	events      *services.EventService
 }
 
 func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
@@ -34,6 +35,7 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	menuStorage := sqlite.NewMenuStorage(db)
 	shoppingStorage := sqlite.NewShoppingStorage(db)
 	feedbackStorage := sqlite.NewFeedbackStorage(db)
+	eventStorage := sqlite.NewEventStorage(db)
 
 	// Service layer
 	authService := services.NewAuthService(db, userStorage, householdStorage, jwtService)
@@ -43,18 +45,24 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	shoppingService := services.NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 	tjekService := services.NewTjekService()
 	feedbackService := services.NewFeedbackService(feedbackStorage)
+	eventService := services.NewEventService(eventStorage, "")
+	menuService.SetEventService(eventService)
 
 	// Handler layer
+	shoppingHandler := handlers.NewShoppingHandler(shoppingService, menuStorage)
+	shoppingHandler.SetEventService(eventService)
+
 	return &dependencies{
 		auth:        handlers.NewAuthHandler(authService),
 		household:   handlers.NewHouseholdHandler(householdService),
 		recipe:      handlers.NewRecipeHandler(recipeService),
 		menu:        handlers.NewMenuHandler(menuService),
-		shopping:    handlers.NewShoppingHandler(shoppingService, menuStorage),
+		shopping:    shoppingHandler,
 		offers:      handlers.NewOffersHandler(tjekService),
 		feedback:    handlers.NewFeedbackHandler(feedbackService),
 		health:      handlers.NewHealthHandler(db),
 		userStorage: userStorage,
+		events:      eventService,
 	}
 }
 

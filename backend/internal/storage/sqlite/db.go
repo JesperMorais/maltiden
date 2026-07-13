@@ -110,6 +110,7 @@ func runMigrations(db *sql.DB, fs embed.FS) error {
 		{10, "010_add_recipe_household_id.sql"},
 		{11, "011_create_feedback.sql"},
 		{12, "012_seed_100_recipes.sql"},
+		{13, "013_create_session_events.sql"},
 	}
 
 	for _, m := range migrationFiles {

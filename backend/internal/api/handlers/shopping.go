@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"log"
 	"maltiden/internal/domain"
 	"maltiden/internal/services"
@@ -11,6 +12,7 @@ import (
 type ShoppingHandler struct {
 	shoppingService *services.ShoppingService
 	menuStorage     domain.MenuRepository
+	events          *services.EventService
 }
 
 func NewShoppingHandler(shoppingService *services.ShoppingService, menuStorage domain.MenuRepository) *ShoppingHandler {
@@ -18,6 +20,11 @@ func NewShoppingHandler(shoppingService *services.ShoppingService, menuStorage d
 		shoppingService: shoppingService,
 		menuStorage:     menuStorage,
 	}
+}
+
+// SetEventService wires in an optional, nil-safe analytics dependency.
+func (h *ShoppingHandler) SetEventService(events *services.EventService) {
+	h.events = events
 }
 
 func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request) {
@@ -59,6 +66,10 @@ func (h *ShoppingHandler) GetShoppingList(w http.ResponseWriter, r *http.Request
 	if list == nil {
 		WriteError(w, http.StatusNotFound, "menu_not_found")
 		return
+	}
+
+	if h.events != nil {
+		h.events.Track(context.Background(), domain.EventShoppingListViewed, householdID, "")
 	}
 
 	WriteJSON(w, http.StatusOK, list)
