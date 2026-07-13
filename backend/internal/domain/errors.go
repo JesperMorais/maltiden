@@ -38,6 +38,8 @@ var (
 	ErrTooManyIngredients   = errors.New("too_many_ingredients")
 	ErrTooManyTags          = errors.New("too_many_tags")
 	ErrTagTooLong           = errors.New("tag_too_long")
+	ErrInvalidAmount        = errors.New("invalid_amount")
+	ErrAmountTooLarge       = errors.New("amount_too_large")
 
 	// Auth validation
 	ErrInvalidEmail = errors.New("invalid_email")

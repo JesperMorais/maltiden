@@ -78,6 +78,14 @@ func (s *RecipeService) Update(id string, householdID string, req domain.UpdateR
 			return nil, domain.ErrTagTooLong
 		}
 	}
+	for _, ing := range req.Ingredients {
+		if ing.Amount < 0 {
+			return nil, domain.ErrInvalidAmount
+		}
+		if ing.Amount > 10000 {
+			return nil, domain.ErrAmountTooLarge
+		}
+	}
 
 	// Update fields on existing recipe
 	existing.Name = req.Name
@@ -148,6 +156,14 @@ func (s *RecipeService) Create(req domain.CreateRecipeRequest, householdID strin
 	for _, tag := range req.Tags {
 		if len(tag) > 50 {
 			return nil, domain.ErrTagTooLong
+		}
+	}
+	for _, ing := range req.Ingredients {
+		if ing.Amount < 0 {
+			return nil, domain.ErrInvalidAmount
+		}
+		if ing.Amount > 10000 {
+			return nil, domain.ErrAmountTooLarge
 		}
 	}
 
