@@ -36,7 +36,7 @@ func (m *prMockUserStorage) IncrementTokenVersion(_ string) error     { return n
 func (m *prMockUserStorage) IncrementTokenVersionTx(_ *sql.Tx, _ string) error {
 	return nil
 }
-func (m *prMockUserStorage) UpdatePassword(_, _ string) error            { return nil }
+func (m *prMockUserStorage) UpdatePassword(_, _ string) error              { return nil }
 func (m *prMockUserStorage) UpdatePasswordTx(_ *sql.Tx, _, _ string) error { return nil }
 func (m *prMockUserStorage) CreatePasswordResetToken(_ *domain.PasswordResetToken) error {
 	m.createTokenSeen = true

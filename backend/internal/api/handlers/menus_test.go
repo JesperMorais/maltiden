@@ -14,9 +14,9 @@ import (
 // mockMenuStorageForHandler wraps mockMenuStorage with controllable errors.
 type mockMenuStorageForHandler struct {
 	mockMenuStorage
-	createErr  error
-	updateErr  error
-	currentMenu *domain.Menu
+	createErr     error
+	updateErr     error
+	currentMenu   *domain.Menu
 	getCurrentErr error
 }
 

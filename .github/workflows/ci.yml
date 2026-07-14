@@ -80,6 +80,16 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      - name: Gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::These files are not gofmt-clean:"
+            echo "$unformatted"
+            echo "Run 'gofmt -w backend/' and commit."
+            exit 1
+          fi
+
       - name: Vulnerability check
         uses: golang/govulncheck-action@v1
         with:

@@ -15,49 +15,55 @@ import (
 
 // mockUserStorage stubs domain.UserRepository for auth handler tests.
 type mockUserStorage struct {
-	user     *domain.User
-	getErr   error
+	user   *domain.User
+	getErr error
 }
 
 func (m *mockUserStorage) GetByEmail(_ string) (*domain.User, error) {
 	return m.user, m.getErr
 }
 func (m *mockUserStorage) GetByID(_ string) (*domain.User, error)                      { return nil, nil }
-func (m *mockUserStorage) Create(_ *domain.User) error                                  { return nil }
+func (m *mockUserStorage) Create(_ *domain.User) error                                 { return nil }
 func (m *mockUserStorage) CreateTx(_ *sql.Tx, _ *domain.User) error                    { return nil }
-func (m *mockUserStorage) GetTokenVersion(_ string) (int, error)                        { return 0, nil }
-func (m *mockUserStorage) IncrementTokenVersion(_ string) error                         { return nil }
-func (m *mockUserStorage) IncrementTokenVersionTx(_ *sql.Tx, _ string) error            { return nil }
-func (m *mockUserStorage) UpdatePassword(_, _ string) error                             { return nil }
+func (m *mockUserStorage) GetTokenVersion(_ string) (int, error)                       { return 0, nil }
+func (m *mockUserStorage) IncrementTokenVersion(_ string) error                        { return nil }
+func (m *mockUserStorage) IncrementTokenVersionTx(_ *sql.Tx, _ string) error           { return nil }
+func (m *mockUserStorage) UpdatePassword(_, _ string) error                            { return nil }
 func (m *mockUserStorage) UpdatePasswordTx(_ *sql.Tx, _, _ string) error               { return nil }
-func (m *mockUserStorage) CreatePasswordResetToken(_ *domain.PasswordResetToken) error  { return nil }
+func (m *mockUserStorage) CreatePasswordResetToken(_ *domain.PasswordResetToken) error { return nil }
 func (m *mockUserStorage) GetPasswordResetToken(_ string) (*domain.PasswordResetToken, error) {
 	return nil, nil
 }
-func (m *mockUserStorage) MarkPasswordResetTokenUsed(_ string) error                    { return nil }
-func (m *mockUserStorage) MarkPasswordResetTokenUsedTx(_ *sql.Tx, _ string) error      { return nil }
+func (m *mockUserStorage) MarkPasswordResetTokenUsed(_ string) error              { return nil }
+func (m *mockUserStorage) MarkPasswordResetTokenUsedTx(_ *sql.Tx, _ string) error { return nil }
 
 // mockHouseholdStorage stubs domain.HouseholdRepository for auth handler tests.
 type mockHouseholdStorage struct{}
 
-func (m *mockHouseholdStorage) Create(_ *domain.Household) error                               { return nil }
-func (m *mockHouseholdStorage) CreateTx(_ *sql.Tx, _ *domain.Household) error                 { return nil }
-func (m *mockHouseholdStorage) UpdateName(_, _ string) error                                   { return nil }
-func (m *mockHouseholdStorage) GetByUserID(_ string) (*domain.HouseholdResponse, error)        { return nil, nil }
-func (m *mockHouseholdStorage) CreateInviteCode(_ *domain.InviteCode) error                    { return nil }
-func (m *mockHouseholdStorage) GetInviteByCode(_ string) (*domain.InviteCode, error)           { return nil, nil }
-func (m *mockHouseholdStorage) MarkInviteUsedTx(_ *sql.Tx, _, _ string) error                 { return nil }
-func (m *mockHouseholdStorage) GetMemberRole(_, _ string) (string, error)                      { return "", nil }
-func (m *mockHouseholdStorage) GetMemberStatuses(_ string) ([]domain.MemberStatus, error)      { return nil, nil }
-func (m *mockHouseholdStorage) UpdateMemberStatus(_ string, _ string, _ *bool, _ *bool) error { return nil }
-func (m *mockHouseholdStorage) RemoveMember(_, _ string) error                                 { return nil }
-func (m *mockHouseholdStorage) IsMember(_, _ string) (bool, error)                             { return false, nil }
-func (m *mockHouseholdStorage) IsMemberTx(_ *sql.Tx, _, _ string) (bool, error)               { return false, nil }
-func (m *mockHouseholdStorage) GetUserHouseholdID(_ string) (string, error)                    { return "", nil }
-func (m *mockHouseholdStorage) RemoveMemberTx(_ *sql.Tx, _, _ string) error                   { return nil }
-func (m *mockHouseholdStorage) AddMemberTx(_ *sql.Tx, _ *domain.HouseholdMember) error        { return nil }
-func (m *mockHouseholdStorage) UpdateUserHouseholdTx(_ *sql.Tx, _, _ string) error            { return nil }
-func (m *mockHouseholdStorage) DB() *sql.DB                                                    { return nil }
+func (m *mockHouseholdStorage) Create(_ *domain.Household) error              { return nil }
+func (m *mockHouseholdStorage) CreateTx(_ *sql.Tx, _ *domain.Household) error { return nil }
+func (m *mockHouseholdStorage) UpdateName(_, _ string) error                  { return nil }
+func (m *mockHouseholdStorage) GetByUserID(_ string) (*domain.HouseholdResponse, error) {
+	return nil, nil
+}
+func (m *mockHouseholdStorage) CreateInviteCode(_ *domain.InviteCode) error          { return nil }
+func (m *mockHouseholdStorage) GetInviteByCode(_ string) (*domain.InviteCode, error) { return nil, nil }
+func (m *mockHouseholdStorage) MarkInviteUsedTx(_ *sql.Tx, _, _ string) error        { return nil }
+func (m *mockHouseholdStorage) GetMemberRole(_, _ string) (string, error)            { return "", nil }
+func (m *mockHouseholdStorage) GetMemberStatuses(_ string) ([]domain.MemberStatus, error) {
+	return nil, nil
+}
+func (m *mockHouseholdStorage) UpdateMemberStatus(_ string, _ string, _ *bool, _ *bool) error {
+	return nil
+}
+func (m *mockHouseholdStorage) RemoveMember(_, _ string) error                         { return nil }
+func (m *mockHouseholdStorage) IsMember(_, _ string) (bool, error)                     { return false, nil }
+func (m *mockHouseholdStorage) IsMemberTx(_ *sql.Tx, _, _ string) (bool, error)        { return false, nil }
+func (m *mockHouseholdStorage) GetUserHouseholdID(_ string) (string, error)            { return "", nil }
+func (m *mockHouseholdStorage) RemoveMemberTx(_ *sql.Tx, _, _ string) error            { return nil }
+func (m *mockHouseholdStorage) AddMemberTx(_ *sql.Tx, _ *domain.HouseholdMember) error { return nil }
+func (m *mockHouseholdStorage) UpdateUserHouseholdTx(_ *sql.Tx, _, _ string) error     { return nil }
+func (m *mockHouseholdStorage) DB() *sql.DB                                            { return nil }
 
 func newTestAuthHandler(userStore *mockUserStorage) *AuthHandler {
 	jwtSvc, _ := utils.NewJWTService("test-secret")

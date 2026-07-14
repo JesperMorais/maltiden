@@ -53,8 +53,8 @@ func Open(path string) (*sql.DB, error) {
 	}
 
 	// Configure connection pool (conservative for SQLite single-writer)
-	db.SetMaxOpenConns(10)    // single writer, multiple readers with WAL
-	db.SetMaxIdleConns(5)     // keep warm connections close to max to avoid churn
+	db.SetMaxOpenConns(10)                 // single writer, multiple readers with WAL
+	db.SetMaxIdleConns(5)                  // keep warm connections close to max to avoid churn
 	db.SetConnMaxLifetime(5 * time.Minute) // recycle connections periodically
 
 	// Run Migrations
