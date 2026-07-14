@@ -42,6 +42,16 @@ var recipeSchema = map[string]interface{}{
 			"type":  "array",
 			"items": map[string]interface{}{"type": "string"},
 		},
+		"nutrition": map[string]interface{}{
+			"type": []string{"object", "null"},
+			"properties": map[string]interface{}{
+				"calories": map[string]interface{}{"type": []string{"integer", "null"}},
+				"proteinG": map[string]interface{}{"type": []string{"number", "null"}},
+				"carbsG":   map[string]interface{}{"type": []string{"number", "null"}},
+				"fatG":     map[string]interface{}{"type": []string{"number", "null"}},
+			},
+			"additionalProperties": false,
+		},
 	},
 	"required":             []string{"name", "servings", "ingredients", "instructions", "confidence"},
 	"additionalProperties": false,
@@ -67,6 +77,8 @@ IMPORTANT RULES:
    - Clean up numbering (remove "1.", "2." etc.)
 8. Set "confidence" (0.0-1.0) based on how well-structured the input was
 9. Add "warnings" array for any issues (missing info, ambiguous amounts, etc.)
+10. For "nutrition", estimate per-serving calories, proteinG, carbsG, and fatG for
+    typical Swedish home cooking; use null for any value you cannot reasonably estimate
 
 NEVER include anything except the JSON object in your response.`
 
@@ -81,14 +93,15 @@ func NewRecipeParserService(claudeClient *claude.Client) *RecipeParserService {
 }
 
 type parsedRecipeResponse struct {
-	Name         string             `json:"name"`
-	Servings     int                `json:"servings"`
-	Emoji        string             `json:"emoji"`
-	Tags         []string           `json:"tags"`
+	Name         string              `json:"name"`
+	Servings     int                 `json:"servings"`
+	Emoji        string              `json:"emoji"`
+	Tags         []string            `json:"tags"`
 	Ingredients  []domain.Ingredient `json:"ingredients"`
-	Instructions []string           `json:"instructions"`
-	Confidence   float64            `json:"confidence"`
-	Warnings     []string           `json:"warnings"`
+	Instructions []string            `json:"instructions"`
+	Confidence   float64             `json:"confidence"`
+	Warnings     []string            `json:"warnings"`
+	Nutrition    *domain.Nutrition   `json:"nutrition,omitempty"`
 }
 
 func (s *RecipeParserService) ParseRecipe(rawText string) (*domain.ParseRecipeResponse, error) {
@@ -149,5 +162,6 @@ func (s *RecipeParserService) ParseRecipe(rawText string) (*domain.ParseRecipeRe
 		Confidence: parsed.Confidence,
 		Warnings:   parsed.Warnings,
 		RawText:    rawText,
+		Nutrition:  parsed.Nutrition,
 	}, nil
 }

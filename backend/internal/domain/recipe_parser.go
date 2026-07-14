@@ -12,4 +12,14 @@ type ParseRecipeResponse struct {
 	Confidence float64             `json:"confidence"`
 	Warnings   []string            `json:"warnings,omitempty"`
 	RawText    string              `json:"rawText"`
+	Nutrition  *Nutrition          `json:"nutrition,omitempty"`
+}
+
+// Nutrition holds estimated per-serving macros. Fields are pointers so an
+// unknown value can be represented as null rather than a misleading zero.
+type Nutrition struct {
+	Calories *int     `json:"calories,omitempty"`
+	ProteinG *float64 `json:"proteinG,omitempty"`
+	CarbsG   *float64 `json:"carbsG,omitempty"`
+	FatG     *float64 `json:"fatG,omitempty"`
 }
