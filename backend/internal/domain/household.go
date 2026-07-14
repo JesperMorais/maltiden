@@ -55,9 +55,9 @@ type JoinHouseholdResponse struct {
 // Member status
 
 type MemberStatus struct {
-	ID             string `json:"id"`
-	IsEatingToday  bool   `json:"isEatingToday"`
-	WantsLunchBox  bool   `json:"wantsLunchBox"`
+	ID            string `json:"id"`
+	IsEatingToday bool   `json:"isEatingToday"`
+	WantsLunchBox bool   `json:"wantsLunchBox"`
 }
 
 type MemberStatusListResponse struct {

@@ -18,8 +18,8 @@ type mockMenuStorage struct {
 	menuByID            map[string]*domain.Menu
 }
 
-func (m *mockMenuStorage) Create(menu *domain.Menu) error                        { return nil }
-func (m *mockMenuStorage) Update(menu *domain.Menu) error                        { return nil }
+func (m *mockMenuStorage) Create(menu *domain.Menu) error { return nil }
+func (m *mockMenuStorage) Update(menu *domain.Menu) error { return nil }
 func (m *mockMenuStorage) GetCurrentByHousehold(householdID string) (*domain.Menu, error) {
 	return nil, nil
 }
@@ -53,12 +53,12 @@ func (m *mockShoppingRecipeStorage) Update(recipe *domain.Recipe) error { return
 func (m *mockShoppingRecipeStorage) Delete(id string) error             { return nil }
 
 type mockShoppingStorage struct {
-	checkedItems         map[string]bool
-	customItems          []domain.CustomShoppingItem
-	capInserted          bool
-	setCheckedErr        error
-	setCustomCheckedErr  error
-	deleteErr            error
+	checkedItems        map[string]bool
+	customItems         []domain.CustomShoppingItem
+	capInserted         bool
+	setCheckedErr       error
+	setCustomCheckedErr error
+	deleteErr           error
 }
 
 func (m *mockShoppingStorage) GetCheckedItems(menuID string) (map[string]bool, error) {
