@@ -42,11 +42,11 @@ type cacheEntry struct {
 const maxCacheEntries = 500
 
 type TjekService struct {
-	baseURL    string
-	httpClient *http.Client
-	cache      map[string]cacheEntry
-	cacheMu    sync.Mutex
-	cacheHits  atomic.Int64
+	baseURL     string
+	httpClient  *http.Client
+	cache       map[string]cacheEntry
+	cacheMu     sync.Mutex
+	cacheHits   atomic.Int64
 	cacheMisses atomic.Int64
 }
 

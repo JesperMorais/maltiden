@@ -82,8 +82,12 @@ func TestValidate(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name:    "emoji 9 runes",
-			req:     func() CreateRecipeRequest { r := validRecipe(); r.Emoji = "🍝🍝🍝🍝🍝🍝🍝🍝🍝"; return r }(),
+			name: "emoji 9 runes",
+			req: func() CreateRecipeRequest {
+				r := validRecipe()
+				r.Emoji = "🍝🍝🍝🍝🍝🍝🍝🍝🍝"
+				return r
+			}(),
 			wantErr: ErrEmojiTooLong,
 		},
 
