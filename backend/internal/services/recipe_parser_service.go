@@ -81,23 +81,23 @@ func NewRecipeParserService(claudeClient *claude.Client) *RecipeParserService {
 }
 
 type parsedRecipeResponse struct {
-	Name         string             `json:"name"`
-	Servings     int                `json:"servings"`
-	Emoji        string             `json:"emoji"`
-	Tags         []string           `json:"tags"`
+	Name         string              `json:"name"`
+	Servings     int                 `json:"servings"`
+	Emoji        string              `json:"emoji"`
+	Tags         []string            `json:"tags"`
 	Ingredients  []domain.Ingredient `json:"ingredients"`
-	Instructions []string           `json:"instructions"`
-	Confidence   float64            `json:"confidence"`
-	Warnings     []string           `json:"warnings"`
+	Instructions []string            `json:"instructions"`
+	Confidence   float64             `json:"confidence"`
+	Warnings     []string            `json:"warnings"`
 }
 
 func (s *RecipeParserService) ParseRecipe(rawText string) (*domain.ParseRecipeResponse, error) {
 	if rawText == "" {
-		return nil, fmt.Errorf("raw text is required")
+		return nil, fmt.Errorf("parse recipe: validation: raw text is required")
 	}
 
 	if len(rawText) > 10000 {
-		return nil, fmt.Errorf("input text too long (max 10000 characters)")
+		return nil, fmt.Errorf("parse recipe: validation: input text too long (max 10000 characters)")
 	}
 
 	req := claude.Request{
@@ -116,11 +116,11 @@ func (s *RecipeParserService) ParseRecipe(rawText string) (*domain.ParseRecipeRe
 
 	resp, err := s.claudeClient.SendMessage(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("claude API error: %w", err)
+		return nil, fmt.Errorf("parse recipe: claude call: %w", err)
 	}
 
 	if len(resp.Content) == 0 || resp.Content[0].Type != "text" {
-		return nil, fmt.Errorf("unexpected response format from Claude")
+		return nil, fmt.Errorf("parse recipe: response shape: unexpected response format from Claude")
 	}
 
 	// Strip markdown code fences if Claude wraps the JSON
@@ -134,7 +134,7 @@ func (s *RecipeParserService) ParseRecipe(rawText string) (*domain.ParseRecipeRe
 
 	var parsed parsedRecipeResponse
 	if err := json.Unmarshal([]byte(text), &parsed); err != nil {
-		return nil, fmt.Errorf("failed to parse Claude response: %w", err)
+		return nil, fmt.Errorf("parse recipe: json unmarshal: %w", err)
 	}
 
 	return &domain.ParseRecipeResponse{
