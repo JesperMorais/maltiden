@@ -248,6 +248,54 @@ func (s *HouseholdService) RemoveMember(householdID, requestingUserID, targetUse
 	return tx.Commit()
 }
 
+var validDiets = map[string]bool{
+	"omnivore":    true,
+	"vegetarian":  true,
+	"vegan":       true,
+	"pescatarian": true,
+}
+
+// GetPreferences returns a household's dietary preferences.
+func (s *HouseholdService) GetPreferences(householdID string) (*domain.HouseholdPreferences, error) {
+	prefs, err := s.householdStorage.GetPreferences(householdID)
+	if err != nil {
+		return nil, err
+	}
+	if prefs == nil {
+		return nil, domain.ErrNotFound
+	}
+	return prefs, nil
+}
+
+// UpdatePreferences validates and persists a household's dietary preferences.
+func (s *HouseholdService) UpdatePreferences(householdID string, req domain.UpdateHouseholdPreferencesRequest) error {
+	if !validDiets[req.Diet] {
+		return domain.ErrInvalidDiet
+	}
+	if req.VegDaysPerWeek < 0 || req.VegDaysPerWeek > 7 {
+		return domain.ErrInvalidDays
+	}
+
+	dislikes := make([]string, 0, len(req.DislikedIngredients))
+	seen := make(map[string]bool, len(req.DislikedIngredients))
+	for _, d := range req.DislikedIngredients {
+		trimmed := strings.TrimSpace(d)
+		if trimmed == "" || seen[trimmed] {
+			continue
+		}
+		seen[trimmed] = true
+		dislikes = append(dislikes, trimmed)
+	}
+
+	prefs := &domain.HouseholdPreferences{
+		Diet:                req.Diet,
+		VegDaysPerWeek:      req.VegDaysPerWeek,
+		DislikedIngredients: dislikes,
+	}
+
+	return s.householdStorage.UpdatePreferences(householdID, prefs)
+}
+
 // generateInviteCode creates a random 8-character alphanumeric code (~40 bits of entropy).
 func generateInviteCode() (string, error) {
 	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // no 0/O/1/I to avoid confusion

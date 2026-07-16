@@ -55,9 +55,9 @@ type JoinHouseholdResponse struct {
 // Member status
 
 type MemberStatus struct {
-	ID             string `json:"id"`
-	IsEatingToday  bool   `json:"isEatingToday"`
-	WantsLunchBox  bool   `json:"wantsLunchBox"`
+	ID            string `json:"id"`
+	IsEatingToday bool   `json:"isEatingToday"`
+	WantsLunchBox bool   `json:"wantsLunchBox"`
 }
 
 type MemberStatusListResponse struct {
@@ -71,4 +71,18 @@ type UpdateMemberStatusRequest struct {
 
 type UpdateHouseholdRequest struct {
 	Name string `json:"name"`
+}
+
+// Dietary preferences
+
+type HouseholdPreferences struct {
+	Diet                string   `json:"diet"`
+	VegDaysPerWeek      int      `json:"vegDaysPerWeek"`
+	DislikedIngredients []string `json:"dislikedIngredients"`
+}
+
+type UpdateHouseholdPreferencesRequest struct {
+	Diet                string   `json:"diet"`
+	VegDaysPerWeek      int      `json:"vegDaysPerWeek"`
+	DislikedIngredients []string `json:"dislikedIngredients"`
 }
