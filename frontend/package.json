@@ -27,7 +27,7 @@
     "axios": "^1.18.1",
     "lucide-vue-next": "^1.0.0",
     "motion-v": "^2.3.0",
-    "pinia": "^4.0.2",
+    "pinia": "^3.0.4",
     "vue": "^3.5.40",
     "vue-router": "^5.2.0"
   },
@@ -46,7 +46,7 @@
     "jiti": "^2.7.0",
     "npm-run-all2": "^9.0.2",
     "prettier": "3.9.5",
-    "typescript": "~7.0.2",
+    "typescript": "~6.0.3",
     "vite": "^7.3.6",
     "vite-plugin-vue-devtools": "^8.1.5",
     "vitest": "^4.1.10",
