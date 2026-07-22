@@ -2,7 +2,6 @@ package services
 
 import (
 	"maltiden/internal/domain"
-	"math/rand/v2"
 	"time"
 
 	"github.com/google/uuid"
@@ -93,17 +92,31 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		skipDays[d] = true
 	}
 
-	// Shuffle recipes for variety, cycle if fewer recipes than days
-	shuffled := make([]domain.RecipeSummary, len(recipes))
-	copy(shuffled, recipes)
-	rand.Shuffle(len(shuffled), func(i, j int) {
-		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
-	})
+	today := time.Now()
+
+	// Determine which slots are skipped and fetch full recipe data
+	// (with ingredients) for the greedy overlap scorer.
+	skipSlots := make(map[int]bool)
+	for i := 0; i < days; i++ {
+		date := today.AddDate(0, 0, i).Format("2006-01-02")
+		if skipDays[date] {
+			skipSlots[i] = true
+		}
+	}
+
+	ids := make([]string, len(recipes))
+	for i, r := range recipes {
+		ids[i] = r.ID
+	}
+	recipeData, err := s.recipeStorage.GetByIDs(ids)
+	if err != nil {
+		return nil, err
+	}
+
+	selected := selectRecipesForWeek(recipes, days, skipSlots, recipeData, uint64(today.UnixNano()))
 
 	// Generate menu days
 	menuDays := make([]domain.MenuDay, 0, days)
-	today := time.Now()
-	recipeIdx := 0
 
 	for i := 0; i < days; i++ {
 		date := today.AddDate(0, 0, i).Format("2006-01-02")
@@ -113,13 +126,10 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 			Servings: servings,
 		}
 
-		// Check if this day should be skipped
-		if skipDays[date] {
+		if skipSlots[i] {
 			day.Skip = true
 		} else {
-			// Pick recipe from shuffled list, cycling through if needed
-			day.RecipeID = shuffled[recipeIdx%len(shuffled)].ID
-			recipeIdx++
+			day.RecipeID = selected[i]
 
 			// Check for extra portions
 			if extra, ok := req.ExtraPortions[date]; ok {
