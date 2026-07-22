@@ -10,4 +10,4 @@ A meal planning and recipe management application.
 
 ## Getting Started
 
-Visit the project at: [https://måltiden.se](https://maltiden.fly.dev/)
+Visit the project at: [https://måltiden.se](https://måltiden.se/)

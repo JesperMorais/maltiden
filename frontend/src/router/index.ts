@@ -8,10 +8,11 @@ const LoginView = () => import('@/views/LoginView.vue')
 const DashboardView = () => import('@/views/DashboardView.vue')
 const GenerateMenuView = () => import('@/views/GenerateMenuView.vue')
 const AboutView = () => import('@/views/AboutView.vue')
-const OffersView = () => import('@/views/OffersView.vue')
 const RecipesView = () => import('@/views/RecipesView.vue')
 const ShoppingListView = () => import('@/views/ShoppingListView.vue')
 const AccountView = () => import('@/views/AccountView.vue')
+const ForgotPasswordView = () => import('@/views/ForgotPasswordView.vue')
+const ResetPasswordView = () => import('@/views/ResetPasswordView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -35,6 +36,18 @@ const router = createRouter({
       meta: { transition: 'page-slide' }
     },
     {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: ForgotPasswordView,
+      meta: { transition: 'page-slide' }
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: ResetPasswordView,
+      meta: { transition: 'page-slide' }
+    },
+    {
       path: '/dashboard',
       name: 'dashboard',
       component: DashboardView,
@@ -44,7 +57,9 @@ const router = createRouter({
       path: '/menu/generate',
       name: 'generate-menu',
       component: GenerateMenuView,
-      meta: { transition: 'page-slide', requiresAuth: true, requiresMember: true }
+      // hideBottomNav: focused flow with its own sticky action bar — the fixed
+      // bottom nav would overlap the save/regenerate buttons on mobile
+      meta: { transition: 'page-slide', requiresAuth: true, requiresMember: true, hideBottomNav: true }
     },
     {
       path: '/about',
@@ -73,12 +88,6 @@ const router = createRouter({
       name: 'account',
       component: AccountView,
       meta: { transition: 'page-slide', requiresAuth: true }
-    },
-    {
-      path: '/offers-poc',
-      name: 'offers-poc',
-      component: OffersView,
-      meta: { transition: 'page-fade' }
     },
   ],
 })

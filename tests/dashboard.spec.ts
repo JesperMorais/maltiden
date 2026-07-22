@@ -113,9 +113,9 @@ test.describe('Dashboard', () => {
   })
 
   test('shopping list widget shows items count', async ({ page }) => {
-    // Shopping list widget shows stats: remaining "kvar", checked "klart", total "totalt"
+    // Shopping list widget shows stats: "X kvar" and "av Y"
     await expect(page.getByText('kvar')).toBeVisible({ timeout: 5000 })
-    await expect(page.getByText('totalt')).toBeVisible()
+    await expect(page.getByText(/^av \d+$/)).toBeVisible()
   })
 
   test('shopping list widget has progress bar', async ({ page }) => {

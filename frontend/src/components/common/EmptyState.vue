@@ -32,6 +32,18 @@ const emit = defineEmits<{
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;
+  animation: empty-state-enter 0.4s ease-out;
+}
+
+@keyframes empty-state-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .empty-state-icon {
@@ -63,8 +75,8 @@ const emit = defineEmits<{
 
 .empty-state-action {
   padding: 0.875rem 2rem;
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border: none;
   border-radius: 100px;
   font-family: 'Nunito', sans-serif;

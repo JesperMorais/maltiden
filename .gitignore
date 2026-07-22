@@ -62,6 +62,9 @@ tests/lighthouse-*.report.html
 tests/lighthouse-desktop-after/
 tests/lighthouse-mobile-after/
 
+# Playwright accessibility / screenshot artifacts
+tests/screenshots/
+
 # E2E build artifacts
 backend/static/
 tools/.venv/

@@ -132,7 +132,7 @@ test.describe('Direct URL access', () => {
 
   test('/recipes/parse redirects to /recipes', async ({ page }) => {
     await login(page)
-    await navigateTo(page, '/recipes/parse')
+    await page.goto('/recipes/parse')
     await expect(page).toHaveURL(/\/recipes/)
   })
 

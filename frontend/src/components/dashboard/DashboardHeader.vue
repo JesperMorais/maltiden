@@ -215,13 +215,13 @@ function handleSettings() {
 }
 
 .role-badge.owner {
-  background: var(--role-owner-bg);
-  color: var(--text-on-accent);
+  background: var(--role-owner-text-bg);
+  color: var(--role-owner-text);
 }
 
 .role-badge.member {
-  background: var(--role-member-bg);
-  color: var(--text-on-accent);
+  background: var(--accent-bg-subtle);
+  color: var(--accent-text);
 }
 
 .role-badge.guest {

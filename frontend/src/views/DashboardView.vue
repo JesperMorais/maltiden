@@ -12,11 +12,14 @@ import HouseholdWidget from '@/components/dashboard/HouseholdWidget.vue'
 import ShoppingListWidget from '@/components/dashboard/ShoppingListWidget.vue'
 import InviteModal from '@/components/dashboard/InviteModal.vue'
 import RecipeDetailModal from '@/components/recipes/RecipeDetailModal.vue'
+import SwapRecipeModal from '@/components/menu/SwapRecipeModal.vue'
 import DashboardSkeleton from '@/components/skeleton/layouts/DashboardSkeleton.vue'
+import { useToast } from '@/composables/useToast'
 import ErrorState from '@/components/common/ErrorState.vue'
 import FadeContent from '@/components/vue-bits/FadeContent.vue'
 import RotatingText from '@/components/vue-bits/RotatingText.vue'
 import type { MenuDay } from '@/api/types/dashboard.types'
+import { removeMember } from '@/api/household.api'
 
 const greetingTexts = [
   'Vad blir det till middag?',
@@ -33,6 +36,8 @@ const prefsStore = usePlanningPreferencesStore()
 // Modal state
 const showInvite = ref(false)
 const selectedRecipeId = ref<string | null>(null)
+const swapTarget = ref<{ recipeId: string; date: string } | null>(null)
+const toast = useToast()
 
 const todayExtraPortions = computed(() => {
   const today = dashboardStore.todayFromMenu
@@ -49,6 +54,24 @@ onMounted(() => {
 
 function handleViewRecipe(day: MenuDay) {
   selectedRecipeId.value = day.meal?.id ?? null
+}
+
+function handleSwapRecipe(day: MenuDay) {
+  if (!day.meal) return
+  swapTarget.value = { recipeId: day.meal.id, date: day.date }
+  dashboardStore.setSelectedDate(null)
+}
+
+async function handleSwapSelected(newRecipeId: string) {
+  const target = swapTarget.value
+  if (!target) return
+  swapTarget.value = null
+  const ok = await dashboardStore.swapRecipeForDay(target.date, newRecipeId)
+  if (ok) {
+    toast.success('Recept utbytt!')
+  } else {
+    toast.error('Kunde inte byta recept. Försök igen.')
+  }
 }
 
 function handleMealClick() {
@@ -87,9 +110,20 @@ function handleCloseInvite() {
   showInvite.value = false
 }
 
-function handleRemoveMember(memberId: string) {
-  console.log('Remove member:', memberId)
-  // TODO: Call API to remove member from household
+async function handleRemoveMember(memberId: string) {
+  const household = dashboardStore.dashboardData?.household
+  if (!household) return
+
+  const snapshot = [...household.members]
+  household.members = household.members.filter((m) => m.id !== memberId)
+
+  try {
+    await removeMember(memberId)
+    toast.success('Medlemmen har tagits bort.')
+  } catch {
+    household.members = snapshot
+    toast.error('Kunde inte ta bort medlemmen. Försök igen.')
+  }
 }
 
 function handleViewShoppingList() {
@@ -147,6 +181,7 @@ function handleViewShoppingList() {
               <WeeklyMenuGrid
                 :weekly-menu="dashboardStore.weeklyMenu"
                 @view-recipe="handleViewRecipe"
+                @swap-recipe="handleSwapRecipe"
               />
             </FadeContent>
 
@@ -195,6 +230,15 @@ function handleViewShoppingList() {
         @close="selectedRecipeId = null"
         @updated="dashboardStore.fetchDashboard(true)"
         @deleted="selectedRecipeId = null; dashboardStore.fetchDashboard(true)"
+      />
+
+      <!-- Swap Recipe Modal -->
+      <SwapRecipeModal
+        v-if="swapTarget"
+        :current-recipe-id="swapTarget.recipeId"
+        :day-date="swapTarget.date"
+        @close="swapTarget = null"
+        @select="handleSwapSelected"
       />
     </template>
   </div>
@@ -266,6 +310,7 @@ function handleViewShoppingList() {
   gap: 1rem;
   position: sticky;
   top: calc(var(--header-height) + 2rem);
+  z-index: 1;
 }
 
 /* Responsive */
@@ -311,10 +356,13 @@ function handleViewShoppingList() {
     width: 100%;
   }
 
-  /* Interleave: TodaysMeal(1) → QuickActions(2) → WeeklyMenu(3) → ShoppingList(4) */
+  /* Interleave: TodaysMeal(1) → QuickActions(2) → WeeklyMenu(3) → ShoppingList(4) → Household(5).
+     Every child of .main-area/.sidebar MUST get an explicit order here — an
+     unlisted child defaults to order: 0 and jumps to the top of the page. */
   .main-area > :first-child { order: 1; }
   .sidebar > :nth-child(1) { order: 2; }
   .main-area > :nth-child(2) { order: 3; }
   .sidebar > :nth-child(2) { order: 4; }
+  .main-area > :nth-child(3) { order: 5; }
 }
 </style>

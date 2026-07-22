@@ -64,3 +64,22 @@ export async function register(
   const { data } = await apiClient.post<AuthResponse>('/auth/register', payload)
   return data
 }
+
+/**
+ * Request a password reset email.
+ *
+ * Always resolves successfully — the backend returns 200 regardless of whether
+ * the email exists, so we never leak account existence to the caller.
+ */
+export async function forgotPassword(email: string): Promise<void> {
+  await apiClient.post('/auth/forgot-password', { email })
+}
+
+/**
+ * Reset a password using a token issued by `forgotPassword`.
+ *
+ * Throws on invalid/expired/used token or weak password.
+ */
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await apiClient.post('/auth/reset-password', { token, newPassword })
+}

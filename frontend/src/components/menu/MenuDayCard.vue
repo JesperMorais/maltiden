@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { AnimatePresence, Motion } from 'motion-v'
+import { Lock, LockOpen, CookingPot, Refrigerator } from 'lucide-vue-next'
 import type { DraftMenuDay } from '@/stores/menuGenerator'
 import type { DisplayRecipe } from '@/composables/useSlotMachine'
 
@@ -12,7 +14,22 @@ interface Props {
   displayRecipe?: DisplayRecipe
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+// Batch-cooking markers (#248 Phase 2): a cook-day is cooked at double servings,
+// a leftovers day reuses it the next eligible day.
+const isBatchCook = computed(() => props.day.prepMode === 'batch')
+const isLeftover = computed(() => !!props.day.leftoverOf)
+
+// Per-serving macros (#248 Phase 3), shown only when the recipe carries data.
+const perServingMacros = computed<string | null>(() => {
+  const n = props.day.nutrition
+  if (!n) return null
+  const parts: string[] = []
+  if (n.calories != null) parts.push(`${Math.round(n.calories)} kcal`)
+  if (n.proteinG != null) parts.push(`${Math.round(n.proteinG)} g protein`)
+  return parts.length ? parts.join(' · ') : null
+})
 
 const emit = defineEmits<{
   'toggle-lock': []
@@ -87,6 +104,19 @@ const emit = defineEmits<{
 
         <!-- Servings -->
         <p class="recipe-servings">{{ day.servings }} portioner</p>
+
+        <!-- Per-serving macros (#248 Phase 3) -->
+        <p v-if="perServingMacros" class="recipe-macros">≈ {{ perServingMacros }} / portion</p>
+
+        <!-- Batch-cooking badge (#248 Phase 2) -->
+        <div
+          v-if="isBatchCook || isLeftover"
+          class="prep-badge"
+          :class="{ leftover: isLeftover }"
+        >
+          <component :is="isLeftover ? Refrigerator : CookingPot" :size="13" aria-hidden="true" />
+          <span>{{ isLeftover ? 'Rester' : 'Dubbel sats' }}</span>
+        </div>
       </template>
 
       <!-- EMPTY STATE -->
@@ -107,7 +137,7 @@ const emit = defineEmits<{
       :disabled="isLoading"
       @click.stop="emit('toggle-lock')"
     >
-      <span class="lock-icon">{{ isLocked ? '🔒' : '🔓' }}</span>
+      <component :is="isLocked ? Lock : LockOpen" :size="14" class="lock-icon" />
     </button>
   </article>
 </template>
@@ -295,6 +325,8 @@ const emit = defineEmits<{
   justify-content: center;
   text-align: center;
   gap: 0.75rem;
+  /* keep centered text clear of the absolutely-positioned lock button */
+  padding-bottom: 2.75rem;
 }
 
 .recipe-emoji {
@@ -329,6 +361,39 @@ const emit = defineEmits<{
   font-size: 0.875rem;
   color: var(--text-secondary);
   margin: 0;
+}
+
+.recipe-macros {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--accent-text);
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Batch-cooking badge */
+.prep-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 100px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  color: var(--accent-text);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.prep-badge.leftover {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
 }
 
 /* Empty recipe state */

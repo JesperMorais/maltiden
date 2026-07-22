@@ -2,6 +2,54 @@
 
 Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
+## Recent Changes (PR #225)
+
+**Frontend Route Changes:**
+- **Removed** `/offers-poc` route — the OffersView proof-of-concept component has been deleted.
+- **Added** `/konto` route — maps to `AccountView` (auth required, accessible by all roles including guests).
+
+**Shopping List:**
+- `GET /shopping-list` — `menuId` query parameter is now **optional**. When omitted the backend returns the shopping list for the household's current active menu.
+
+**No backend endpoint changes** — no new or removed API routes, no request/response shape changes.
+
+---
+
+## Recent Changes (PR #177)
+
+**New Endpoints:**
+- `POST /auth/forgot-password` — Request a password reset email (public, rate-limited ~3/hour per IP)
+- `POST /auth/reset-password` — Consume a reset token and set a new password (public, rate-limited ~3/hour per IP)
+
+**New Frontend Routes:**
+- `/forgot-password` — ForgotPasswordView
+- `/reset-password` — ResetPasswordView (receives `?token=` from email link)
+
+**Security:**
+- Forgot-password always returns `200 { "ok": true }` regardless of whether the email is registered, preventing account enumeration.
+- On successful reset, `token_version` is incremented — all existing JWTs for that user are immediately invalidated.
+
+**New environment variables (backend):**
+- `RESEND_API_KEY` — If set, reset emails are sent via Resend; otherwise the link is logged to stdout.
+- `EMAIL_FROM` — Sender address (default: `Måltiden <no-reply@maltiden.app>`).
+
+**No breaking changes** — purely additive.
+
+---
+
+## Recent Changes (PR #163)
+
+**New Shopping List Endpoints:**
+- `POST /shopping-list/items` — Add a custom item to the shopping list (auth required)
+- `DELETE /shopping-list/items/:id` — Remove a custom item from the shopping list (auth required)
+
+**Updated Response Shape:**
+- `ShoppingItem` (returned by `GET /shopping-list` and `POST /shopping-list/items`) now includes `isCustom: boolean` — `true` for user-added items, `false` for recipe-generated items.
+
+**No breaking changes** — purely additive.
+
+---
+
 ## Recent Changes (PR #99)
 
 **Auth client improvements (frontend only — no backend changes):**
@@ -110,6 +158,46 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 { "error": "invalid_credentials" }
 ```
 
+### POST /auth/forgot-password
+Request a password reset email. **Always returns 200** regardless of whether the email
+is registered, to avoid leaking account existence. Rate-limited to ~3 requests/hour
+per IP.
+
+When a matching account is found, the backend generates a 32-byte hex token (valid for
+1 hour) and emails a reset link. By default the email is logged to stdout (operators
+can grab the link from logs); if `RESEND_API_KEY` is set, the email is sent via Resend.
+```json
+// Request
+{ "email": "anna@example.com" }
+
+// Response 200 (always — even on unknown email or invalid format)
+{ "ok": true }
+```
+
+### POST /auth/reset-password
+Consume a reset token and set a new password. On success the user's `token_version`
+is incremented, invalidating all existing JWTs for that user. Rate-limited to
+~3 requests/hour per IP.
+```json
+// Request
+{ "token": "abc123…", "newPassword": "Newpassword123" }
+
+// Response 200
+{ "ok": true }
+
+// Error 400 — token does not exist
+{ "error": "invalid_reset_token" }
+
+// Error 400 — token has expired (>1h since creation)
+{ "error": "expired_reset_token" }
+
+// Error 400 — token has already been used
+{ "error": "used_reset_token" }
+
+// Error 400 — new password is shorter than 8 characters
+{ "error": "weak_password" }
+```
+
 ---
 
 ## Household
@@ -136,6 +224,28 @@ Base URL: `http://localhost:8080` (dev), `https://api.maltiden.se` (prod)
 
 // Error 404
 { "error": "household_not_found" }
+```
+
+### PATCH /households/me
+Rename the household. Requires `owner` or `member` role — guests receive 403.
+```json
+// Request
+{ "name": "Familjen Johansson" }
+
+// Response 200
+{ "ok": true }
+
+// Error 400 (name is empty)
+{ "error": "household_name_required" }
+
+// Error 400 (name exceeds 100 characters)
+{ "error": "household_name_too_long" }
+
+// Error 403 (caller is a guest)
+{ "error": "forbidden" }
+
+// Error 404 (household not found)
+{ "error": "not_found" }
 ```
 
 ### POST /households/invite
@@ -434,7 +544,10 @@ Parse recipe text and immediately save it to the database. **Auth required.**
   "days": 5,
   "skipDays": ["2025-01-22"],
   "servings": 4,
-  "extraPortions": { "2025-01-23": 2 }
+  "extraPortions": { "2025-01-23": 2 },
+  "prepMode": false,
+  "wishes": "två vegetariska dagar och snabb vardagsmat",
+  "arrange": true
 }
 
 // Response 201
@@ -445,9 +558,18 @@ Parse recipe text and immediately save it to the database. **Auth required.**
     { "date": "2025-01-21", "recipeId": "rec_002", "recipeName": "Laxpasta", "emoji": "🐟", "servings": 4 },
     { "date": "2025-01-22", "skip": true, "servings": 0 },
     { "date": "2025-01-23", "recipeId": "rec_003", "recipeName": "Kycklinggryta", "emoji": "🍗", "servings": 6 }
-  ]
+  ],
+  "sharedIngredients": [ { "name": "Lök", "recipeCount": 3 } ],
+  "rationale": "Veckan varvar snabb vardagsmat med en helgmiddag.",
+  "wishesIgnored": false
 }
 // Note: recipeName and emoji are optional — omitted for skip days and when not set on the recipe.
+// Phase 4 (AI experience layer, #248) — all optional and degrade gracefully without an API key:
+//   Request: `wishes` (free-text Swedish, parsed into per-run constraints), `arrange` (let AI place
+//     recipes across weekdays + write a rationale). `prepMode` enables batch cooking (#248 Phase 2).
+//   Response: `rationale` (short Swedish explanation; empty when arrange is off or AI unavailable),
+//     `wishesIgnored` (true when wishes were sent but the AI layer was unavailable),
+//     `sharedIngredients` (ingredients reused across the week, most-shared first).
 
 // Error 400
 { "error": "invalid_days" }
@@ -515,7 +637,7 @@ Use this to replace the generated menu's day assignments without regenerating fr
 
 ### GET /shopping-list
 ```json
-// Query: ?menuId=menu_001   — REQUIRED
+// Query: ?menuId=menu_001   — optional; defaults to the household's current active menu
 
 // Response 200
 {
@@ -524,17 +646,20 @@ Use this to replace the generated menu's day assignments without regenerating fr
     {
       "name": "Kött & Fisk",
       "items": [
-        { "id": "item_001", "name": "Köttfärs", "amount": 800, "unit": "g", "checked": false }
+        { "id": "item_001", "name": "Köttfärs", "amount": 800, "unit": "g", "checked": false, "isCustom": false }
       ]
     },
     {
       "name": "Mejeri",
       "items": [
-        { "id": "item_002", "name": "Grädde", "amount": 2, "unit": "dl", "checked": false }
+        { "id": "item_002", "name": "Grädde", "amount": 2, "unit": "dl", "checked": false, "isCustom": false },
+        { "id": "item_003", "name": "Parmesan", "amount": 1, "unit": "st", "checked": false, "isCustom": true }
       ]
     }
   ]
 }
+// isCustom: false — item generated from a recipe
+// isCustom: true  — item added manually by the user
 
 // Error 403 (menu belongs to a different household)
 { "error": "forbidden" }
@@ -557,6 +682,67 @@ Use this to replace the generated menu's day assignments without regenerating fr
 
 // Error 404
 { "error": "menu_not_found" }
+```
+
+### POST /shopping-list/items
+Add a custom item to the shopping list. **Auth required.**
+```json
+// Query: ?menuId=menu_001   — REQUIRED
+
+// Request
+{
+  "name": "Parmesan",    // required, max 200 chars
+  "unit": "st",          // optional, max 20 chars (default: "st")
+  "amount": 1            // optional, must be finite and ≤ 100000 (default: 1)
+}
+
+// Response 201
+{
+  "id": "citem_550e8400-e29b-41d4-a716-446655440000",
+  "name": "Parmesan",
+  "amount": 1,
+  "unit": "st",
+  "checked": false,
+  "isCustom": true
+}
+
+// Error 400 — name field missing or empty
+{ "error": "name_required" }
+
+// Error 400 — name exceeds 200 characters
+{ "error": "name_too_long" }
+
+// Error 400 — unit exceeds 20 characters
+{ "error": "unit_too_long" }
+
+// Error 400 — amount is NaN or Infinity
+{ "error": "invalid_amount" }
+
+// Error 400 — amount exceeds 100000
+{ "error": "amount_too_large" }
+
+// Error 401 — missing or invalid auth token
+{ "error": "unauthorized" }
+
+// Error 403 — menu belongs to a different household (cross-tenant access)
+{ "error": "forbidden" }
+
+// Error 404 — menu does not exist
+{ "error": "menu_not_found" }
+```
+
+### DELETE /shopping-list/items/:id
+Remove a custom item from the shopping list. **Auth required.** Only custom items (IDs prefixed `citem_`) can be deleted via this endpoint; recipe-generated items are not deletable.
+```json
+// Response 200
+{ "ok": true }
+
+// Error 401 — missing or invalid auth token
+{ "error": "unauthorized" }
+
+// Error 404 — item not found, OR item belongs to a different household
+// (cross-tenant probes return 404, not 403, to avoid leaking item existence)
+{ "error": "not_found" }
 ```
 
 ---
@@ -689,6 +875,10 @@ Alla errors följer samma struktur:
 | `invalid_token_format` | 401 | Ogiltigt format på Authorization-headern (saknar "Bearer "-prefix) |
 | `invalid_token` | 401 | JWT-token är ogiltig, utgången eller kan inte valideras |
 | `token_revoked` | 401 | Token har återkallats (t.ex. efter lösenordsbyte eller att ha lämnat hushållet) |
+| `invalid_reset_token` | 400 | Reset-token finns inte |
+| `expired_reset_token` | 400 | Reset-token har gått ut (>1h sedan skapandet) |
+| `used_reset_token` | 400 | Reset-token har redan använts |
+| `weak_password` | 400 | Nytt lösenord är kortare än 8 tecken |
 | `email_taken` | 400 | Email redan registrerad |
 | `code_required` | 400 | Inbjudningskod saknas i requesten |
 | `invalid_code` | 400 | Inbjudningskod ogiltig/utgången |
@@ -727,13 +917,15 @@ The frontend uses Vue Router with the following routes:
 | `/` | LandingView | No | No | Public landing page |
 | `/register` | OnboardingView | No | No | User registration |
 | `/login` | LoginView | No | No | User login |
+| `/forgot-password` | ForgotPasswordView | No | No | Request password reset email |
+| `/reset-password` | ResetPasswordView | No | No | Consume reset token from email link |
 | `/dashboard` | DashboardView | Yes | No | Main dashboard (guests can view) |
 | `/menu/generate` | GenerateMenuView | Yes | Yes | Menu generator (members only) |
 | `/recipes` | RecipesView | Yes | Yes | Unified recipes page with tabs |
 | `/recipes/parse` | *(redirect to /recipes)* | Yes | Yes | Legacy route, redirects to recipes |
 | `/shopping-list` | ShoppingListView | Yes | Yes | Shopping list (members only) |
+| `/konto` | AccountView | Yes | No | Account settings (all authenticated roles) |
 | `/about` | AboutView | No | No | About page |
-| `/offers-poc` | OffersView | No | No | Offers POC page |
 
 **Authentication Guard:**
 - Routes with `requiresAuth: true` redirect to `/login` if not authenticated
@@ -749,7 +941,10 @@ The frontend uses Vue Router with the following routes:
 | GET /health | ✅ | ⬜ |
 | POST /auth/register | ✅ | ✅ |
 | POST /auth/login | ✅ | ✅ |
+| POST /auth/forgot-password | ✅ | ✅ |
+| POST /auth/reset-password | ✅ | ✅ |
 | GET /households/me | ✅ | ✅ |
+| PATCH /households/me | ✅ | ✅ |
 | POST /households/invite | ✅ | ✅ |
 | POST /households/join | ✅ | ✅ |
 | GET /households/members/status | ✅ | ✅ |
@@ -767,6 +962,8 @@ The frontend uses Vue Router with the following routes:
 | GET /menus/current | ✅ | ✅ |
 | GET /shopping-list | ✅ | ✅ |
 | PATCH /shopping-list/items/:id | ✅ | ✅ |
+| POST /shopping-list/items | ✅ | ✅ |
+| DELETE /shopping-list/items/:id | ✅ | ✅ |
 | GET /offers/search | ✅ | ✅ |
 | GET /offers/discounts | ✅ | ✅ |
 | GET /offers/stores | ✅ | ✅ |
