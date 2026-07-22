@@ -335,3 +335,50 @@ func TestMenuGenerate_BoundaryDays(t *testing.T) {
 		t.Errorf("expected 31 days, got %d", len(resp.Days))
 	}
 }
+
+// TestMenuGenerate_TagVariety asserts the selector's variety guarantee:
+// within one generated week, no recipe tag appears more than twice
+// (menu_selector.go candidateScore penalizes tags used >=2 times already).
+func TestMenuGenerate_TagVariety(t *testing.T) {
+	env := newMenuTestEnv(t)
+
+	recipeIDToTag := make(map[string]string)
+	for i := 0; i < 7; i++ {
+		tag := "cat" + string(rune('0'+i))
+		resp, err := env.recipeService.Create(domain.CreateRecipeRequest{
+			Name:         "Recipe " + strings.Repeat("X", i),
+			Servings:     4,
+			Tags:         []string{tag},
+			Ingredients:  []domain.Ingredient{{Name: "Ingredient" + strings.Repeat("Y", i), Amount: 1, Unit: "st"}},
+			Instructions: []string{"Do something"},
+		}, env.householdID)
+		if err != nil {
+			t.Fatalf("failed to seed recipe %d: %v", i, err)
+		}
+		recipeIDToTag[resp.ID] = tag
+	}
+
+	menuResp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{
+		Days:     7,
+		Servings: 4,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	tagCounts := make(map[string]int)
+	for _, day := range menuResp.Days {
+		if day.Skip || day.RecipeID == "" {
+			continue
+		}
+		if tag, ok := recipeIDToTag[day.RecipeID]; ok {
+			tagCounts[tag]++
+		}
+	}
+
+	for tag, count := range tagCounts {
+		if count > 2 {
+			t.Errorf("tag %q appeared %d times in one week, expected at most 2", tag, count)
+		}
+	}
+}
