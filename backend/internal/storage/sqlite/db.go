@@ -53,8 +53,8 @@ func Open(path string) (*sql.DB, error) {
 	}
 
 	// Configure connection pool (conservative for SQLite single-writer)
-	db.SetMaxOpenConns(10)    // single writer, multiple readers with WAL
-	db.SetMaxIdleConns(5)     // keep warm connections close to max to avoid churn
+	db.SetMaxOpenConns(10)                 // single writer, multiple readers with WAL
+	db.SetMaxIdleConns(5)                  // keep warm connections close to max to avoid churn
 	db.SetConnMaxLifetime(5 * time.Minute) // recycle connections periodically
 
 	// Run Migrations
@@ -110,7 +110,14 @@ func runMigrations(db *sql.DB, fs embed.FS) error {
 		{10, "010_add_recipe_household_id.sql"},
 		{11, "011_create_feedback.sql"},
 		{12, "012_seed_100_recipes.sql"},
-		{13, "013_household_preferences.sql"},
+		{13, "013_custom_shopping_items.sql"},
+		{14, "014_clean_recipe_content.sql"},
+		{15, "015_password_reset_tokens.sql"},
+		{16, "016_create_menu_preferences.sql"},
+		{17, "017_add_disliked_ingredients.sql"},
+		{18, "018_add_recipe_nutrition.sql"},
+		{19, "019_add_menu_day_batch_cooking.sql"},
+		{20, "020_add_menu_rationale.sql"},
 	}
 
 	for _, m := range migrationFiles {

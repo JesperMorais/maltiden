@@ -1,6 +1,12 @@
 package domain
 
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+	"unicode"
+	"unicode/utf8"
+)
 
 type Ingredient struct {
 	Name           string  `json:"name"`
@@ -9,6 +15,18 @@ type Ingredient struct {
 	CanonicalName  string  `json:"canonicalName,omitempty"`
 	IsPantryStaple bool    `json:"isPantryStaple,omitempty"`
 	IsPerishable   bool    `json:"isPerishable,omitempty"`
+}
+
+// Nutrition holds per-serving nutritional values for a recipe (issue #248,
+// Phase 3 prereq). All fields are optional: a nil pointer means the value is
+// unknown for that recipe (existing recipes have no nutrition data). This is
+// the data-layer foundation only — menu-level macro aggregation/balancing is
+// the Phase 3 feature built on top of it, not part of this struct.
+type Nutrition struct {
+	Calories *float64 `json:"calories,omitempty"`
+	ProteinG *float64 `json:"proteinG,omitempty"`
+	CarbsG   *float64 `json:"carbsG,omitempty"`
+	FatG     *float64 `json:"fatG,omitempty"`
 }
 
 type Recipe struct {
@@ -20,7 +38,9 @@ type Recipe struct {
 	Ingredients  []Ingredient `json:"ingredients"`
 	Instructions []string     `json:"instructions"`
 	HouseholdID  string       `json:"householdId,omitempty"`
-	CreatedAt    time.Time    `json:"createdAt"`
+	// Nutrition is per serving and optional; omitted when no data exists.
+	Nutrition *Nutrition `json:"nutrition,omitempty"`
+	CreatedAt time.Time  `json:"createdAt"`
 }
 
 type RecipeSummary struct {
@@ -60,4 +80,98 @@ type CreateRecipeResponse struct {
 type RecipeFilter struct {
 	Name string
 	Tag  string
+}
+
+func hasControlChar(s string) bool {
+	for _, r := range s {
+		if unicode.IsControl(r) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r CreateRecipeRequest) Validate() error {
+	// Name
+	if utf8.RuneCountInString(r.Name) == 0 {
+		return ErrNameRequired
+	}
+	if utf8.RuneCountInString(r.Name) > 200 {
+		return fmt.Errorf("name: %w", ErrNameTooLong)
+	}
+	if hasControlChar(r.Name) {
+		return fmt.Errorf("name: %w", ErrContainsControlChar)
+	}
+
+	// Servings
+	if r.Servings < 1 || r.Servings > 50 {
+		return ErrInvalidServings
+	}
+
+	// Emoji
+	if utf8.RuneCountInString(r.Emoji) > 8 {
+		return ErrEmojiTooLong
+	}
+
+	// Tags
+	if len(r.Tags) > 12 {
+		return ErrTooManyTags
+	}
+	for _, tag := range r.Tags {
+		if utf8.RuneCountInString(tag) > 50 {
+			return fmt.Errorf("tag: %w", ErrTagTooLong)
+		}
+		if hasControlChar(tag) {
+			return fmt.Errorf("tag: %w", ErrContainsControlChar)
+		}
+	}
+
+	// Ingredients
+	if len(r.Ingredients) > 40 {
+		return ErrTooManyIngredients
+	}
+	for _, ing := range r.Ingredients {
+		if utf8.RuneCountInString(ing.Name) > 80 {
+			return fmt.Errorf("ingredient name: %w", ErrIngredientNameTooLong)
+		}
+		if hasControlChar(ing.Name) {
+			return fmt.Errorf("ingredient name: %w", ErrContainsControlChar)
+		}
+		if ing.Amount < 0 {
+			return ErrInvalidAmount
+		}
+		if ing.Amount > 10000 {
+			return ErrAmountTooLarge
+		}
+		if utf8.RuneCountInString(ing.Unit) > 20 {
+			return fmt.Errorf("unit: %w", ErrUnitTooLong)
+		}
+		if hasControlChar(ing.Unit) {
+			return fmt.Errorf("unit: %w", ErrContainsControlChar)
+		}
+	}
+
+	// Instructions
+	if len(r.Instructions) > 30 {
+		return ErrTooManyInstructions
+	}
+	for _, step := range r.Instructions {
+		if utf8.RuneCountInString(step) > 500 {
+			return fmt.Errorf("instruction: %w", ErrInstructionTooLong)
+		}
+		if hasControlChar(step) {
+			return fmt.Errorf("instruction: %w", ErrContainsControlChar)
+		}
+	}
+
+	// Total JSON size backstop
+	data, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+	if len(data) > 32*1024 {
+		return ErrRecipeTooLarge
+	}
+
+	return nil
 }

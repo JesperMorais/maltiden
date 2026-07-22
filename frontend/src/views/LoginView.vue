@@ -7,8 +7,10 @@ import { UtensilsCrossed } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 import { useToast } from '@/composables/useToast'
-import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
 import BaseThemeToggle from '@/components/common/BaseThemeToggle.vue'
+// Static import (not async): avoids the <Transition mode="out-in"> unmount
+// pitfall that left the canvas RAF loop running across navigations (#248).
+import WavesBackground from '@/components/vue-bits/WavesBackground.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -120,12 +122,9 @@ async function handleLogin() {
           <p v-show="error" id="login-error" role="alert" class="form-error">{{ error }}</p>
 
           <div class="forgot-password">
-            <a
-              href="mailto:maltiden.app@gmail.com?subject=Glömt%20lösenord%20-%20Måltiden&body=Hej!%20Jag%20har%20glömt%20mitt%20lösenord.%20Min%20e-post%3A%20"
-              class="forgot-link"
-            >
-              Glömt lösenord? Mejla support
-            </a>
+            <RouterLink to="/forgot-password" class="forgot-link">
+              Glömt lösenord?
+            </RouterLink>
           </div>
 
           <BaseButton

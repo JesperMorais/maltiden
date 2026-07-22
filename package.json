@@ -1,10 +1,10 @@
 {
   "devDependencies": {
-    "@axe-core/playwright": "^4.11.1",
-    "@playwright/test": "^1.58.2",
-    "@types/node": "^25.3.0"
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^26.1.1"
   },
   "scripts": {
-    "type-check": "npm --prefix frontend run type-check"
+    "type-check": "npm run type-check --prefix frontend"
   }
 }

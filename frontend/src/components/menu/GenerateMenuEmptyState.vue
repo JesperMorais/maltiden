@@ -135,8 +135,8 @@ const emit = defineEmits<{
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 2.5rem;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-  color: var(--text-on-accent);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border: none;
   border-radius: 100px;
   font-family: 'Nunito', sans-serif;
@@ -144,12 +144,12 @@ const emit = defineEmits<{
   font-size: 1.1rem;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 4px 12px rgba(255, 107, 91, 0.3);
+  box-shadow: var(--shadow-accent-sm);
 }
 
 .generate-button:hover {
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 8px 20px rgba(255, 107, 91, 0.4);
+  box-shadow: var(--shadow-accent-hover);
 }
 
 .generate-button:active {

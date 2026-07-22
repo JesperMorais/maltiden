@@ -8,10 +8,10 @@ import (
 
 // mockFeedbackStorage implements domain.FeedbackRepository for testing.
 type mockFeedbackStorage struct {
-	created      []*domain.Feedback
-	recentCount  int
-	recentErr    error
-	createErr    error
+	created     []*domain.Feedback
+	recentCount int
+	recentErr   error
+	createErr   error
 }
 
 func (m *mockFeedbackStorage) Create(f *domain.Feedback) error {

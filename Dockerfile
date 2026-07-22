@@ -3,6 +3,11 @@ FROM node:20-bookworm AS frontend-builder
 
 WORKDIR /build
 
+# Vite bakes VITE_* env vars into the bundle at build time.
+# Pass via `fly deploy --build-arg VITE_SENTRY_DSN_FE=<dsn>` or set in fly.toml [build.args].
+ARG VITE_SENTRY_DSN_FE=""
+ENV VITE_SENTRY_DSN_FE=$VITE_SENTRY_DSN_FE
+
 COPY frontend/package*.json ./
 RUN npm ci
 

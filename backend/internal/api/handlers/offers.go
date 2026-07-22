@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/getsentry/sentry-go"
 )
 
 // Haninge coordinates (hardcoded for POC)
@@ -34,17 +36,26 @@ func parseLocationParams(r *http.Request) (lat float64, lng float64, radius int,
 		if err != nil {
 			return 0, 0, 0, fmt.Errorf("invalid lat: %w", err)
 		}
+		if lat < -90 || lat > 90 {
+			return 0, 0, 0, fmt.Errorf("invalid lat: out of range")
+		}
 	}
 	if lngStr := r.URL.Query().Get("lng"); lngStr != "" {
 		lng, err = strconv.ParseFloat(lngStr, 64)
 		if err != nil {
 			return 0, 0, 0, fmt.Errorf("invalid lng: %w", err)
 		}
+		if lng < -180 || lng > 180 {
+			return 0, 0, 0, fmt.Errorf("invalid lng: out of range")
+		}
 	}
 	if radiusStr := r.URL.Query().Get("radius"); radiusStr != "" {
 		radius, err = strconv.Atoi(radiusStr)
 		if err != nil {
 			return 0, 0, 0, fmt.Errorf("invalid radius: %w", err)
+		}
+		if radius <= 0 || radius > 100000 {
+			return 0, 0, 0, fmt.Errorf("invalid radius: out of range")
 		}
 	}
 	return lat, lng, radius, nil
@@ -90,6 +101,7 @@ func (h *OffersHandler) SearchOffers(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.tjekService.SearchOffers(req)
 	if err != nil {
+		sentry.CaptureException(err)
 		log.Printf("ERROR [SearchOffers] %v", err)
 		WriteError(w, http.StatusBadGateway, "service_unavailable")
 		return
@@ -109,6 +121,7 @@ func (h *OffersHandler) GetDiscounts(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.tjekService.GetTopDiscounts(lat, lng, radius, excludeStores)
 	if err != nil {
+		sentry.CaptureException(err)
 		log.Printf("ERROR [GetDiscounts] %v", err)
 		WriteError(w, http.StatusBadGateway, "service_unavailable")
 		return
@@ -126,6 +139,7 @@ func (h *OffersHandler) GetStores(w http.ResponseWriter, r *http.Request) {
 
 	stores, err := h.tjekService.GetAvailableStores(lat, lng, radius)
 	if err != nil {
+		sentry.CaptureException(err)
 		log.Printf("ERROR [GetStores] %v", err)
 		WriteError(w, http.StatusBadGateway, "service_unavailable")
 		return

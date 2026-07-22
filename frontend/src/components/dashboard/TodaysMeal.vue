@@ -217,8 +217,8 @@ const emit = defineEmits<{
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: var(--accent-text);
-  color: var(--text-on-accent);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border-radius: 100px;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
@@ -228,7 +228,7 @@ const emit = defineEmits<{
 }
 
 .todays-meal:hover .meal-action {
-  background: var(--accent);
+  background: var(--btn-primary-bg-hover);
   box-shadow: var(--shadow-accent);
 }
 
