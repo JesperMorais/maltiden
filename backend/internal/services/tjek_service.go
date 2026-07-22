@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
+
+	"github.com/getsentry/sentry-go"
 )
 
 // Tjek API uses non-standard timezone format (+0000 instead of +00:00)
@@ -40,11 +42,11 @@ type cacheEntry struct {
 const maxCacheEntries = 500
 
 type TjekService struct {
-	baseURL    string
-	httpClient *http.Client
-	cache      map[string]cacheEntry
-	cacheMu    sync.Mutex
-	cacheHits  atomic.Int64
+	baseURL     string
+	httpClient  *http.Client
+	cache       map[string]cacheEntry
+	cacheMu     sync.Mutex
+	cacheHits   atomic.Int64
 	cacheMisses atomic.Int64
 }
 
@@ -686,6 +688,7 @@ func (s *TjekService) getCatalogs(lat, lng float64, radius int) ([]catalogRespon
 
 	var catalogs []catalogResponse
 	if err := json.NewDecoder(resp.Body).Decode(&catalogs); err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 
@@ -719,6 +722,7 @@ func (s *TjekService) getCatalogOffers(catalog catalogResponse, store storeRespo
 
 	var hotspots []hotspotResponse
 	if err := json.NewDecoder(resp.Body).Decode(&hotspots); err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 
@@ -792,6 +796,7 @@ func (s *TjekService) getStores(lat, lng float64, radius int) ([]storeResponse, 
 
 	var stores []storeResponse
 	if err := json.NewDecoder(resp.Body).Decode(&stores); err != nil {
+		sentry.CaptureException(err)
 		return nil, err
 	}
 

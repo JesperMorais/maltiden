@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
-import { BookOpen, ArrowRight, Sandwich, Minus, Plus, UtensilsCrossed, Users } from 'lucide-vue-next'
+import { BookOpen, ArrowRight, Sandwich, Minus, Plus, UtensilsCrossed, Users, Shuffle } from 'lucide-vue-next'
 import type { MenuDay, HouseholdMember } from '@/api/types/dashboard.types'
 
 interface Props {
@@ -16,6 +16,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'view-recipe': []
+  'swap-recipe': []
   'update-lunchbox': [count: number]
   'toggle-member': [memberId: string]
   close: []
@@ -46,7 +47,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="popover" @click.stop>
+  <div ref="popoverRef" class="popover" role="dialog" @click.stop>
     <div class="popover-arrow"></div>
 
     <!-- Meal identity -->
@@ -56,16 +57,28 @@ onUnmounted(() => {
       <span class="meal-name">{{ day.meal?.name }}</span>
     </div>
 
-    <!-- View recipe link -->
-    <button
-      class="popover-action view-recipe-btn"
-      :disabled="!isRealData"
-      @click="emit('view-recipe')"
-    >
-      <BookOpen :size="16" />
-      Se recept
-      <ArrowRight :size="14" class="arrow-icon" />
-    </button>
+    <!-- Action buttons -->
+    <div class="action-row">
+      <button
+        class="popover-action view-recipe-btn"
+        :disabled="!isRealData"
+        @click="emit('view-recipe')"
+      >
+        <BookOpen :size="16" />
+        Se recept
+        <ArrowRight :size="14" class="arrow-icon" />
+      </button>
+
+      <button
+        class="popover-action swap-recipe-btn"
+        :disabled="!isRealData"
+        :aria-label="`Byt recept för ${day.meal?.name ?? 'dagen'}`"
+        @click="emit('swap-recipe')"
+      >
+        <Shuffle :size="16" />
+        Byt recept
+      </button>
+    </div>
 
     <!-- Members eating this day -->
     <div v-if="members.length > 0" class="members-section">
@@ -183,7 +196,13 @@ onUnmounted(() => {
   color: var(--text-primary);
 }
 
-.view-recipe-btn {
+.action-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.popover-action {
   display: flex;
   align-items: center;
   width: 100%;
@@ -201,12 +220,12 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
-.view-recipe-btn:hover:not(:disabled) {
+.popover-action:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-.view-recipe-btn:disabled {
+.popover-action:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
@@ -319,8 +338,8 @@ onUnmounted(() => {
 }
 
 .counter-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1.5px solid var(--border-color);
   background: var(--bg-card);

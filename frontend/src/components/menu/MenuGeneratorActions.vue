@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Lock, RefreshCw } from 'lucide-vue-next'
+
 interface Props {
   hasMenu: boolean
   isLoading: boolean
@@ -30,7 +32,7 @@ const emit = defineEmits<{
       <!-- Center: Lock status -->
       <div v-if="hasMenu" class="actions-center">
         <div class="lock-status">
-          <span class="lock-icon">🔒</span>
+          <Lock :size="14" class="lock-icon" />
           <span class="lock-text">{{ lockedCount }} av {{ totalDays }} dagar låsta</span>
         </div>
       </div>
@@ -44,7 +46,7 @@ const emit = defineEmits<{
           :title="lockedCount === totalDays ? 'Lås upp minst en dag för att generera nya recept' : ''"
           @click="emit('regenerate')"
         >
-          <span class="btn-icon">🔄</span>
+          <RefreshCw :size="16" class="btn-icon" />
           <span class="btn-text">Generera nya</span>
         </button>
 
@@ -71,8 +73,7 @@ const emit = defineEmits<{
   border-top: 1px solid var(--border-color);
   padding: 1.5rem;
   z-index: 10;
-  backdrop-filter: blur(10px);
-  background: color-mix(in srgb, var(--bg-primary) 95%, transparent);
+  background: var(--bg-primary);
 }
 
 .actions-container {
@@ -188,14 +189,14 @@ const emit = defineEmits<{
 
 /* Save button */
 .btn-save {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-  color: var(--text-on-accent);
-  border-color: var(--accent);
-  box-shadow: 0 4px 12px rgba(255, 107, 91, 0.3);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-bg);
+  box-shadow: var(--shadow-accent-sm);
 }
 
 .btn-save:hover:not(:disabled) {
-  box-shadow: 0 6px 16px rgba(255, 107, 91, 0.4);
+  box-shadow: var(--shadow-accent-hover);
 }
 
 /* Responsive */
@@ -222,6 +223,7 @@ const emit = defineEmits<{
 @media (max-width: 768px) {
   .menu-actions {
     padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   }
 
   .actions-container {

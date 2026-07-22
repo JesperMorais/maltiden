@@ -7,6 +7,8 @@ import (
 	"maltiden/internal/services"
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/claude"
+	"maltiden/pkg/email"
+	"maltiden/pkg/gemini"
 	"maltiden/pkg/middleware"
 	"maltiden/pkg/utils"
 	"net/http"
@@ -15,15 +17,16 @@ import (
 )
 
 type dependencies struct {
-	auth        *handlers.AuthHandler
-	household   *handlers.HouseholdHandler
-	recipe      *handlers.RecipeHandler
-	menu        *handlers.MenuHandler
-	shopping    *handlers.ShoppingHandler
-	offers      *handlers.OffersHandler
-	feedback    *handlers.FeedbackHandler
-	health      *handlers.HealthHandler
-	userStorage *sqlite.UserStorage // needed for token version checks in auth middleware
+	auth          *handlers.AuthHandler
+	household     *handlers.HouseholdHandler
+	recipe        *handlers.RecipeHandler
+	menu          *handlers.MenuHandler
+	shopping      *handlers.ShoppingHandler
+	offers        *handlers.OffersHandler
+	feedback      *handlers.FeedbackHandler
+	health        *handlers.HealthHandler
+	passwordReset *handlers.PasswordResetHandler
+	userStorage   *sqlite.UserStorage // auth middleware: token version + live household resolution
 }
 
 func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
@@ -32,6 +35,7 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	householdStorage := sqlite.NewHouseholdStorage(db)
 	recipeStorage := sqlite.NewRecipeStorage(db)
 	menuStorage := sqlite.NewMenuStorage(db)
+	menuPrefsStorage := sqlite.NewMenuPreferencesStorage(db)
 	shoppingStorage := sqlite.NewShoppingStorage(db)
 	feedbackStorage := sqlite.NewFeedbackStorage(db)
 
@@ -39,22 +43,46 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	authService := services.NewAuthService(db, userStorage, householdStorage, jwtService)
 	householdService := services.NewHouseholdService(householdStorage, userStorage)
 	recipeService := services.NewRecipeService(recipeStorage)
-	menuService := services.NewMenuService(menuStorage, recipeStorage)
+	menuService := services.NewMenuService(menuStorage, recipeStorage, menuPrefsStorage)
+	// Optional Phase-4 AI experience layer (Gemini) — opt-in per request, and
+	// only constructed when an API key is present. A nil service keeps menu
+	// generation fully deterministic and offline.
+	if gc, err := gemini.NewClient(gemini.FlashLiteModel); err != nil {
+		log.Printf("Warning: AI menu arranger disabled: %v", err)
+	} else {
+		menuService = menuService.WithExperience(services.NewMenuExperienceService(gc))
+	}
 	shoppingService := services.NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 	tjekService := services.NewTjekService()
 	feedbackService := services.NewFeedbackService(feedbackStorage)
 
+	// Email sender — defaults to log-only; uses Resend if RESEND_API_KEY is set.
+	var emailer email.EmailSender
+	fromAddr := os.Getenv("EMAIL_FROM")
+	if fromAddr == "" {
+		fromAddr = "Måltiden <no-reply@maltiden.app>"
+	}
+	if apiKey := os.Getenv("RESEND_API_KEY"); apiKey != "" {
+		emailer = email.NewResendSender(apiKey, fromAddr)
+		log.Printf("Email sender: Resend (%s)", fromAddr)
+	} else {
+		emailer = email.NewLogSender(fromAddr)
+		log.Printf("Email sender: log-only (set RESEND_API_KEY to enable real email)")
+	}
+	passwordResetService := services.NewPasswordResetService(db, userStorage, emailer)
+
 	// Handler layer
 	return &dependencies{
-		auth:        handlers.NewAuthHandler(authService),
-		household:   handlers.NewHouseholdHandler(householdService),
-		recipe:      handlers.NewRecipeHandler(recipeService),
-		menu:        handlers.NewMenuHandler(menuService),
-		shopping:    handlers.NewShoppingHandler(shoppingService, menuStorage),
-		offers:      handlers.NewOffersHandler(tjekService),
-		feedback:    handlers.NewFeedbackHandler(feedbackService),
-		health:      handlers.NewHealthHandler(db),
-		userStorage: userStorage,
+		auth:          handlers.NewAuthHandler(authService),
+		household:     handlers.NewHouseholdHandler(householdService),
+		recipe:        handlers.NewRecipeHandler(recipeService),
+		menu:          handlers.NewMenuHandler(menuService),
+		shopping:      handlers.NewShoppingHandler(shoppingService, menuStorage),
+		offers:        handlers.NewOffersHandler(tjekService),
+		feedback:      handlers.NewFeedbackHandler(feedbackService),
+		health:        handlers.NewHealthHandler(db),
+		passwordReset: handlers.NewPasswordResetHandler(passwordResetService),
+		userStorage:   userStorage,
 	}
 }
 
@@ -67,11 +95,19 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	// Rate limiter for auth endpoints: 5 requests/sec, burst of 10
 	authLimiter := middleware.NewRateLimiter(5, 10)
 
+	// Rate limiter for password reset: ~3 requests/hour per IP (burst 3)
+	// 3/3600 ≈ 0.000833 tokens/sec
+	passwordResetLimiter := middleware.NewRateLimiter(3.0/3600.0, 3)
+
 	// Rate limiter for invite code join: 3 requests/sec, burst of 5 (brute-force protection)
 	joinLimiter := middleware.NewRateLimiter(3, 5)
 
 	// Rate limiter for recipe parser: 2 requests/sec, burst of 5 (API credit protection)
 	parserLimiter := middleware.NewRateLimiter(2, 5)
+
+	// Rate limiter for custom shopping item creation: 0.5 req/sec, burst of 30
+	// (~30 req/min sustained, prevents abuse of unbounded list growth).
+	customItemLimiter := middleware.NewRateLimiter(0.5, 30)
 
 	// Recipe parser (Claude API) - optional, degrades gracefully if ANTHROPIC_API_KEY not set
 	var parserHandler *handlers.RecipeParserHandler
@@ -89,6 +125,8 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.HandleFunc("GET /health", deps.health.Check)
 	mux.Handle("POST /auth/register", authLimiter.Limit(http.HandlerFunc(deps.auth.Register)))
 	mux.Handle("POST /auth/login", authLimiter.Limit(http.HandlerFunc(deps.auth.Login)))
+	mux.Handle("POST /auth/forgot-password", passwordResetLimiter.Limit(http.HandlerFunc(deps.passwordReset.ForgotPassword)))
+	mux.Handle("POST /auth/reset-password", passwordResetLimiter.Limit(http.HandlerFunc(deps.passwordReset.ResetPassword)))
 	mux.HandleFunc("GET /offers/search", deps.offers.SearchOffers)
 	mux.HandleFunc("GET /offers/discounts", deps.offers.GetDiscounts)
 	mux.HandleFunc("GET /offers/stores", deps.offers.GetStores)
@@ -119,12 +157,6 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.Handle("DELETE /households/members/{id}", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.household.RemoveMember),
 	))
-	mux.Handle("GET /households/preferences", middleware.RequireAuth(jwtService, deps.userStorage)(
-		http.HandlerFunc(deps.household.GetPreferences),
-	))
-	mux.Handle("PUT /households/preferences", middleware.RequireAuth(jwtService, deps.userStorage)(
-		http.HandlerFunc(deps.household.UpdatePreferences),
-	))
 	mux.Handle("POST /recipes", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.recipe.Create),
 	))
@@ -135,27 +167,50 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 		http.HandlerFunc(deps.recipe.Delete),
 	))
 	if parserHandler != nil {
-		mux.Handle("POST /recipes/parse", parserLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
+		// Recipe parser routes call the Claude API which can routinely take
+		// 20–40s for long recipes. Apply a longer per-route timeout so the
+		// global 10s wrapper (added below) does not turn legitimate parses
+		// into 503s. The longer timeout is applied as the OUTERMOST wrapper
+		// here; the global Timeout middleware below skips these routes.
+		parseTimeout := middleware.TimeoutWith(middleware.ParserTimeout)
+		mux.Handle("POST /recipes/parse", parseTimeout(parserLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
 			http.HandlerFunc(parserHandler.ParseRecipe),
-		)))
-		mux.Handle("POST /recipes/parse-and-save", parserLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
+		))))
+		mux.Handle("POST /recipes/parse-and-save", parseTimeout(parserLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
 			http.HandlerFunc(parserHandler.ParseAndSave),
-		)))
+		))))
 	}
-	mux.Handle("POST /menus/generate", middleware.RequireAuth(jwtService, deps.userStorage)(
+	// Phase-4 AI layer (wishes/arrange) can add a few seconds of Gemini latency
+	// when opted into, which can exceed the global 10s deadline. Apply a longer
+	// per-route timeout (the global wrapper skips this route below) so an
+	// AI-arranged generate is not turned into a 503 mid-build (a "ghost menu").
+	generateTimeout := middleware.TimeoutWith(middleware.ParserTimeout)
+	mux.Handle("POST /menus/generate", generateTimeout(middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.menu.Generate),
-	))
+	)))
 	mux.Handle("PUT /menus/current", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.menu.UpdateCurrent),
 	))
 	mux.Handle("GET /menus/current", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.menu.GetCurrent),
 	))
+	mux.Handle("GET /menus/preferences", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.menu.GetPreferences),
+	))
+	mux.Handle("PUT /menus/preferences", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.menu.UpdatePreferences),
+	))
 	mux.Handle("GET /shopping-list", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.shopping.GetShoppingList),
 	))
 	mux.Handle("PATCH /shopping-list/items/{id}", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.shopping.UpdateItem),
+	))
+	mux.Handle("POST /shopping-list/items", customItemLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.shopping.AddCustomItem),
+	)))
+	mux.Handle("DELETE /shopping-list/items/{id}", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.shopping.DeleteCustomItem),
 	))
 	mux.Handle("POST /feedback", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.feedback.Create),
@@ -170,5 +225,17 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 
 	// Wrap with middleware: CORS → request ID → timeout → handler
 	// Note: Security headers are applied in main.go to cover both API and static files
-	return middleware.CORS(allowedOrigins)(middleware.RequestID(middleware.Timeout(mux)))
+	//
+	// The global 10s Timeout is bypassed for recipe parser routes — those
+	// already have a per-route 60s timeout applied above, and wrapping them
+	// in an outer 10s deadline would defeat that.
+	timeoutHandler := middleware.Timeout(mux)
+	timed := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && (r.URL.Path == "/recipes/parse" || r.URL.Path == "/recipes/parse-and-save" || r.URL.Path == "/menus/generate") {
+			mux.ServeHTTP(w, r)
+			return
+		}
+		timeoutHandler.ServeHTTP(w, r)
+	})
+	return middleware.CORS(allowedOrigins)(middleware.RequestID(timed))
 }

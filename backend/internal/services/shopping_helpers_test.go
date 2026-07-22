@@ -13,17 +13,55 @@ func TestCategorizeIngredient_KnownCategory(t *testing.T) {
 		{"köttfärs", "Kött & Fisk"},
 		{"bacon", "Kött & Fisk"},
 		{"lax", "Kött & Fisk"},
-		{"ägg", "Mejeri"},
-		{"smör", "Mejeri"},
-		{"tomat", "Frukt & Grönt"},
-		{"potatis", "Frukt & Grönt"},
-		{"spaghetti", "Skafferi"},
-		{"ris", "Skafferi"},
+		{"ägg", "Mejeri & Ägg"},
+		{"smör", "Mejeri & Ägg"},
+		{"tomat", "Grönsaker"},
+		{"potatis", "Grönsaker"},
+		{"spaghetti", "Pasta, ris & spannmål"},
+		{"ris", "Pasta, ris & spannmål"},
 		{"salt", "Kryddor"},
 		{"svartpeppar", "Kryddor"},
 		{"oregano", "Kryddor"},
 		{"paprikapulver", "Kryddor"},
 		{"kanel", "Kryddor"},
+	}
+	for _, tt := range tests {
+		got := categorizeIngredient(tt.input)
+		if got != tt.expected {
+			t.Errorf("categorizeIngredient(%q) = %q, want %q", tt.input, got, tt.expected)
+		}
+	}
+}
+
+// TestCategorizeIngredient_HandlesNewCategories covers the post-#168 category
+// split — fruit vs veg vs fresh herbs vs bread vs pantry vs sauces vs frozen —
+// to make sure each new bucket has at least one representative ingredient that
+// routes to the right place.
+func TestCategorizeIngredient_HandlesNewCategories(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"äpple", "Frukt"},
+		{"banan", "Frukt"},
+		{"avokado", "Frukt"},
+		{"vitlök", "Grönsaker"},
+		{"morot", "Grönsaker"},
+		{"persilja", "Färska örter"},
+		{"färsk basilika", "Färska örter"},
+		{"knäckebröd", "Bröd"},
+		{"tortilla", "Bröd"},
+		{"havregryn", "Pasta, ris & spannmål"},
+		{"linser", "Pasta, ris & spannmål"},
+		{"krossade tomater", "Konserver"},
+		{"kikärtor", "Konserver"},
+		{"olivolja", "Såser & olja"},
+		{"sojasås", "Såser & olja"},
+		{"frysta ärtor", "Frys"},
+		{"glass", "Frys"},
+		{"halloumi", "Mejeri & Ägg"},
+		{"yoghurt", "Mejeri & Ägg"},
+		{"räkor", "Kött & Fisk"},
 	}
 	for _, tt := range tests {
 		got := categorizeIngredient(tt.input)
@@ -99,13 +137,13 @@ func TestRoundAmount(t *testing.T) {
 		unit   string
 		want   float64
 	}{
-		{3.6666666666666665, "st", 4},       // countable rounds to integer
-		{3.4, "st", 3},                      // countable rounds down
-		{2.5, "stycken", 3},                 // alternate countable spelling
-		{3.6666666666666665, "g", 3.67},     // weight keeps 2 decimals
-		{100.125, "ml", 100.13},             // volume rounds to 2
-		{1, "tsk", 1},                       // exact integer stays exact
-		{1.0 / 3.0, "kg", 0.33},             // pathological float
+		{3.6666666666666665, "st", 4},   // countable rounds to integer
+		{3.4, "st", 3},                  // countable rounds down
+		{2.5, "stycken", 3},             // alternate countable spelling
+		{3.6666666666666665, "g", 3.67}, // weight keeps 2 decimals
+		{100.125, "ml", 100.13},         // volume rounds to 2
+		{1, "tsk", 1},                   // exact integer stays exact
+		{1.0 / 3.0, "kg", 0.33},         // pathological float
 	}
 	for _, tt := range tests {
 		got := roundAmount(tt.amount, tt.unit)

@@ -635,3 +635,85 @@ func TestFullFlow_InviteJoinAndManage(t *testing.T) {
 		t.Errorf("expected 1 member after removal, got %d", len(statuses.Members))
 	}
 }
+
+func TestHouseholdGetMyHousehold(t *testing.T) {
+	db := setupTestDB(t)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	userStorage := sqlite.NewUserStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+	householdService := NewHouseholdService(householdStorage, userStorage)
+
+	user := createTestUser(t, authService, "getmyhh@test.com", "GetHH")
+
+	hh, err := householdService.GetMyHousehold(user.User.ID)
+	if err != nil {
+		t.Fatalf("GetMyHousehold failed: %v", err)
+	}
+	if hh == nil {
+		t.Fatal("expected non-nil household")
+	}
+	if hh.ID != user.User.HouseholdID {
+		t.Errorf("household ID mismatch: got %q, want %q", hh.ID, user.User.HouseholdID)
+	}
+}
+
+func TestHouseholdGetMyHousehold_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	userStorage := sqlite.NewUserStorage(db)
+	householdService := NewHouseholdService(householdStorage, userStorage)
+
+	bogusID := "usr_" + uuid.New().String()
+	hh, err := householdService.GetMyHousehold(bogusID)
+	if err == nil && hh != nil {
+		t.Error("expected error or nil for unknown userID, got a household")
+	}
+}
+
+func TestHouseholdMemberStatusRoundTrip(t *testing.T) {
+	db := setupTestDB(t)
+	householdStorage := sqlite.NewHouseholdStorage(db)
+	userStorage := sqlite.NewUserStorage(db)
+	jwtService := setupTestJWTService(t)
+	authService := NewAuthService(db, userStorage, householdStorage, jwtService)
+	householdService := NewHouseholdService(householdStorage, userStorage)
+
+	owner := createTestUser(t, authService, "rrowner@test.com", "RoundOwner")
+
+	// Default status should include the owner
+	statuses, err := householdService.GetMemberStatuses(owner.User.HouseholdID)
+	if err != nil {
+		t.Fatalf("GetMemberStatuses failed: %v", err)
+	}
+	if len(statuses.Members) == 0 {
+		t.Fatal("expected at least one member")
+	}
+
+	// Update owner's eating status to false
+	falseVal := false
+	err = householdService.UpdateMemberStatus(owner.User.HouseholdID, owner.User.ID, domain.UpdateMemberStatusRequest{
+		IsEatingToday: &falseVal,
+	})
+	if err != nil {
+		t.Fatalf("UpdateMemberStatus failed: %v", err)
+	}
+
+	// Round-trip: fetch and verify status reflected
+	statuses, err = householdService.GetMemberStatuses(owner.User.HouseholdID)
+	if err != nil {
+		t.Fatalf("GetMemberStatuses after update failed: %v", err)
+	}
+	found := false
+	for _, m := range statuses.Members {
+		if m.ID == owner.User.ID {
+			found = true
+			if m.IsEatingToday {
+				t.Error("expected IsEatingToday=false after update")
+			}
+		}
+	}
+	if !found {
+		t.Errorf("owner member %q not found in statuses", owner.User.ID)
+	}
+}

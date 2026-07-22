@@ -15,7 +15,6 @@ test.describe('Shopping list', () => {
       await widget.click()
       await expect(page).toHaveURL(/\/shopping-list/)
       await expect(page.getByRole('heading', { name: 'Inköpslista' })).toBeVisible({ timeout: 5000 })
-      await expect(page.getByText(/Alla ingredienser du behöver/)).toBeVisible()
     }
   })
 

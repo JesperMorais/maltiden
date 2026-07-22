@@ -289,7 +289,7 @@ function handleOverlayClick(e: MouseEvent) {
 
 .copy-btn.copied {
   background: linear-gradient(135deg, var(--success) 0%, #38a169 100%);
-  box-shadow: 0 6px 20px rgba(72, 187, 120, 0.35);
+  box-shadow: var(--shadow-success);
 }
 
 .hint {

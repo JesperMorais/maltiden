@@ -10,6 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getsentry/sentry-go"
+	sentryhttp "github.com/getsentry/sentry-go/http"
+
 	"maltiden/internal/api"
 	"maltiden/internal/storage/sqlite"
 	"maltiden/pkg/middleware"
@@ -19,6 +22,23 @@ import (
 func main() {
 	// Set up structured logging
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
+	// Initialize Sentry if SENTRY_DSN is set (provisioned by Fly extension).
+	// Captures unhandled panics and any errors explicitly sent via sentry.CaptureException.
+	if dsn := os.Getenv("SENTRY_DSN"); dsn != "" {
+		if err := sentry.Init(sentry.ClientOptions{
+			Dsn:              dsn,
+			Environment:      os.Getenv("FLY_APP_NAME"),
+			Release:          os.Getenv("FLY_MACHINE_VERSION"),
+			TracesSampleRate: 0.2,
+			SendDefaultPII:   false,
+		}); err != nil {
+			slog.Error("sentry init failed", "error", err)
+		} else {
+			slog.Info("sentry initialized")
+			defer sentry.Flush(2 * time.Second)
+		}
+	}
 
 	// Create JWT service with validated secret
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -54,13 +74,17 @@ func main() {
 	// then apply security headers to ALL responses (API + static files)
 	handler := middleware.Security(withSPA("./static", router))
 
+	// Wrap with Sentry HTTP middleware so panics and request context flow to Sentry.
+	// No-op if SENTRY_DSN was unset (the SDK degrades silently).
+	handler = sentryhttp.New(sentryhttp.Options{Repanic: true}).Handle(handler)
+
 	// Configure HTTP server with graceful shutdown and timeouts
 	srv := &http.Server{
-		Addr:         ":" + port,
-		Handler:      handler,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 30 * time.Second, // higher to allow Claude API proxy calls
-		IdleTimeout:  60 * time.Second,
+		Addr:           ":" + port,
+		Handler:        handler,
+		ReadTimeout:    15 * time.Second,
+		WriteTimeout:   90 * time.Second, // must exceed middleware.ParserTimeout (60s) so TimeoutHandler can write 503 before TCP close
+		IdleTimeout:    60 * time.Second,
 		MaxHeaderBytes: 1 << 20, // 1 MB max header size
 	}
 

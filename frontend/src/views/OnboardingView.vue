@@ -379,8 +379,8 @@ function goToDashboard() {
 }
 
 .choice-card:hover .choice-indicator {
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
 }
 
 .choice-indicator .check {
@@ -388,8 +388,8 @@ function goToDashboard() {
 }
 
 .choice-card-wrapper.active .choice-indicator {
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
 }
 
 /* Inline form */

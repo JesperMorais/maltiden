@@ -106,6 +106,14 @@ onUnmounted(stopTimer)
       <div class="nav-actions">
         <RouterLink v-prefetch="'about'" to="/about" class="nav-link">Om oss</RouterLink>
         <button
+          v-if="userStore.isAuthenticated"
+          type="button"
+          class="nav-link nav-logout"
+          @click="userStore.logout()"
+        >
+          Logga ut
+        </button>
+        <button
           class="theme-toggle"
           @click="themeStore.toggleDarkMode()"
           :aria-label="themeStore.isDarkMode ? 'Byt till ljust läge' : 'Byt till mörkt läge'"
@@ -333,6 +341,17 @@ onUnmounted(stopTimer)
 .nav-link:hover {
   color: var(--accent);
   background: var(--border-color-hover);
+}
+
+button.nav-link {
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.nav-logout:hover {
+  color: var(--error);
+  background: var(--error-bg);
 }
 
 .theme-toggle {
