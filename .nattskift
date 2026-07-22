@@ -1,4 +1,0 @@
-# nattskift per-repo config (read by ~/Dev/nattskift)
-# pr_base: branch that nattskift draft PRs should target.
-# maltiden merges day-to-day work into `dev` and only promotes to main on release.
-pr_base = dev
