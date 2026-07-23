@@ -29,10 +29,15 @@ jobs:
 
             ## Setup
 
-            1. Read CLAUDE.md at the repo root first — it contains all project conventions,
-               architecture rules, and code patterns. Your review MUST respect these conventions.
-            2. Read the full diff with `gh pr diff`.
-            3. Use the Read tool to check surrounding code context BEFORE flagging anything.
+            1. Read the full diff with `gh pr diff`.
+            2. Use the Read tool to check surrounding code context BEFORE flagging anything.
+
+            ## Project conventions
+
+            - Vue 3 + TypeScript frontend; Python backend. Match the style of surrounding code.
+            - Glassmorphism is banned: no `backdrop-filter` in `.vue` styles (enforced in CI).
+            - Non-null assertions (`!`) on provably safe access patterns (constant arrays
+              with a bounded index, loop variables bounded by `.length`) are intentional.
 
             ## Review rules
 
@@ -40,11 +45,11 @@ jobs:
 
             - DO flag: actual bugs, logic errors, security vulnerabilities, missing error handling
               that causes silent failures, real memory leaks (verified by reading the code).
-            - DO flag: violations of conventions documented in CLAUDE.md.
+            - DO flag: violations of the project conventions listed above.
             - DO NOT flag: speculative "what if" scenarios that can't actually happen.
             - DO NOT flag: non-null assertions (`!`) on provably safe access patterns
               (constant arrays with bounded index, loop variables bounded by `.length`).
-              These are documented as intentional in CLAUDE.md.
+              These are intentional (see project conventions above).
             - DO NOT flag: design choices as bugs (e.g., animation timing, intentional
               state management patterns) unless they produce incorrect behavior.
             - DO NOT flag: performance concerns without evidence of an actual problem.
