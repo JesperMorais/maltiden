@@ -122,7 +122,7 @@ jobs:
       - name: No glassmorphism (backdrop-filter ban)
         run: |
           if grep -rn 'backdrop-filter' src/ --include='*.vue' | grep -v '@media'; then
-            echo "backdrop-filter is banned (glassmorphism). See CLAUDE.md."
+            echo "backdrop-filter is banned (glassmorphism)."
             exit 1
           fi
 

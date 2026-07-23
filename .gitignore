@@ -37,6 +37,11 @@ Thumbs.db
 .claude-flow/
 .mcp.json
 
+# === Internal agent tooling (not published to public repo) ===
+.claude/
+CLAUDE.md
+.nattskift
+
 # Root-level node
 node_modules/
 dist/
