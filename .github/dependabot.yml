@@ -46,6 +46,16 @@ updates:
     open-pull-requests-limit: 5
     labels: ["dependencies", "frontend"]
     versioning-strategy: increase
+    # TypeScript majors are held back: vue-tsc (used by the `type-check`
+    # script) resolves `typescript/lib/tsc`, which TS 7 no longer exports, so
+    # a TS 7 bump fails type-check with ERR_PACKAGE_PATH_NOT_EXPORTED. As of
+    # vue-tsc 3.3.8 — the newest release — there is still no TS 7-compatible
+    # version; its peer range says `>=5.0.0` but it breaks at runtime. Drop
+    # this ignore once vue-tsc ships TS 7 support, or once `type-check`
+    # migrates off `vue-tsc --build`. Minor/patch TS updates still flow.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       all-frontend:
         applies-to: version-updates
