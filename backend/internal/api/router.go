@@ -41,6 +41,7 @@ type dependencies struct {
 	feedback      *handlers.FeedbackHandler
 	health        *handlers.HealthHandler
 	passwordReset *handlers.PasswordResetHandler
+	account       *handlers.AccountHandler
 	userStorage   *sqlite.UserStorage // auth middleware: token version + live household resolution
 }
 
@@ -98,6 +99,7 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 		feedback:      handlers.NewFeedbackHandler(feedbackService),
 		health:        handlers.NewHealthHandler(db),
 		passwordReset: handlers.NewPasswordResetHandler(passwordResetService),
+		account:       handlers.NewAccountHandler(services.NewAccountService(sqlite.NewAccountStorage(db), userStorage)),
 		userStorage:   userStorage,
 	}
 }
@@ -231,6 +233,14 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	))
 	mux.Handle("POST /feedback", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.feedback.Create),
+	))
+	// GDPR self-service. Delete re-checks the password, so it shares the auth
+	// limiter to stop password guessing through this endpoint.
+	mux.Handle("DELETE /account", authLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.account.Delete),
+	)))
+	mux.Handle("GET /account/export", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.account.Export),
 	))
 
 	// Get CORS origins from environment or use development defaults
