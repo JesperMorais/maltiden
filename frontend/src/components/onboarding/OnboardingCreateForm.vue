@@ -188,8 +188,8 @@ async function handleCreate() {
     </BaseButton>
 
     <p class="form-terms">
-      Genom att skapa konto godkänner du våra
-      <a href="#">villkor</a> och <a href="#">integritetspolicy</a>.
+      Läs hur vi hanterar dina uppgifter i vår
+      <RouterLink to="/integritet">integritetspolicy</RouterLink>.
     </p>
   </form>
 </template>

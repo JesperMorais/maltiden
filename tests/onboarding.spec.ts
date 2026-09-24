@@ -221,11 +221,12 @@ test.describe('Onboarding page', () => {
     await expect(page.getByText(/skapa/i).first()).toBeVisible()
   })
 
-  test('shows terms and privacy links in create form', async ({ page }) => {
+  test('links to the privacy policy in create form', async ({ page }) => {
     await page.getByText('Skapa nytt hushåll').click()
     await page.waitForTimeout(800)
-    await expect(page.getByText(/villkor/)).toBeVisible({ timeout: 3000 })
-    await expect(page.getByText(/integritetspolicy/)).toBeVisible()
+    const link = page.getByRole('link', { name: 'integritetspolicy' })
+    await expect(link).toBeVisible({ timeout: 3000 })
+    await expect(link).toHaveAttribute('href', '/integritet')
   })
 
   test('shows benefits comparison in join flow', async ({ page }) => {
