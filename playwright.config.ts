@@ -2,8 +2,8 @@ import { defineConfig, devices } from '@playwright/test'
 
 const E2E_PORT = 5174
 
-// Specs that should also run on a mobile viewport. CLAUDE.md describes Måltiden
-// as a mobile-first MVP (375–414px), so the views users actually interact with
+// Specs that should also run on a mobile viewport. Måltiden is mobile-first
+// (375–414px), so the views users actually interact with
 // on a phone get an extra mobile pass. Keep this list small to avoid doubling
 // CI time — only the specs whose UX materially differs on mobile.
 //

@@ -1,8 +1,8 @@
 // Package gemini is a minimal raw-HTTP client for Google's Gemini
-// generateContent API. It is used ONLY by the offline backfill tool to enrich
-// existing recipes — never in the menu-generation request path. The main app
-// remains Claude-based (see pkg/claude); this exists so a one-off backfill can
-// run on cheap Gemini credit.
+// generateContent API. It backs the optional menu "experience layer"
+// (services.MenuExperienceService: free-text wishes and weekday arrangement),
+// which is wired in only when GEMINI_API_KEY is set and is capped per day by
+// pkg/aibudget. Recipe parsing uses Claude (see pkg/claude).
 package gemini
 
 import (
