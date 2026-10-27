@@ -83,6 +83,9 @@ async function handleParse() {
       rawText_required: 'Recepttext saknas',
       input_too_long: 'Recepttexten är för lång',
       failed_to_parse_recipe: 'Kunde inte tolka receptet — försök med en annan text',
+      ai_quota_exceeded:
+        'Dagens gräns för AI-tolkning är nådd. Försök igen i morgon eller lägg in receptet manuellt.',
+      rate_limit_exceeded: 'För många försök på kort tid — vänta en stund och försök igen.',
     }
     parseError.value = (code && errorMessages[code]) || 'Kunde inte tolka receptet. Försök igen.'
   } finally {

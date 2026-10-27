@@ -13,6 +13,7 @@ const ShoppingListView = () => import('@/views/ShoppingListView.vue')
 const AccountView = () => import('@/views/AccountView.vue')
 const ForgotPasswordView = () => import('@/views/ForgotPasswordView.vue')
 const ResetPasswordView = () => import('@/views/ResetPasswordView.vue')
+const PrivacyView = () => import('@/views/PrivacyView.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -65,6 +66,12 @@ const router = createRouter({
       path: '/about',
       name: 'about',
       component: AboutView,
+      meta: { transition: 'page-fade' }
+    },
+    {
+      path: '/integritet',
+      name: 'privacy',
+      component: PrivacyView,
       meta: { transition: 'page-fade' }
     },
     {
