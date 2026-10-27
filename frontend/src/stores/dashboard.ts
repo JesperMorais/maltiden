@@ -1,10 +1,12 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import { isAxiosError } from 'axios'
 import type { DashboardData, Meal, MenuDay, Household, HouseholdMember, ShoppingListSummary } from '@/api/types/dashboard.types'
 import { mockDashboardData } from '@/mocks/dashboard.mock'
 import { USE_MOCKS } from '@/mocks'
 import { useUserStore } from './user'
 import apiClient from '@/api/client'
+import { tokenUtils } from '@/utils/token'
 import { getCurrentMenu, saveMenu } from '@/api/menu.api'
 import type { Menu, SaveMenuDay } from '@/api/menu.api'
 import { getShoppingList } from '@/api/shopping.api'
@@ -232,17 +234,23 @@ export const useDashboardStore = defineStore('dashboard', () => {
         refreshShoppingList()
       }
     } catch (e) {
-      // If backend fails (including 401 with skipAuthRedirect), fall back to mock data.
-      // This is intentional: a stale-token 401 is swallowed here to prevent the
-      // post-login redirect loop. See client.ts markAuthSuccess() for context.
-      const msg = e instanceof Error ? e.message : String(e)
-      console.warn('Using mock dashboard data —', msg)
-      dashboardData.value = mockDashboardData
-      currentMenuId.value = 'menu_current'
+      // Never show mock data outside mock mode: a failed load is an error.
+      dashboardData.value = null
+      currentMenuId.value = null
 
-      if (dashboardData.value.user) {
-        userStore.setUser(dashboardData.value.user)
+      // The client interceptor drops the token on a 401, except right after
+      // login (see client.ts markAuthSuccess()). No token means the session is
+      // over, so going to login can't loop. A 401 just after login keeps the
+      // token and shows the error with a retry instead.
+      if (isAxiosError(e) && e.response?.status === 401 && !tokenUtils.get()) {
+        sessionStorage.setItem('session_expired', 'true')
+        userStore.logout()
+        return
       }
+
+      const msg = e instanceof Error ? e.message : String(e)
+      console.warn('Could not load dashboard —', msg)
+      error.value = 'Kunde inte ladda översikten. Försök igen.'
     } finally {
       isLoading.value = false
     }
