@@ -34,14 +34,23 @@ vi.mock('@/api/shopping.api', () => ({
   }),
 }))
 
+// Run the store as production does: real API, no mock mode.
+vi.mock('@/mocks', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/mocks')>()),
+  USE_MOCKS: false,
+}))
+
 vi.mock('@/utils/token', () => ({
   tokenUtils: { get: vi.fn(), set: vi.fn(), remove: vi.fn(), exists: vi.fn() },
 }))
+
+const { logout } = vi.hoisted(() => ({ logout: vi.fn() }))
 
 vi.mock('@/stores/user', () => ({
   useUserStore: () => ({
     currentUser: { id: 'usr_1', name: 'Test', role: 'owner' },
     setUser: vi.fn(),
+    logout,
   }),
 }))
 
@@ -194,5 +203,62 @@ describe('Dashboard store — shopping list sync', () => {
 
     expect(store.membersForDisplayDate).toHaveLength(1)
     expect(store.membersForDisplayDate[0]!.id).toBe('usr_1')
+  })
+})
+
+describe('Dashboard store — failed load', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setActivePinia(createPinia())
+    sessionStorage.clear()
+  })
+
+  function http401() {
+    return Object.assign(new Error('Request failed with status code 401'), {
+      isAxiosError: true,
+      response: { status: 401, data: { error: 'unauthorized' } },
+    })
+  }
+
+  it('shows an error, not mock data, when the backend is down', async () => {
+    const { default: apiClient } = await import('@/api/client')
+    vi.mocked(apiClient.get).mockRejectedValueOnce(new Error('Network Error'))
+
+    const store = useDashboardStore()
+    await store.fetchDashboard()
+
+    expect(store.dashboardData).toBeNull()
+    expect(store.error).toBe('Kunde inte ladda översikten. Försök igen.')
+    expect(store.isUsingRealData).toBe(false)
+    expect(logout).not.toHaveBeenCalled()
+  })
+
+  it('sends an expired session to login', async () => {
+    const { default: apiClient } = await import('@/api/client')
+    const { tokenUtils } = await import('@/utils/token')
+    vi.mocked(apiClient.get).mockRejectedValueOnce(http401())
+    vi.mocked(tokenUtils.get).mockReturnValue(null) // interceptor dropped it
+
+    const store = useDashboardStore()
+    await store.fetchDashboard()
+
+    expect(logout).toHaveBeenCalledOnce()
+    expect(sessionStorage.getItem('session_expired')).toBe('true')
+    expect(store.dashboardData).toBeNull()
+    expect(store.isLoading).toBe(false)
+  })
+
+  it('shows an error instead of redirecting on a 401 just after login', async () => {
+    const { default: apiClient } = await import('@/api/client')
+    const { tokenUtils } = await import('@/utils/token')
+    vi.mocked(apiClient.get).mockRejectedValueOnce(http401())
+    vi.mocked(tokenUtils.get).mockReturnValue('still-here') // grace window kept it
+
+    const store = useDashboardStore()
+    await store.fetchDashboard()
+
+    expect(logout).not.toHaveBeenCalled()
+    expect(store.dashboardData).toBeNull()
+    expect(store.error).not.toBeNull()
   })
 })

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -118,6 +119,11 @@ func main() {
 
 // withSPA wraps an API handler to also serve frontend static files and
 // fall back to index.html for client-side routes (SPA routing).
+//
+// Several paths are both a client route and an API route (/recipes,
+// /shopping-list), so the path alone can't decide. A browser loading a page
+// asks for text/html; the API client asks for JSON. Page loads get the SPA,
+// everything else goes to the API unchanged, so API 404s stay 404s.
 func withSPA(staticDir string, apiHandler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Non-GET/HEAD requests always go to the API
@@ -135,46 +141,20 @@ func withSPA(staticDir string, apiHandler http.Handler) http.Handler {
 			}
 		}
 
-		// Try the API handler with a buffered writer to detect 404s
-		buf := &bufferedWriter{header: make(http.Header), code: 200}
-		apiHandler.ServeHTTP(buf, r)
-
-		if buf.code != http.StatusNotFound {
-			// Forward the API response
-			for k, vals := range buf.header {
-				for _, v := range vals {
-					w.Header().Add(k, v)
-				}
+		if acceptsHTML(r) {
+			indexPath := filepath.Join(staticDir, "index.html")
+			if _, err := os.Stat(indexPath); err == nil {
+				http.ServeFile(w, r, indexPath)
+				return
 			}
-			w.WriteHeader(buf.code)
-			w.Write(buf.body)
-			return
+			// No frontend built (e.g. local dev) — let the API answer
 		}
 
-		// No static file and no API route matched — serve index.html for SPA
-		indexPath := filepath.Join(staticDir, "index.html")
-		if _, err := os.Stat(indexPath); err != nil {
-			// No frontend built (e.g. local dev) — return plain 404
-			http.NotFound(w, r)
-			return
-		}
-		http.ServeFile(w, r, indexPath)
+		apiHandler.ServeHTTP(w, r)
 	})
 }
 
-// bufferedWriter captures an HTTP response so we can inspect the status code
-// before deciding whether to forward it or serve the SPA fallback.
-type bufferedWriter struct {
-	header http.Header
-	body   []byte
-	code   int
+// acceptsHTML reports whether the request is a browser page load.
+func acceptsHTML(r *http.Request) bool {
+	return strings.Contains(r.Header.Get("Accept"), "text/html")
 }
-
-func (b *bufferedWriter) Header() http.Header { return b.header }
-
-func (b *bufferedWriter) Write(data []byte) (int, error) {
-	b.body = append(b.body, data...)
-	return len(data), nil
-}
-
-func (b *bufferedWriter) WriteHeader(code int) { b.code = code }

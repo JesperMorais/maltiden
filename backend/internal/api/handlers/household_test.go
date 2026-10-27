@@ -320,3 +320,27 @@ func TestHouseholdHandler_JoinHousehold_OK(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
 	}
 }
+
+// TestHouseholdHandler_GetMyHousehold_NotFound asserts that an authenticated
+// user whose household does not exist gets a 404 household_not_found. (Carried
+// from main during the dev->main sync; dev's suite covered OK + Unauthorized
+// but not the not-found path.)
+func TestHouseholdHandler_GetMyHousehold_NotFound(t *testing.T) {
+	h, _ := newTestHouseholdHandler(t)
+
+	req := httptest.NewRequest("GET", "/households/me", nil)
+	req = setAuthContext(req, "usr_does-not-exist", "")
+
+	rr := httptest.NewRecorder()
+	h.GetMyHousehold(rr, req)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var errResp map[string]string
+	json.NewDecoder(rr.Body).Decode(&errResp)
+	if errResp["error"] != "household_not_found" {
+		t.Errorf("expected error 'household_not_found', got %q", errResp["error"])
+	}
+}

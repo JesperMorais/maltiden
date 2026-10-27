@@ -37,7 +37,6 @@ type dependencies struct {
 	recipe        *handlers.RecipeHandler
 	menu          *handlers.MenuHandler
 	shopping      *handlers.ShoppingHandler
-	offers        *handlers.OffersHandler
 	feedback      *handlers.FeedbackHandler
 	health        *handlers.HealthHandler
 	passwordReset *handlers.PasswordResetHandler
@@ -70,7 +69,6 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 			WithAIBudget(aibudget.FromEnv("AI_MENU", defaultAIMenuPerHousehold, defaultAIMenuGlobal))
 	}
 	shoppingService := services.NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
-	tjekService := services.NewTjekService()
 	feedbackService := services.NewFeedbackService(feedbackStorage)
 
 	// Email sender — defaults to log-only; uses Resend if RESEND_API_KEY is set.
@@ -95,7 +93,6 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 		recipe:        handlers.NewRecipeHandler(recipeService),
 		menu:          handlers.NewMenuHandler(menuService),
 		shopping:      handlers.NewShoppingHandler(shoppingService, menuStorage),
-		offers:        handlers.NewOffersHandler(tjekService),
 		feedback:      handlers.NewFeedbackHandler(feedbackService),
 		health:        handlers.NewHealthHandler(db),
 		passwordReset: handlers.NewPasswordResetHandler(passwordResetService),
@@ -146,9 +143,6 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	mux.Handle("POST /auth/login", authLimiter.Limit(http.HandlerFunc(deps.auth.Login)))
 	mux.Handle("POST /auth/forgot-password", passwordResetLimiter.Limit(http.HandlerFunc(deps.passwordReset.ForgotPassword)))
 	mux.Handle("POST /auth/reset-password", passwordResetLimiter.Limit(http.HandlerFunc(deps.passwordReset.ResetPassword)))
-	mux.HandleFunc("GET /offers/search", deps.offers.SearchOffers)
-	mux.HandleFunc("GET /offers/discounts", deps.offers.GetDiscounts)
-	mux.HandleFunc("GET /offers/stores", deps.offers.GetStores)
 	mux.Handle("GET /recipes", middleware.OptionalAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.recipe.GetAll),
 	))
