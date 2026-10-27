@@ -118,6 +118,7 @@ func runMigrations(db *sql.DB, fs embed.FS) error {
 		{18, "018_add_recipe_nutrition.sql"},
 		{19, "019_add_menu_day_batch_cooking.sql"},
 		{20, "020_add_menu_rationale.sql"},
+		{21, "021_add_recipe_source.sql"},
 	}
 
 	for _, m := range migrationFiles {

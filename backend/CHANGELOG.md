@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Recipe nutrition fields foundation — nullable per-serving `calories`, `protein_g`, `carbs_g`, `fat_g` columns and a `Nutrition` domain struct (data layer only; no aggregation yet).
   - Shared-ingredients UX support — the generate response surfaces the week's shared non-staple ingredients for display.
   - Migrations 016 (menu preferences), 017 (disliked ingredients), 018 (recipe nutrition), 019 (menu-day batch cooking).
+- Optional AI menu layer (Gemini): free-text wishes and weekday arrangement with a Swedish rationale (migration 020 adds `menus.rationale`). Enabled only when `GEMINI_API_KEY` is set.
+- `DELETE /account` (password-confirmed account erasure) and `GET /account/export` (JSON export of the user's and household's data).
+- Daily per-household and global caps on paid LLM requests (`pkg/aibudget`, `AI_PARSER_*` / `AI_MENU_*` env vars).
+- Migration 021: `recipes.source` provenance column; seed recipes labelled `ica.se` (110) or `maltiden-seed` (20). See `docs/recipe-provenance.md`.
 
 ### Fixed
 

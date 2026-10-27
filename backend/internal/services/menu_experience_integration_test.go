@@ -143,3 +143,49 @@ func TestMenuGenerate_ArrangeGuardrailFallback(t *testing.T) {
 
 func intpSvc(v int) *int    { return &v }
 func boolpSvc(v bool) *bool { return &v }
+
+// denyAllBudget is an exhausted daily AI budget.
+type denyAllBudget struct{ asked int }
+
+func (b *denyAllBudget) Allow(string) bool { b.asked++; return false }
+
+func TestMenuGenerate_AIBudgetExhaustedFallsBackDeterministically(t *testing.T) {
+	env := newMenuTestEnv(t)
+	env.seedRecipes(t, 5)
+	budget := &denyAllBudget{}
+	env.menuService.
+		WithExperience(newMenuExperienceServiceWith(&routingGemini{arrangeValid: true})).
+		WithAIBudget(budget)
+
+	resp, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{
+		Days: 5, Servings: 4, Arrange: true, Wishes: "två vegetariska dagar",
+	})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if budget.asked != 1 {
+		t.Errorf("budget consulted %d times, want once per generate", budget.asked)
+	}
+	if resp.Rationale != "" {
+		t.Errorf("rationale = %q, want empty when over AI budget", resp.Rationale)
+	}
+	if !resp.WishesIgnored {
+		t.Error("WishesIgnored = false, want true when over AI budget")
+	}
+}
+
+func TestMenuGenerate_PlainGenerateDoesNotSpendAIBudget(t *testing.T) {
+	env := newMenuTestEnv(t)
+	env.seedRecipes(t, 5)
+	budget := &denyAllBudget{}
+	env.menuService.
+		WithExperience(newMenuExperienceServiceWith(&routingGemini{arrangeValid: true})).
+		WithAIBudget(budget)
+
+	if _, err := env.menuService.Generate(env.householdID, domain.GenerateMenuRequest{Days: 5, Servings: 4}); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if budget.asked != 0 {
+		t.Errorf("budget consulted %d times for a non-AI generate, want 0", budget.asked)
+	}
+}
