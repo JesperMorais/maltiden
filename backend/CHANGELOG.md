@@ -20,6 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Shared-ingredients UX support — the generate response surfaces the week's shared non-staple ingredients for display.
   - Migrations 016 (menu preferences), 017 (disliked ingredients), 018 (recipe nutrition), 019 (menu-day batch cooking).
 
+### Fixed
+
+- Rate limits are per visitor on Fly.io. They keyed on the proxy's address, so every visitor shared one bucket; they now use `Fly-Client-IP` (trusted only when `FLY_APP_NAME` is set).
+- Browser page loads of paths that are also API routes (`/recipes`, `/shopping-list`) serve the app instead of raw JSON. Requests are split by `Accept: text/html`, so API 404s are no longer turned into `200` + `index.html`.
+
+### Removed
+
+- The public Tjek offers proxy (`GET /offers/search`, `/offers/discounts`, `/offers/stores`). Tjek's terms forbid this use without a written agreement.
+
 ## [0.1.0] - 2026-05-07
 
 Initial backend release.

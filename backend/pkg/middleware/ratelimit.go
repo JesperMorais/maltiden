@@ -3,6 +3,7 @@ package middleware
 import (
 	"net"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -84,16 +85,30 @@ func (rl *RateLimiter) allow(ip string) bool {
 // Limit wraps an http.Handler with rate limiting.
 func (rl *RateLimiter) Limit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-		if ip == "" {
-			ip = r.RemoteAddr
-		}
-
-		if !rl.allow(ip) {
+		if !rl.allow(clientIP(r)) {
 			writeError(w, http.StatusTooManyRequests, "rate_limit_exceeded")
 			return
 		}
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+// behindFlyProxy is true on Fly.io, which sets FLY_APP_NAME on every machine.
+// There, r.RemoteAddr is Fly's proxy, so every visitor would share one bucket.
+var behindFlyProxy = os.Getenv("FLY_APP_NAME") != ""
+
+// clientIP returns the visitor's IP. Fly-Client-IP is only trusted behind
+// Fly's proxy; anywhere else a client could set it to dodge the limit.
+func clientIP(r *http.Request) string {
+	if behindFlyProxy {
+		if ip := r.Header.Get("Fly-Client-IP"); ip != "" {
+			return ip
+		}
+	}
+	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+	if ip == "" {
+		ip = r.RemoteAddr
+	}
+	return ip
 }
