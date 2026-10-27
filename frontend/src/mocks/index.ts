@@ -10,4 +10,3 @@ export const USE_MOCKS = import.meta.env.DEV && import.meta.env.VITE_USE_REAL_AP
 
 export { mockLandingData } from './landing.mock'
 export { mockDashboardData, mockGuestDashboardData } from './dashboard.mock'
-export * from './offers.mock'

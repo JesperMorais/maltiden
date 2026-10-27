@@ -113,7 +113,7 @@ const topCategories = computed(() => {
       </div>
 
       <!-- CTA -->
-      <button type="button" class="view-list-cta" @click.stop="emit('view-list')">
+      <button type="button" class="view-list-cta" aria-label="Visa hela inköpslistan" @click.stop="emit('view-list')">
         <span>Visa hela listan</span>
         <ArrowRight :size="16" :stroke-width="2.5" class="cta-arrow" />
       </button>
