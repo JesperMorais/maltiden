@@ -97,7 +97,8 @@ async function handleExport() {
     link.href = url
     link.download = `maltiden-export-${new Date().toISOString().slice(0, 10)}.json`
     link.click()
-    URL.revokeObjectURL(url)
+    // Revoking in the same tick can cancel the download in Safari and older Firefox.
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   } catch {
     exportError.value = 'Kunde inte hämta dina uppgifter — försök igen'
   } finally {
