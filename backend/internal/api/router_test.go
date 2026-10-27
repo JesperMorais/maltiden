@@ -37,8 +37,6 @@ func TestRouterKnownRoutes(t *testing.T) {
 		{"GET", "/health"},
 		{"POST", "/auth/register"},
 		{"POST", "/auth/login"},
-		{"GET", "/offers/search"},
-		{"GET", "/offers/stores"},
 		{"GET", "/recipes"},
 		{"GET", "/recipes/some-id"},
 		// Protected routes — expect 401, not 404
@@ -72,6 +70,8 @@ func TestRouterUnknownRoutes(t *testing.T) {
 		{"GET", "/nonexistent"},
 		{"GET", "/recipes/extra/segments/too/many"},
 		{"GET", "/admin"},
+		{"GET", "/offers/search"}, // Tjek proxy removed
+		{"GET", "/offers/stores"},
 		{"POST", "/nonexistent/path"},
 	}
 

@@ -99,3 +99,61 @@ func TestRateLimit_MissingPortFallsBack(t *testing.T) {
 		t.Fatalf("expected 200 for addr without port, got %d", rr.Code)
 	}
 }
+
+func TestRateLimit_BehindFlyProxyKeysOnFlyClientIP(t *testing.T) {
+	prev := behindFlyProxy
+	behindFlyProxy = true
+	t.Cleanup(func() { behindFlyProxy = prev })
+
+	rl := NewRateLimiter(0.001, 1)
+	handler := rl.Limit(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// Same proxy address, different visitors: each gets its own bucket.
+	for _, visitor := range []string{"203.0.113.1", "203.0.113.2"} {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.RemoteAddr = "172.16.0.1:443"
+		req.Header.Set("Fly-Client-IP", visitor)
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("visitor %s: expected 200, got %d", visitor, rr.Code)
+		}
+	}
+
+	// The first visitor's bucket is now empty.
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "172.16.0.1:443"
+	req.Header.Set("Fly-Client-IP", "203.0.113.1")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected 429 for repeat visitor, got %d", rr.Code)
+	}
+}
+
+func TestRateLimit_IgnoresFlyClientIPOffFly(t *testing.T) {
+	prev := behindFlyProxy
+	behindFlyProxy = false
+	t.Cleanup(func() { behindFlyProxy = prev })
+
+	rl := NewRateLimiter(0.001, 1)
+	handler := rl.Limit(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// A client rotating a spoofed header must not get fresh buckets.
+	codes := []int{}
+	for _, spoofed := range []string{"198.51.100.1", "198.51.100.2"} {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.RemoteAddr = "10.0.0.5:1234"
+		req.Header.Set("Fly-Client-IP", spoofed)
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		codes = append(codes, rr.Code)
+	}
+	if codes[1] != http.StatusTooManyRequests {
+		t.Fatalf("expected spoofed header to be ignored (429 on 2nd), got %v", codes)
+	}
+}
