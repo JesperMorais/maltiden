@@ -20,6 +20,15 @@ type MenuService struct {
 	// API key is configured; every use is guarded so generation degrades to the
 	// deterministic Phase 1–3 result and makes zero network calls by default.
 	experience *MenuExperienceService
+
+	// aiBudget caps how many AI-assisted generations a household (and the app)
+	// may run per day. Nil means uncapped (tests); production always sets one.
+	aiBudget aiBudget
+}
+
+// aiBudget is satisfied by *aibudget.Budget.
+type aiBudget interface {
+	Allow(key string) bool
 }
 
 // experienceCallTimeout bounds each opt-in AI experience call. It is kept well
@@ -43,6 +52,14 @@ func NewMenuService(menuStorage domain.MenuRepository, recipeStorage domain.Reci
 // fluent setup.
 func (s *MenuService) WithExperience(e *MenuExperienceService) *MenuService {
 	s.experience = e
+	return s
+}
+
+// WithAIBudget caps opt-in AI generations per household per day. Over the cap,
+// generation silently falls back to the deterministic path, exactly as if no
+// experience layer were configured.
+func (s *MenuService) WithAIBudget(b aiBudget) *MenuService {
+	s.aiBudget = b
 	return s
 }
 
@@ -278,6 +295,15 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 	// the selector core enforces.
 	prefs := s.effectivePreferences(householdID)
 
+	// One budget unit covers the whole AI-assisted generate (wish parse +
+	// arrange, at most two model calls). Over budget, run deterministically.
+	experience := s.experience
+	wantsAI := strings.TrimSpace(req.Wishes) != "" || req.Arrange
+	if experience != nil && wantsAI && s.aiBudget != nil && !s.aiBudget.Allow(householdID) {
+		log.Printf("INFO [Generate] daily AI budget exhausted for household %s, generating deterministically", householdID)
+		experience = nil
+	}
+
 	// Opt-in wish parsing (Phase 4): free-text Swedish wishes become per-run
 	// constraint overrides merged into the effective prefs BEFORE the day/serving
 	// defaulting below, so a typed request field still wins. This only runs when
@@ -285,9 +311,9 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 	// reported as ignored and generation proceeds deterministically.
 	wishesIgnored := false
 	if strings.TrimSpace(req.Wishes) != "" {
-		if s.experience != nil {
+		if experience != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), experienceCallTimeout)
-			pc, err := s.experience.ParseWishes(ctx, req.Wishes)
+			pc, err := experience.ParseWishes(ctx, req.Wishes)
 			cancel()
 			if err != nil {
 				sentry.CaptureException(err)
@@ -393,7 +419,7 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 	// offered slots/recipes; on any failure the deterministic order is kept and
 	// the rationale stays empty (graceful degradation).
 	rationale := ""
-	if req.Arrange && s.experience != nil {
+	if req.Arrange && experience != nil {
 		nameByID := make(map[string]string, len(recipes))
 		for _, r := range recipes {
 			nameByID[r.ID] = r.Name
@@ -416,7 +442,7 @@ func (s *MenuService) Generate(householdID string, req domain.GenerateMenuReques
 		}
 		if len(slots) > 0 {
 			ctx, cancel := context.WithTimeout(context.Background(), experienceCallTimeout)
-			assignment, r, err := s.experience.ArrangeWeek(ctx, slots)
+			assignment, r, err := experience.ArrangeWeek(ctx, slots)
 			cancel()
 			if err != nil {
 				sentry.CaptureException(err)

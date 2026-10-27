@@ -5,6 +5,6 @@
 set -euo pipefail
 
 cd backend
-# -v + -race per CLAUDE.md's canonical CI command — race detector catches
-# concurrent-access bugs locally that CI would otherwise be the first to see.
+# -v + -race matches the CI command in .github/workflows/ci.yml; the race
+# detector catches concurrent-access bugs locally before CI does.
 go test -v -race ./...

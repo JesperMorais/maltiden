@@ -4,6 +4,7 @@ import { useThemeStore } from '@/stores/theme'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useUserStore } from '@/stores/user'
 import BackLink from '@/components/common/BackLink.vue'
+import { exportMyData, deleteMyAccount } from '@/api/account.api'
 import {
   User as UserIcon,
   Bell,
@@ -14,6 +15,9 @@ import {
   Home,
   Check,
   X,
+  Shield,
+  Download,
+  Trash2,
 } from 'lucide-vue-next'
 
 const themeStore = useThemeStore()
@@ -77,6 +81,69 @@ async function saveHouseholdName() {
 
 function handleLogout() {
   userStore.logout()
+}
+
+// Privacy self-service (GDPR): export and delete
+const isExporting = ref(false)
+const exportError = ref('')
+
+async function handleExport() {
+  isExporting.value = true
+  exportError.value = ''
+  try {
+    const blob = await exportMyData()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `maltiden-export-${new Date().toISOString().slice(0, 10)}.json`
+    link.click()
+    // Revoking in the same tick can cancel the download in Safari and older Firefox.
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  } catch {
+    exportError.value = 'Kunde inte hämta dina uppgifter — försök igen'
+  } finally {
+    isExporting.value = false
+  }
+}
+
+const isConfirmingDelete = ref(false)
+const deletePassword = ref('')
+const deleteError = ref('')
+const isDeleting = ref(false)
+
+function startDelete() {
+  deletePassword.value = ''
+  deleteError.value = ''
+  isConfirmingDelete.value = true
+}
+
+function cancelDelete() {
+  isConfirmingDelete.value = false
+  deletePassword.value = ''
+  deleteError.value = ''
+}
+
+async function confirmDelete() {
+  if (!deletePassword.value) {
+    deleteError.value = 'Ange ditt lösenord för att bekräfta'
+    return
+  }
+  isDeleting.value = true
+  deleteError.value = ''
+  try {
+    await deleteMyAccount(deletePassword.value)
+    userStore.logout()
+  } catch (err: unknown) {
+    const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+    deleteError.value =
+      code === 'invalid_password'
+        ? 'Fel lösenord'
+        : code === 'rate_limit_exceeded'
+          ? 'För många försök — vänta en stund och försök igen'
+          : 'Kunde inte radera kontot — försök igen'
+  } finally {
+    isDeleting.value = false
+  }
 }
 </script>
 
@@ -265,6 +332,64 @@ function handleLogout() {
             </a>
           </div>
           <p class="coming-soon">Hjälp oss bli bättre — vi läser all feedback!</p>
+        </section>
+
+        <!-- Privacy -->
+        <section class="settings-section">
+          <h2>
+            <span class="section-icon"><Shield :size="16" /></span>
+            Dina uppgifter
+          </h2>
+          <div class="account-actions">
+            <button
+              type="button"
+              class="action-btn export-btn"
+              :disabled="isExporting"
+              @click="handleExport"
+            >
+              <span class="btn-icon"><Download :size="18" /></span>
+              {{ isExporting ? 'Hämtar…' : 'Ladda ner mina uppgifter' }}
+            </button>
+            <p v-if="exportError" role="alert" class="household-error">{{ exportError }}</p>
+
+            <button
+              v-if="!isConfirmingDelete"
+              type="button"
+              class="action-btn logout-btn"
+              @click="startDelete"
+            >
+              <span class="btn-icon"><Trash2 :size="18" /></span>
+              Radera mitt konto
+            </button>
+            <form v-else class="delete-confirm" @submit.prevent="confirmDelete">
+              <p class="delete-warning">
+                Kontot raderas permanent och kan inte återställas. Är du ensam i hushållet
+                raderas även hushållets menyer, recept och inköpslista. Finns det andra medlemmar
+                lämnar du hushållet och deras data finns kvar.
+              </p>
+              <label class="household-label" for="delete-password-input">Lösenord</label>
+              <input
+                id="delete-password-input"
+                v-model="deletePassword"
+                type="password"
+                class="household-input"
+                autocomplete="current-password"
+                :disabled="isDeleting"
+              />
+              <p v-if="deleteError" role="alert" class="household-error">{{ deleteError }}</p>
+              <div class="delete-actions">
+                <button type="button" class="edit-btn" :disabled="isDeleting" @click="cancelDelete">
+                  Avbryt
+                </button>
+                <button type="submit" class="action-btn logout-btn" :disabled="isDeleting">
+                  {{ isDeleting ? 'Raderar…' : 'Radera permanent' }}
+                </button>
+              </div>
+            </form>
+          </div>
+          <p class="coming-soon">
+            <RouterLink :to="{ name: 'privacy' }">Läs vår integritetspolicy</RouterLink>
+          </p>
         </section>
 
         <!-- Account -->
@@ -720,6 +845,51 @@ function handleLogout() {
 
 .btn-icon {
   font-size: 1.1rem;
+}
+
+.export-btn {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.export-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--error);
+  border-radius: 14px;
+}
+
+.delete-warning {
+  margin: 0 0 0.5rem;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.delete-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+  margin-top: 0.5rem;
+}
+
+.delete-actions .action-btn {
+  flex: 1;
+  padding: 0.75rem;
 }
 
 .page-footer {

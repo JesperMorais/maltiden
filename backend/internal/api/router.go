@@ -6,6 +6,7 @@ import (
 	"maltiden/internal/api/handlers"
 	"maltiden/internal/services"
 	"maltiden/internal/storage/sqlite"
+	"maltiden/pkg/aibudget"
 	"maltiden/pkg/claude"
 	"maltiden/pkg/email"
 	"maltiden/pkg/gemini"
@@ -14,6 +15,20 @@ import (
 	"net/http"
 	"os"
 	"strings"
+)
+
+// Default daily caps on paid LLM requests (see pkg/aibudget). Override with
+// AI_PARSER_DAILY_PER_HOUSEHOLD / AI_PARSER_DAILY_GLOBAL and
+// AI_MENU_DAILY_PER_HOUSEHOLD / AI_MENU_DAILY_GLOBAL; 0 turns a feature off.
+//
+// Recipe parsing uses Claude Sonnet (up to two calls of <=2000 output tokens
+// each), so it gets the tighter cap. Menu AI uses Gemini Flash-Lite, which
+// costs a small fraction of that per call.
+const (
+	defaultAIParserPerHousehold = 20
+	defaultAIParserGlobal       = 200
+	defaultAIMenuPerHousehold   = 30
+	defaultAIMenuGlobal         = 1500
 )
 
 type dependencies struct {
@@ -26,6 +41,7 @@ type dependencies struct {
 	feedback      *handlers.FeedbackHandler
 	health        *handlers.HealthHandler
 	passwordReset *handlers.PasswordResetHandler
+	account       *handlers.AccountHandler
 	userStorage   *sqlite.UserStorage // auth middleware: token version + live household resolution
 }
 
@@ -50,7 +66,8 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 	if gc, err := gemini.NewClient(gemini.FlashLiteModel); err != nil {
 		log.Printf("Warning: AI menu arranger disabled: %v", err)
 	} else {
-		menuService = menuService.WithExperience(services.NewMenuExperienceService(gc))
+		menuService = menuService.WithExperience(services.NewMenuExperienceService(gc)).
+			WithAIBudget(aibudget.FromEnv("AI_MENU", defaultAIMenuPerHousehold, defaultAIMenuGlobal))
 	}
 	shoppingService := services.NewShoppingService(menuStorage, recipeStorage, shoppingStorage)
 	tjekService := services.NewTjekService()
@@ -82,6 +99,7 @@ func wireDependencies(db *sql.DB, jwtService *utils.JWTService) *dependencies {
 		feedback:      handlers.NewFeedbackHandler(feedbackService),
 		health:        handlers.NewHealthHandler(db),
 		passwordReset: handlers.NewPasswordResetHandler(passwordResetService),
+		account:       handlers.NewAccountHandler(services.NewAccountService(sqlite.NewAccountStorage(db), userStorage)),
 		userStorage:   userStorage,
 	}
 }
@@ -120,6 +138,7 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 		parserService := services.NewRecipeParserService(claudeClient)
 		parserHandler = handlers.NewRecipeParserHandler(parserService, recipeService)
 	}
+	parserBudget := middleware.AIBudget(aibudget.FromEnv("AI_PARSER", defaultAIParserPerHousehold, defaultAIParserGlobal))
 
 	// Public routes
 	mux.HandleFunc("GET /health", deps.health.Check)
@@ -174,10 +193,10 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 		// here; the global Timeout middleware below skips these routes.
 		parseTimeout := middleware.TimeoutWith(middleware.ParserTimeout)
 		mux.Handle("POST /recipes/parse", parseTimeout(parserLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
-			http.HandlerFunc(parserHandler.ParseRecipe),
+			parserBudget(http.HandlerFunc(parserHandler.ParseRecipe)),
 		))))
 		mux.Handle("POST /recipes/parse-and-save", parseTimeout(parserLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
-			http.HandlerFunc(parserHandler.ParseAndSave),
+			parserBudget(http.HandlerFunc(parserHandler.ParseAndSave)),
 		))))
 	}
 	// Phase-4 AI layer (wishes/arrange) can add a few seconds of Gemini latency
@@ -214,6 +233,14 @@ func NewRouter(db *sql.DB, jwtService *utils.JWTService) http.Handler {
 	))
 	mux.Handle("POST /feedback", middleware.RequireAuth(jwtService, deps.userStorage)(
 		http.HandlerFunc(deps.feedback.Create),
+	))
+	// GDPR self-service. Delete re-checks the password, so it shares the auth
+	// limiter to stop password guessing through this endpoint.
+	mux.Handle("DELETE /account", authLimiter.Limit(middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.account.Delete),
+	)))
+	mux.Handle("GET /account/export", middleware.RequireAuth(jwtService, deps.userStorage)(
+		http.HandlerFunc(deps.account.Export),
 	))
 
 	// Get CORS origins from environment or use development defaults
