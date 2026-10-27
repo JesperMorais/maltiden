@@ -25,7 +25,16 @@ if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN_FE) {
     integrations: [Sentry.browserTracingIntegration({ router })],
     tracesSampleRate: 0.2,
     tracePropagationTargets: ['localhost', /^https:\/\/maltiden\.fly\.dev/],
-    sendDefaultPii: false,
+    // Sentry 11 replaced sendDefaultPii with dataCollection, whose defaults
+    // collect everything. Keep collecting nothing personal: request bodies
+    // carry passwords and the reset link carries its token in the query.
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: false,
+      httpBodies: [],
+      urlQueryParams: false,
+    },
   })
 }
 
