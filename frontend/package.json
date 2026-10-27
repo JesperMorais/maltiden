@@ -46,7 +46,7 @@
     "jiti": "^2.7.0",
     "npm-run-all2": "^9.0.3",
     "prettier": "3.9.9",
-    "typescript": "~7.0.2",
+    "typescript": "~6.0.3",
     "vite": "^7.3.7",
     "vite-plugin-vue-devtools": "^8.2.1",
     "vitest": "^5.0.3",
